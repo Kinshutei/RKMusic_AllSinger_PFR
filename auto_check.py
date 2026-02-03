@@ -3,11 +3,12 @@
 """
 YouTube チャンネル統計 自動チェックスクリプト（複数チャンネル対応版）
 GitHub Actionsで定期実行される
-Movie/LiveArchive判別機能付き
+Movie/Short/LiveArchive判別機能付き
 """
 
 import os
 import json
+import re
 from datetime import datetime
 from googleapiclient.discovery import build
 import smtplib
@@ -30,6 +31,19 @@ except:
 
 # キリ番のリスト
 MILESTONES = [5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000]
+
+def parse_duration(duration):
+    """ISO 8601形式の動画時間を秒数に変換"""
+    # PT1M30S -> 90秒
+    match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration)
+    if not match:
+        return 0
+    
+    hours = int(match.group(1) or 0)
+    minutes = int(match.group(2) or 0)
+    seconds = int(match.group(3) or 0)
+    
+    return hours * 3600 + minutes * 60 + seconds
 
 def send_email_notification(achievements, channel_name):
     """キリ番達成をメールで通知"""
@@ -112,7 +126,7 @@ def get_channel_stats(youtube, channel_id):
     return None
 
 def determine_video_type(video):
-    """動画タイプを判定（Movie or LiveArchive）"""
+    """動画タイプを判定（Movie/Short/LiveArchive）"""
     # liveStreamingDetailsがあればLiveArchive
     if 'liveStreamingDetails' in video:
         return 'LiveArchive'
@@ -122,11 +136,18 @@ def determine_video_type(video):
     if live_broadcast in ['live', 'upcoming']:
         return 'LiveArchive'
     
+    # 動画の長さで判定（60秒以下ならShort）
+    duration_str = video.get('contentDetails', {}).get('duration', '')
+    if duration_str:
+        duration_seconds = parse_duration(duration_str)
+        if duration_seconds <= 60:
+            return 'Short'
+    
     # デフォルトはMovie
     return 'Movie'
 
 def get_all_videos(youtube, channel_id):
-    """チャンネルの全動画情報を取得（Movie/LiveArchive判別付き）"""
+    """チャンネルの全動画情報を取得（Movie/Short/LiveArchive判別付き）"""
     videos = []
     
     try:
@@ -155,9 +176,9 @@ def get_all_videos(youtube, channel_id):
             video_ids = [item['snippet']['resourceId']['videoId'] 
                         for item in playlist_response['items']]
             
-            # 動画の詳細情報を取得（liveStreamingDetails追加）
+            # 動画の詳細情報を取得（contentDetails追加で動画時間も取得）
             videos_request = youtube.videos().list(
-                part='snippet,statistics,liveStreamingDetails',
+                part='snippet,statistics,liveStreamingDetails,contentDetails',
                 id=','.join(video_ids)
             )
             videos_response = videos_request.execute()
@@ -184,6 +205,7 @@ def get_all_videos(youtube, channel_id):
         
         print(f"✓ 完了: {len(videos)}本の動画を取得しました")
         print(f"  - Movie: {sum(1 for v in videos if v['type'] == 'Movie')}本")
+        print(f"  - Short: {sum(1 for v in videos if v['type'] == 'Short')}本")
         print(f"  - LiveArchive: {sum(1 for v in videos if v['type'] == 'LiveArchive')}本")
         
     except Exception as e:
@@ -237,6 +259,7 @@ def save_log(videos, channel_stats, achievements, channel_name):
         'channel_stats': channel_stats,
         'total_videos': len(videos),
         'movie_count': sum(1 for v in videos if v['type'] == 'Movie'),
+        'short_count': sum(1 for v in videos if v['type'] == 'Short'),
         'archive_count': sum(1 for v in videos if v['type'] == 'LiveArchive'),
         'achievements': achievements
     }
