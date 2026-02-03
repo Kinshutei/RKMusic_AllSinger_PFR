@@ -1,0 +1,592 @@
+{
+  "timestamp": "2026-02-03 14:36:44",
+  "channel_stats": {
+    "チャンネル名": "LEWNE",
+    "登録者数": 10400,
+    "総再生数": 860225,
+    "動画数": 154,
+    "取得日時": "2026-02-03 14:36:43"
+  },
+  "videos": {
+    "2h6BAazTv08": {
+      "再生数": 508,
+      "type": "LiveArchive"
+    },
+    "pXlDB0FaN-g": {
+      "再生数": 2136,
+      "type": "Movie"
+    },
+    "_ZlCh1UF7NI": {
+      "再生数": 2447,
+      "type": "Movie"
+    },
+    "oUI-PZuUpbc": {
+      "再生数": 2223,
+      "type": "Movie"
+    },
+    "BZoF7cudyNw": {
+      "再生数": 2531,
+      "type": "LiveArchive"
+    },
+    "5hxfOuOh51M": {
+      "再生数": 1597,
+      "type": "LiveArchive"
+    },
+    "9ozHY7HrDwA": {
+      "再生数": 4866,
+      "type": "LiveArchive"
+    },
+    "HtNQDWwIRGA": {
+      "再生数": 6680,
+      "type": "Movie"
+    },
+    "ni_G_XW-Wnk": {
+      "再生数": 3372,
+      "type": "Movie"
+    },
+    "IUlqQ60Klcc": {
+      "再生数": 3897,
+      "type": "LiveArchive"
+    },
+    "mjLoGasa_E4": {
+      "再生数": 1543,
+      "type": "LiveArchive"
+    },
+    "3HBLeKmXLdg": {
+      "再生数": 2833,
+      "type": "Movie"
+    },
+    "6wrlSHObTuc": {
+      "再生数": 3364,
+      "type": "LiveArchive"
+    },
+    "miSXhbHY5fU": {
+      "再生数": 2817,
+      "type": "Movie"
+    },
+    "lP-pcmoktFY": {
+      "再生数": 2654,
+      "type": "Movie"
+    },
+    "hEuy31nmlpA": {
+      "再生数": 1456,
+      "type": "LiveArchive"
+    },
+    "SY3ygbrwtZk": {
+      "再生数": 19170,
+      "type": "Movie"
+    },
+    "yZVZ-_GiNK8": {
+      "再生数": 3570,
+      "type": "LiveArchive"
+    },
+    "6xmh9ZkeSF8": {
+      "再生数": 3577,
+      "type": "Movie"
+    },
+    "WHl-ConiXOo": {
+      "再生数": 2442,
+      "type": "Movie"
+    },
+    "7S8aPomsI-E": {
+      "再生数": 2055,
+      "type": "LiveArchive"
+    },
+    "rRDCIysufAw": {
+      "再生数": 626,
+      "type": "LiveArchive"
+    },
+    "_b-vNbwc8jY": {
+      "再生数": 2778,
+      "type": "Movie"
+    },
+    "lYMBgNaTKMo": {
+      "再生数": 14948,
+      "type": "LiveArchive"
+    },
+    "Rrj02TxP6Sk": {
+      "再生数": 2493,
+      "type": "LiveArchive"
+    },
+    "rAGYCJtDU_Q": {
+      "再生数": 3707,
+      "type": "Movie"
+    },
+    "SOxYs8DJ6wU": {
+      "再生数": 4880,
+      "type": "LiveArchive"
+    },
+    "2h9Pkp3E84A": {
+      "再生数": 1023,
+      "type": "LiveArchive"
+    },
+    "TV7vTjgzrtw": {
+      "再生数": 1905,
+      "type": "LiveArchive"
+    },
+    "27oUKDt1F1I": {
+      "再生数": 1521,
+      "type": "LiveArchive"
+    },
+    "wQyXhvDf2x4": {
+      "再生数": 1374,
+      "type": "LiveArchive"
+    },
+    "4xy6NTH406g": {
+      "再生数": 4270,
+      "type": "Movie"
+    },
+    "Pn9Eg4c9cxM": {
+      "再生数": 723,
+      "type": "LiveArchive"
+    },
+    "Zqz8xJOGDww": {
+      "再生数": 2097,
+      "type": "LiveArchive"
+    },
+    "dnewZFMkvWs": {
+      "再生数": 1662,
+      "type": "LiveArchive"
+    },
+    "Lva8TLCtqaI": {
+      "再生数": 1354,
+      "type": "LiveArchive"
+    },
+    "9ApNDYLYoUk": {
+      "再生数": 2466,
+      "type": "Movie"
+    },
+    "JMMZg1vIIMk": {
+      "再生数": 2069,
+      "type": "LiveArchive"
+    },
+    "DCS_FNQiI7k": {
+      "再生数": 559,
+      "type": "LiveArchive"
+    },
+    "Z_LGB44VhD8": {
+      "再生数": 2404,
+      "type": "Movie"
+    },
+    "0MSFrMDD2T4": {
+      "再生数": 7241,
+      "type": "LiveArchive"
+    },
+    "a5a5DBmBY0k": {
+      "再生数": 1813,
+      "type": "LiveArchive"
+    },
+    "A_2NSAONPn4": {
+      "再生数": 1491,
+      "type": "LiveArchive"
+    },
+    "9hcGLoj7f0Y": {
+      "再生数": 3338,
+      "type": "LiveArchive"
+    },
+    "mV_9ru54MlU": {
+      "再生数": 1417,
+      "type": "LiveArchive"
+    },
+    "RkDbsGl0pVc": {
+      "再生数": 3965,
+      "type": "LiveArchive"
+    },
+    "fssfpkm0LRU": {
+      "再生数": 1411,
+      "type": "LiveArchive"
+    },
+    "y4zmcc3CVco": {
+      "再生数": 2139,
+      "type": "Movie"
+    },
+    "IOisgKTfEWA": {
+      "再生数": 1342,
+      "type": "LiveArchive"
+    },
+    "zQtbfJLedM8": {
+      "再生数": 2413,
+      "type": "Movie"
+    },
+    "8qL0w1_CYsM": {
+      "再生数": 3488,
+      "type": "Movie"
+    },
+    "Dr6mBW7n3ZY": {
+      "再生数": 1816,
+      "type": "LiveArchive"
+    },
+    "SZjf9JQdQMs": {
+      "再生数": 1355,
+      "type": "LiveArchive"
+    },
+    "ItmrOOZZcnE": {
+      "再生数": 1446,
+      "type": "LiveArchive"
+    },
+    "w8DPwSWn4ZQ": {
+      "再生数": 990,
+      "type": "LiveArchive"
+    },
+    "LYNT6N60LtU": {
+      "再生数": 1271,
+      "type": "LiveArchive"
+    },
+    "AVQqv87x-gw": {
+      "再生数": 1254,
+      "type": "LiveArchive"
+    },
+    "USM1X_a2Nn8": {
+      "再生数": 1117,
+      "type": "LiveArchive"
+    },
+    "zbtOryn0voo": {
+      "再生数": 3511,
+      "type": "Movie"
+    },
+    "v2akG9bf1so": {
+      "再生数": 1112,
+      "type": "LiveArchive"
+    },
+    "0WSfua3MAWk": {
+      "再生数": 1218,
+      "type": "LiveArchive"
+    },
+    "yQS9_-AbLI4": {
+      "再生数": 1725,
+      "type": "LiveArchive"
+    },
+    "UQf9Jzh1m7s": {
+      "再生数": 1916,
+      "type": "LiveArchive"
+    },
+    "2-FWSxbgrNE": {
+      "再生数": 936,
+      "type": "Movie"
+    },
+    "BfDl0z58Sow": {
+      "再生数": 2110,
+      "type": "LiveArchive"
+    },
+    "Ffs7-PdBcAk": {
+      "再生数": 11992,
+      "type": "LiveArchive"
+    },
+    "kassrKMC9oo": {
+      "再生数": 3081,
+      "type": "Movie"
+    },
+    "hdfheQ2ie9g": {
+      "再生数": 1758,
+      "type": "LiveArchive"
+    },
+    "fACE_i1NmqY": {
+      "再生数": 837,
+      "type": "LiveArchive"
+    },
+    "YAZaqFdWtPo": {
+      "再生数": 1037,
+      "type": "LiveArchive"
+    },
+    "VJyVata-pgA": {
+      "再生数": 980,
+      "type": "LiveArchive"
+    },
+    "zuOxqIOmQkc": {
+      "再生数": 693,
+      "type": "LiveArchive"
+    },
+    "YCvqLAFuy9U": {
+      "再生数": 955,
+      "type": "LiveArchive"
+    },
+    "sIxm8pJY3Gw": {
+      "再生数": 1502,
+      "type": "LiveArchive"
+    },
+    "Tc0e3_z9pyM": {
+      "再生数": 1456,
+      "type": "LiveArchive"
+    },
+    "sErc0tknG2s": {
+      "再生数": 1423,
+      "type": "LiveArchive"
+    },
+    "n5Y2YP9t0Uo": {
+      "再生数": 1975,
+      "type": "LiveArchive"
+    },
+    "9INuvRByn3w": {
+      "再生数": 1767,
+      "type": "LiveArchive"
+    },
+    "BnVUlKpQvRI": {
+      "再生数": 2093,
+      "type": "LiveArchive"
+    },
+    "i9-xx0nadPg": {
+      "再生数": 690,
+      "type": "LiveArchive"
+    },
+    "Du3rEW5wfDU": {
+      "再生数": 1437,
+      "type": "LiveArchive"
+    },
+    "65xGM58Pxvk": {
+      "再生数": 2047,
+      "type": "LiveArchive"
+    },
+    "ovPWj4CdGiw": {
+      "再生数": 2487,
+      "type": "LiveArchive"
+    },
+    "w4Rlai1Esss": {
+      "再生数": 548,
+      "type": "LiveArchive"
+    },
+    "8Vb9jN5OfXI": {
+      "再生数": 1443,
+      "type": "LiveArchive"
+    },
+    "meCZPkJFbRc": {
+      "再生数": 2096,
+      "type": "LiveArchive"
+    },
+    "UX1toBv23Fw": {
+      "再生数": 523,
+      "type": "LiveArchive"
+    },
+    "yqQ4-pIoRpQ": {
+      "再生数": 784,
+      "type": "LiveArchive"
+    },
+    "pgdYwN1BDbg": {
+      "再生数": 2245,
+      "type": "LiveArchive"
+    },
+    "nWS2rT3ioFY": {
+      "再生数": 1775,
+      "type": "LiveArchive"
+    },
+    "Djt_NW-PxyQ": {
+      "再生数": 1888,
+      "type": "LiveArchive"
+    },
+    "IdX_qohqdRE": {
+      "再生数": 738,
+      "type": "LiveArchive"
+    },
+    "CfWGTGa8Aww": {
+      "再生数": 1227,
+      "type": "LiveArchive"
+    },
+    "OP_YmmcEzK8": {
+      "再生数": 2264,
+      "type": "Movie"
+    },
+    "mqQKbAWMl30": {
+      "再生数": 166375,
+      "type": "LiveArchive"
+    },
+    "x6zbh4nSaoQ": {
+      "再生数": 1066,
+      "type": "LiveArchive"
+    },
+    "xyjchamFsHo": {
+      "再生数": 1782,
+      "type": "LiveArchive"
+    },
+    "ON-syUSSZ9U": {
+      "再生数": 1376,
+      "type": "LiveArchive"
+    },
+    "pbGvhPMNo2M": {
+      "再生数": 2350,
+      "type": "LiveArchive"
+    },
+    "4wMWvSGpxPk": {
+      "再生数": 709,
+      "type": "LiveArchive"
+    },
+    "ndbwdf8--is": {
+      "再生数": 2430,
+      "type": "LiveArchive"
+    },
+    "ods0bxk5CTc": {
+      "再生数": 2238,
+      "type": "LiveArchive"
+    },
+    "VyFDK1lStOg": {
+      "再生数": 1686,
+      "type": "LiveArchive"
+    },
+    "mH186PysiV0": {
+      "再生数": 1449,
+      "type": "LiveArchive"
+    },
+    "ijx2L_FY2-M": {
+      "再生数": 1301,
+      "type": "LiveArchive"
+    },
+    "1def5VEu_7E": {
+      "再生数": 1912,
+      "type": "LiveArchive"
+    },
+    "eTX_Dp2e-fA": {
+      "再生数": 2790,
+      "type": "LiveArchive"
+    },
+    "f8mBfJ1oxlw": {
+      "再生数": 2118,
+      "type": "LiveArchive"
+    },
+    "qJz-lVfVzlY": {
+      "再生数": 1515,
+      "type": "LiveArchive"
+    },
+    "YfnnZOb8wpQ": {
+      "再生数": 2292,
+      "type": "LiveArchive"
+    },
+    "2ygCbdeY3Tk": {
+      "再生数": 1645,
+      "type": "LiveArchive"
+    },
+    "7d_2Qrimn04": {
+      "再生数": 1413,
+      "type": "LiveArchive"
+    },
+    "m-4U0euxwsE": {
+      "再生数": 1213,
+      "type": "LiveArchive"
+    },
+    "qy8MZkeWEtA": {
+      "再生数": 2644,
+      "type": "LiveArchive"
+    },
+    "ef1B8YbexdQ": {
+      "再生数": 1845,
+      "type": "LiveArchive"
+    },
+    "bmXcdUMcIyo": {
+      "再生数": 4040,
+      "type": "Movie"
+    },
+    "y2BMAdSGu5w": {
+      "再生数": 1662,
+      "type": "LiveArchive"
+    },
+    "PZefGjUsojU": {
+      "再生数": 2085,
+      "type": "LiveArchive"
+    },
+    "2KF_mDf0LP0": {
+      "再生数": 1539,
+      "type": "LiveArchive"
+    },
+    "r68wpanY3hU": {
+      "再生数": 2073,
+      "type": "LiveArchive"
+    },
+    "fYi0DTBvSF8": {
+      "再生数": 1231,
+      "type": "LiveArchive"
+    },
+    "J9jhZi_f2RU": {
+      "再生数": 1664,
+      "type": "LiveArchive"
+    },
+    "2cjAlTIUBYk": {
+      "再生数": 0,
+      "type": "LiveArchive"
+    },
+    "MzIlEEMMDgY": {
+      "再生数": 5966,
+      "type": "Movie"
+    },
+    "0tET4f8WlC8": {
+      "再生数": 1828,
+      "type": "LiveArchive"
+    },
+    "WGE7DZmuKr4": {
+      "再生数": 2192,
+      "type": "LiveArchive"
+    },
+    "mV6RElPQSPU": {
+      "再生数": 1441,
+      "type": "LiveArchive"
+    },
+    "l7rb3IrWaQA": {
+      "再生数": 2595,
+      "type": "LiveArchive"
+    },
+    "z-U-D31KmYo": {
+      "再生数": 2441,
+      "type": "LiveArchive"
+    },
+    "AhFnhDftUtA": {
+      "再生数": 1864,
+      "type": "LiveArchive"
+    },
+    "brntsMT31Mo": {
+      "再生数": 1798,
+      "type": "LiveArchive"
+    },
+    "agtCjFWlMEQ": {
+      "再生数": 2800,
+      "type": "LiveArchive"
+    },
+    "bg7KtBevXxk": {
+      "再生数": 3498,
+      "type": "LiveArchive"
+    },
+    "CkZE_5YUkAQ": {
+      "再生数": 2405,
+      "type": "LiveArchive"
+    },
+    "RLfknWuQbkU": {
+      "再生数": 8767,
+      "type": "LiveArchive"
+    },
+    "9_KjwKNTcQ8": {
+      "再生数": 4510,
+      "type": "Movie"
+    },
+    "nL7Ql56GrUU": {
+      "再生数": 1354,
+      "type": "LiveArchive"
+    },
+    "Ng6kXPc7gzU": {
+      "再生数": 210861,
+      "type": "LiveArchive"
+    },
+    "IIWMk_Xgzs8": {
+      "再生数": 4902,
+      "type": "Movie"
+    },
+    "9qFMBGW17lA": {
+      "再生数": 5923,
+      "type": "Movie"
+    },
+    "TMqdwcQ9WHc": {
+      "再生数": 111572,
+      "type": "Movie"
+    },
+    "J7uINOv0hQw": {
+      "再生数": 4680,
+      "type": "Movie"
+    },
+    "dhJf_aYSxTQ": {
+      "再生数": 2117,
+      "type": "LiveArchive"
+    },
+    "jyE7PkAl5n8": {
+      "再生数": 6074,
+      "type": "Movie"
+    },
+    "LmywDoYF-Ws": {
+      "再生数": 1860,
+      "type": "Movie"
+    }
+  }
+}
