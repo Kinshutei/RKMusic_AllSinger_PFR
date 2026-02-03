@@ -1,15 +1,15 @@
 {
-  "timestamp": "2026-02-03 14:36:44",
+  "timestamp": "2026-02-03 14:47:56",
   "channel_stats": {
     "チャンネル名": "LEWNE",
-    "登録者数": 10400,
+    "登録者数": 10500,
     "総再生数": 860225,
     "動画数": 154,
-    "取得日時": "2026-02-03 14:36:43"
+    "取得日時": "2026-02-03 14:47:55"
   },
   "videos": {
     "2h6BAazTv08": {
-      "再生数": 508,
+      "再生数": 530,
       "type": "LiveArchive"
     },
     "pXlDB0FaN-g": {
@@ -29,7 +29,7 @@
       "type": "LiveArchive"
     },
     "5hxfOuOh51M": {
-      "再生数": 1597,
+      "再生数": 1599,
       "type": "LiveArchive"
     },
     "9ozHY7HrDwA": {
@@ -69,7 +69,7 @@
       "type": "Movie"
     },
     "hEuy31nmlpA": {
-      "再生数": 1456,
+      "再生数": 1457,
       "type": "LiveArchive"
     },
     "SY3ygbrwtZk": {
@@ -101,7 +101,7 @@
       "type": "Movie"
     },
     "lYMBgNaTKMo": {
-      "再生数": 14948,
+      "再生数": 14944,
       "type": "LiveArchive"
     },
     "Rrj02TxP6Sk": {
@@ -205,7 +205,7 @@
       "type": "LiveArchive"
     },
     "zQtbfJLedM8": {
-      "再生数": 2413,
+      "再生数": 2414,
       "type": "Movie"
     },
     "8qL0w1_CYsM": {
@@ -269,7 +269,7 @@
       "type": "LiveArchive"
     },
     "Ffs7-PdBcAk": {
-      "再生数": 11992,
+      "再生数": 11991,
       "type": "LiveArchive"
     },
     "kassrKMC9oo": {
@@ -325,7 +325,7 @@
       "type": "LiveArchive"
     },
     "i9-xx0nadPg": {
-      "再生数": 690,
+      "再生数": 689,
       "type": "LiveArchive"
     },
     "Du3rEW5wfDU": {
@@ -385,7 +385,7 @@
       "type": "Movie"
     },
     "mqQKbAWMl30": {
-      "再生数": 166375,
+      "再生数": 166390,
       "type": "LiveArchive"
     },
     "x6zbh4nSaoQ": {
@@ -557,7 +557,7 @@
       "type": "LiveArchive"
     },
     "Ng6kXPc7gzU": {
-      "再生数": 210861,
+      "再生数": 210859,
       "type": "LiveArchive"
     },
     "IIWMk_Xgzs8": {
@@ -581,11 +581,11 @@
       "type": "LiveArchive"
     },
     "jyE7PkAl5n8": {
-      "再生数": 6074,
+      "再生数": 6072,
       "type": "Movie"
     },
     "LmywDoYF-Ws": {
-      "再生数": 1860,
+      "再生数": 1859,
       "type": "Movie"
     }
   }
