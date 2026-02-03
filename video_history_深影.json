@@ -1,15 +1,15 @@
 {
-  "timestamp": "2026-02-03 16:43:35",
+  "timestamp": "2026-02-03 16:50:05",
   "channel_stats": {
     "チャンネル名": "深影",
     "登録者数": 21300,
     "総再生数": 1656571,
     "動画数": 168,
-    "取得日時": "2026-02-03 16:43:02"
+    "取得日時": "2026-02-03 16:49:35"
   },
   "videos": {
     "dng1YYx9VFg": {
-      "再生数": 1124,
+      "再生数": 1207,
       "type": "LiveArchive"
     },
     "UcXs68hiBdo": {
@@ -17,15 +17,15 @@
       "type": "LiveArchive"
     },
     "beLIyIKt2vY": {
-      "再生数": 4428,
+      "再生数": 4419,
       "type": "Short"
     },
     "LXjR6CfR9Q0": {
-      "再生数": 14763,
+      "再生数": 14772,
       "type": "LiveArchive"
     },
     "dy1q4Mwb9Eg": {
-      "再生数": 4631,
+      "再生数": 4634,
       "type": "LiveArchive"
     },
     "kuKYSP8OBHs": {
@@ -33,7 +33,7 @@
       "type": "LiveArchive"
     },
     "gOWNiaFMKS0": {
-      "再生数": 1956,
+      "再生数": 1954,
       "type": "LiveArchive"
     },
     "rrCOr8_OdQk": {
@@ -109,7 +109,7 @@
       "type": "LiveArchive"
     },
     "6H1wEX3C-IQ": {
-      "再生数": 5208,
+      "再生数": 5209,
       "type": "Short"
     },
     "huxfOAjOIsU": {
@@ -157,7 +157,7 @@
       "type": "LiveArchive"
     },
     "TaChGBzjSiM": {
-      "再生数": 5691,
+      "再生数": 5688,
       "type": "Short"
     },
     "CVUE--YBF7U": {
@@ -201,11 +201,11 @@
       "type": "LiveArchive"
     },
     "xCph-KLlD_w": {
-      "再生数": 5951,
+      "再生数": 5952,
       "type": "Short"
     },
     "tvULVpzqHlU": {
-      "再生数": 353476,
+      "再生数": 353482,
       "type": "LiveArchive"
     },
     "V60jXq6zqv8": {
