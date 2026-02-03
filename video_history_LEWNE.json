@@ -1,15 +1,15 @@
 {
-  "timestamp": "2026-02-03 16:13:23",
+  "timestamp": "2026-02-03 16:25:11",
   "channel_stats": {
     "チャンネル名": "LEWNE",
     "登録者数": 10500,
     "総再生数": 860225,
     "動画数": 155,
-    "取得日時": "2026-02-03 16:12:42"
+    "取得日時": "2026-02-03 16:24:28"
   },
   "videos": {
     "2h6BAazTv08": {
-      "再生数": 1043,
+      "再生数": 1119,
       "type": "LiveArchive"
     },
     "pXlDB0FaN-g": {
@@ -45,7 +45,7 @@
       "type": "Short"
     },
     "IUlqQ60Klcc": {
-      "再生数": 3898,
+      "再生数": 3899,
       "type": "LiveArchive"
     },
     "mjLoGasa_E4": {
@@ -141,7 +141,7 @@
       "type": "LiveArchive"
     },
     "Zqz8xJOGDww": {
-      "再生数": 2097,
+      "再生数": 2098,
       "type": "LiveArchive"
     },
     "dnewZFMkvWs": {
@@ -385,7 +385,7 @@
       "type": "Short"
     },
     "mqQKbAWMl30": {
-      "再生数": 166450,
+      "再生数": 166454,
       "type": "LiveArchive"
     },
     "x6zbh4nSaoQ": {
@@ -498,7 +498,7 @@
     },
     "2cjAlTIUBYk": {
       "再生数": 0,
-      "type": "LiveArchive"
+      "type": "Movie"
     },
     "MzIlEEMMDgY": {
       "再生数": 5966,

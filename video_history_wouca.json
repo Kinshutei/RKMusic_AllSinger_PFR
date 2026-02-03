@@ -1,20 +1,20 @@
 {
-  "timestamp": "2026-02-03 16:12:42",
+  "timestamp": "2026-02-03 16:24:28",
   "channel_stats": {
     "チャンネル名": "wouca",
     "登録者数": 10400,
     "総再生数": 1272131,
     "動画数": 49,
-    "取得日時": "2026-02-03 16:12:23"
+    "取得日時": "2026-02-03 16:24:07"
   },
   "videos": {
     "K53odhKrgWg": {
       "再生数": 0,
-      "type": "LiveArchive"
+      "type": "Movie"
     },
     "3Qq9OBKhybA": {
       "再生数": 0,
-      "type": "LiveArchive"
+      "type": "Movie"
     },
     "zZ0fhHADwGU": {
       "再生数": 6874,
@@ -81,7 +81,7 @@
       "type": "LiveArchive"
     },
     "4XeC9DY3TSw": {
-      "再生数": 12304,
+      "再生数": 12305,
       "type": "LiveArchive"
     },
     "n6x09xsNicc": {
@@ -89,7 +89,7 @@
       "type": "LiveArchive"
     },
     "EPOiXzXj0-Y": {
-      "再生数": 4317,
+      "再生数": 4320,
       "type": "LiveArchive"
     },
     "lCsxFsIEYtc": {
@@ -98,7 +98,7 @@
     },
     "hTYxEDnn-HI": {
       "再生数": 0,
-      "type": "LiveArchive"
+      "type": "Movie"
     },
     "_ZhfRobHpFg": {
       "再生数": 4512,
@@ -146,7 +146,7 @@
     },
     "MCet0JsIR8k": {
       "再生数": 0,
-      "type": "LiveArchive"
+      "type": "Movie"
     },
     "0UjwMOsJW28": {
       "再生数": 6612,
