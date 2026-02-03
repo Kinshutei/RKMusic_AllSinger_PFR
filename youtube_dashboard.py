@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 YouTube チャンネル統計ダッシュボード (Streamlit Cloud版)
-複数チャンネル対応 + Movie/Archive分類
+複数チャンネル対応 + Movie/Short/Archive分類
+Noto Sans JP フォント対応
 """
 
 import streamlit as st
@@ -20,6 +21,54 @@ st.set_page_config(
     page_icon="🎵",
     layout="wide"
 )
+
+# Noto Sans JP フォントの適用
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Noto Sans JP', sans-serif;
+}
+
+/* タレント選択ボタンのスタイル */
+.talent-button {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    border: none;
+    border-radius: 8px;
+    background-color: #2d2d2d;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    font-family: 'Noto Sans JP', sans-serif;
+}
+
+.talent-button:hover {
+    background-color: #3d3d3d;
+}
+
+.talent-button.selected {
+    background-color: #6d6d6d;
+    font-weight: 700;
+}
+
+/* リンクのスタイル */
+a {
+    font-family: 'Noto Sans JP', sans-serif;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # キリ番のリスト
 MILESTONES = [5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000]
@@ -116,9 +165,13 @@ def calculate_growth(records, period='1DAY'):
     
     return 0
 
+# セッション状態の初期化
+if 'selected_talent' not in st.session_state:
+    st.session_state.selected_talent = None
+
 # メインUI
 st.title("🎵 RK Music 統計ダッシュボード")
-st.markdown("*自動取得データを表示中（3時間ごとに更新）*")
+st.markdown("*自動取得データを表示中（JST 0, 6, 12, 18, 21時に更新）*")
 st.markdown("---")
 
 # サイドバー
@@ -136,11 +189,22 @@ with st.sidebar:
         st.info("初回の自動実行を待っています...")
         selected_talent = None
     else:
-        selected_talent = st.radio(
-            "",
-            available_talents,
-            index=0
-        )
+        # 初回選択
+        if st.session_state.selected_talent is None:
+            st.session_state.selected_talent = available_talents[0]
+        
+        # タレント選択ボタン
+        for talent in available_talents:
+            if st.button(
+                talent,
+                key=f"talent_{talent}",
+                use_container_width=True,
+                type="primary" if st.session_state.selected_talent == talent else "secondary"
+            ):
+                st.session_state.selected_talent = talent
+                st.rerun()
+        
+        selected_talent = st.session_state.selected_talent
         
         # 選択されたタレントの情報を表示
         if selected_talent:
@@ -154,7 +218,7 @@ with st.sidebar:
                 st.caption(f"最終更新: {history.get('timestamp', 'N/A')}")
     
     st.markdown("---")
-    st.caption("🔄 自動更新: 3時間ごと")
+    st.caption("🔄 自動更新: JST 0, 6, 12, 18, 21時")
 
 # タレントが選択されていない場合
 if not selected_talent:
@@ -174,7 +238,7 @@ if not history:
 channel_stats = history.get('channel_stats', {})
 
 # タブ表示
-tab1, tab2, tab3 = st.tabs(["🏠 General", "📹 動画", "🔴 Archive"])
+tab1, tab2, tab3, tab4 = st.tabs(["🏠 General", "📹 Movie", "🎬 Short", "🔴 Archive"])
 
 with tab1:
     st.header(f"📺 {channel_stats.get('チャンネル名', selected_talent)}")
@@ -216,7 +280,12 @@ with tab1:
             top5 = video_list[:5]
             
             for i, video in enumerate(top5, 1):
-                type_emoji = "📹" if video['type'] == 'Movie' else "🔴"
+                if video['type'] == 'Movie':
+                    type_emoji = "📹"
+                elif video['type'] == 'Short':
+                    type_emoji = "🎬"
+                else:
+                    type_emoji = "🔴"
                 st.markdown(f"{i}. {type_emoji} {video['タイトル'][:40]}... - **{video['再生数']:,}回**")
         else:
             st.info("データを蓄積中...")
@@ -270,7 +339,7 @@ with tab1:
                             growth_rate = (growth / start_views * 100) if start_views > 0 else 0
                             
                             archive_growth.append({
-                                'タイトル': video['タイトル'],
+                                'タイトル': video_data['タイトル'],
                                 '増加数': growth,
                                 '伸び率': growth_rate
                             })
@@ -282,18 +351,20 @@ with tab1:
         else:
             st.info("データを蓄積中...")
 
-with tab2:
-    st.header("📹 動画（Movie）")
+# 共通の動画表示関数
+def display_video_tab(video_type, emoji):
+    """動画タブの共通表示処理"""
+    st.header(f"{emoji} {video_type}")
     
     if not video_history:
         st.info("📡 動画別履歴データを蓄積中です。")
         st.stop()
     
-    # Movieのみフィルター
-    movie_history = filter_videos_by_type(video_history, 'Movie')
+    # 指定タイプのみフィルター
+    filtered_history = filter_videos_by_type(video_history, video_type)
     
-    if not movie_history:
-        st.warning("Movieデータがありません")
+    if not filtered_history:
+        st.warning(f"{video_type}データがありません")
         st.stop()
     
     # 期間選択
@@ -303,7 +374,8 @@ with tab2:
         period = st.selectbox(
             "期間",
             ['1DAY', '1WEEK', '1MONTH'],
-            index=1
+            index=1,
+            key=f'period_{video_type}'
         )
     
     st.markdown("---")
@@ -315,7 +387,7 @@ with tab2:
     plot_data = []
     video_list = []
     
-    for video_id, video_data in movie_history.items():
+    for video_id, video_data in filtered_history.items():
         records = video_data.get('records', [])
         if records:
             video_list.append({
@@ -328,7 +400,7 @@ with tab2:
     top5_ids = [v['id'] for v in video_list[:5]]
     
     for video_id in top5_ids:
-        video_data = movie_history[video_id]
+        video_data = filtered_history[video_id]
         records = video_data.get('records', [])
         
         for record in records:
@@ -348,14 +420,15 @@ with tab2:
             title='再生数推移 TOP5',
             markers=True
         )
-        fig.update_layout(height=500)
+        fig.update_layout(height=500, font=dict(family="Noto Sans JP"))
         st.plotly_chart(fig, use_container_width=True)
     
-    # 中段：動画リスト（表形式）
+    # 中段：動画リスト（リンク付き）
     st.subheader("📋 動画リスト")
+    st.markdown("クリックして動画を視聴できます")
     
     table_data = []
-    for video_id, video_data in movie_history.items():
+    for video_id, video_data in filtered_history.items():
         records = video_data.get('records', [])
         if records:
             current_views = records[-1]['再生数']
@@ -372,9 +445,6 @@ with tab2:
     table_df = pd.DataFrame(table_data)
     table_df = table_df.sort_values('再生数', ascending=False)
     
-    # タイトルをリンクとして表示
-    st.markdown("クリックして動画を視聴できます")
-    
     for idx, row in table_df.iterrows():
         video_url = f"https://www.youtube.com/watch?v={row['動画ID']}"
         growth_text = f"+{row[f'増加数({period})']:,}" if row[f'増加数({period})'] > 0 else "0"
@@ -387,112 +457,15 @@ with tab2:
         with col3:
             st.text(growth_text)
 
+with tab2:
+    display_video_tab('Movie', '📹')
+
 with tab3:
-    st.header("🔴 アーカイブ（LiveArchive）")
-    
-    if not video_history:
-        st.info("📡 動画別履歴データを蓄積中です。")
-        st.stop()
-    
-    # LiveArchiveのみフィルター
-    archive_history = filter_videos_by_type(video_history, 'LiveArchive')
-    
-    if not archive_history:
-        st.warning("LiveArchiveデータがありません")
-        st.stop()
-    
-    # 期間選択
-    period_col1, period_col2 = st.columns([1, 3])
-    
-    with period_col1:
-        period_archive = st.selectbox(
-            "期間 ",
-            ['1DAY', '1WEEK', '1MONTH'],
-            index=1,
-            key='archive_period'
-        )
-    
-    st.markdown("---")
-    
-    # 上段：折れ線グラフ
-    st.subheader("📈 再生数推移")
-    
-    # TOP5のアーカイブの推移をグラフ化
-    plot_data_archive = []
-    archive_list = []
-    
-    for video_id, video_data in archive_history.items():
-        records = video_data.get('records', [])
-        if records:
-            archive_list.append({
-                'id': video_id,
-                'タイトル': video_data['タイトル'],
-                '再生数': records[-1]['再生数']
-            })
-    
-    archive_list.sort(key=lambda x: x['再生数'], reverse=True)
-    top5_archive_ids = [v['id'] for v in archive_list[:5]]
-    
-    for video_id in top5_archive_ids:
-        video_data = archive_history[video_id]
-        records = video_data.get('records', [])
-        
-        for record in records:
-            plot_data_archive.append({
-                '日時': record['timestamp'],
-                'アーカイブ': video_data['タイトル'][:30] + '...',
-                '再生数': record['再生数']
-            })
-    
-    if plot_data_archive:
-        df_plot_archive = pd.DataFrame(plot_data_archive)
-        fig_archive = px.line(
-            df_plot_archive,
-            x='日時',
-            y='再生数',
-            color='アーカイブ',
-            title='再生数推移 TOP5',
-            markers=True
-        )
-        fig_archive.update_layout(height=500)
-        st.plotly_chart(fig_archive, use_container_width=True)
-    
-    # 中段：アーカイブリスト（表形式）
-    st.subheader("📋 アーカイブリスト")
-    
-    table_data_archive = []
-    for video_id, video_data in archive_history.items():
-        records = video_data.get('records', [])
-        if records:
-            current_views = records[-1]['再生数']
-            growth = calculate_growth(records, period_archive)
-            
-            table_data_archive.append({
-                'タイトル': video_data['タイトル'],
-                '再生数': current_views,
-                f'増加数({period_archive})': growth,
-                '動画ID': video_id
-            })
-    
-    # 再生数でソート
-    table_df_archive = pd.DataFrame(table_data_archive)
-    table_df_archive = table_df_archive.sort_values('再生数', ascending=False)
-    
-    # タイトルをリンクとして表示
-    st.markdown("クリックして動画を視聴できます")
-    
-    for idx, row in table_df_archive.iterrows():
-        video_url = f"https://www.youtube.com/watch?v={row['動画ID']}"
-        growth_text = f"+{row[f'増加数({period_archive})']:,}" if row[f'増加数({period_archive})'] > 0 else "0"
-        
-        col1, col2, col3 = st.columns([3, 1, 1])
-        with col1:
-            st.markdown(f"[{row['タイトル']}]({video_url})")
-        with col2:
-            st.text(f"{row['再生数']:,}回")
-        with col3:
-            st.text(growth_text)
+    display_video_tab('Short', '🎬')
+
+with tab4:
+    display_video_tab('LiveArchive', '🔴')
 
 # フッター
 st.markdown("---")
-st.caption("Powered by GitHub Actions + Streamlit Cloud | 自動更新: 3時間ごと")
+st.caption("Powered by GitHub Actions + Streamlit Cloud | 自動更新: JST 0, 6, 12, 18, 21時")
