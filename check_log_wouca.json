@@ -26,5 +26,20 @@
     "movie_count": 14,
     "archive_count": 34,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-03 15:44:52",
+    "channel_stats": {
+      "チャンネル名": "wouca",
+      "登録者数": 10400,
+      "総再生数": 1272131,
+      "動画数": 49,
+      "取得日時": "2026-02-03 15:44:51"
+    },
+    "total_videos": 47,
+    "movie_count": 2,
+    "short_count": 12,
+    "archive_count": 33,
+    "achievements": []
   }
 ]
