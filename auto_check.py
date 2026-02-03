@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-YouTube チャンネル統計 自動チェックスクリプト
+YouTube チャンネル統計 自動チェックスクリプト（複数チャンネル対応版）
 GitHub Actionsで定期実行される
+Movie/LiveArchive判別機能付き
 """
 
 import os
@@ -15,14 +16,60 @@ from email.mime.multipart import MIMEMultipart
 
 # 環境変数から設定を読み込み
 API_KEY = os.environ.get('YOUTUBE_API_KEY')
-CHANNEL_URL = os.environ.get('CHANNEL_URL', 'https://www.youtube.com/@Mikage_RKMusic')
+CHANNELS_JSON = os.environ.get('CHANNELS', '[]')
 EMAIL_ENABLED = os.environ.get('EMAIL_ENABLED', 'false').lower() == 'true'
 SENDER_EMAIL = os.environ.get('SENDER_EMAIL', '')
 SENDER_PASSWORD = os.environ.get('SENDER_PASSWORD', '')
 RECEIVER_EMAIL = os.environ.get('RECEIVER_EMAIL', '')
 
+# チャンネル設定をパース
+try:
+    CHANNELS = json.loads(CHANNELS_JSON)
+except:
+    CHANNELS = []
+
 # キリ番のリスト
 MILESTONES = [5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000]
+
+def send_email_notification(achievements, channel_name):
+    """キリ番達成をメールで通知"""
+    if not EMAIL_ENABLED or not achievements:
+        return False
+    
+    try:
+        # メール本文を作成
+        subject = f"🎉 [{channel_name}] YouTubeキリ番達成通知 - {len(achievements)}件"
+        
+        body = f"[{channel_name}] YouTubeチャンネルでキリ番を達成しました！\n\n"
+        body += "=" * 50 + "\n\n"
+        
+        for i, achievement in enumerate(achievements, 1):
+            body += f"【{i}】{achievement['タイトル']}\n"
+            body += f"   🎯 {achievement['キリ番']:,}回再生を突破！\n"
+            body += f"   現在の再生数: {achievement['現在の再生数']:,}回\n"
+            body += f"   タイプ: {achievement.get('type', 'N/A')}\n"
+            body += f"   動画URL: https://www.youtube.com/watch?v={achievement['動画ID']}\n\n"
+        
+        body += "=" * 50 + "\n"
+        body += f"通知日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}\n"
+        
+        # MIMEメッセージを作成
+        msg = MIMEMultipart()
+        msg['From'] = SENDER_EMAIL
+        msg['To'] = RECEIVER_EMAIL
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        
+        # Gmailサーバーに接続して送信
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.send_message(msg)
+        
+        return True
+    
+    except Exception as e:
+        print(f"メール送信エラー: {str(e)}")
+        return False
 
 def get_channel_id(youtube, channel_url):
     """チャンネルURLからチャンネルIDを取得"""
@@ -64,8 +111,22 @@ def get_channel_stats(youtube, channel_id):
         print(f"エラー: {str(e)}")
     return None
 
+def determine_video_type(video):
+    """動画タイプを判定（Movie or LiveArchive）"""
+    # liveStreamingDetailsがあればLiveArchive
+    if 'liveStreamingDetails' in video:
+        return 'LiveArchive'
+    
+    # liveBroadcastContentで判定
+    live_broadcast = video.get('snippet', {}).get('liveBroadcastContent', 'none')
+    if live_broadcast in ['live', 'upcoming']:
+        return 'LiveArchive'
+    
+    # デフォルトはMovie
+    return 'Movie'
+
 def get_all_videos(youtube, channel_id):
-    """チャンネルの全動画情報を取得"""
+    """チャンネルの全動画情報を取得（Movie/LiveArchive判別付き）"""
     videos = []
     
     try:
@@ -94,14 +155,16 @@ def get_all_videos(youtube, channel_id):
             video_ids = [item['snippet']['resourceId']['videoId'] 
                         for item in playlist_response['items']]
             
-            # 動画の詳細情報を取得
+            # 動画の詳細情報を取得（liveStreamingDetails追加）
             videos_request = youtube.videos().list(
-                part='snippet,statistics',
+                part='snippet,statistics,liveStreamingDetails',
                 id=','.join(video_ids)
             )
             videos_response = videos_request.execute()
             
             for video in videos_response['items']:
+                video_type = determine_video_type(video)
+                
                 video_data = {
                     '動画ID': video['id'],
                     'タイトル': video['snippet']['title'],
@@ -109,6 +172,7 @@ def get_all_videos(youtube, channel_id):
                     '再生数': int(video['statistics'].get('viewCount', 0)),
                     'いいね数': int(video['statistics'].get('likeCount', 0)),
                     'コメント数': int(video['statistics'].get('commentCount', 0)),
+                    'type': video_type
                 }
                 videos.append(video_data)
             
@@ -119,15 +183,17 @@ def get_all_videos(youtube, channel_id):
                 break
         
         print(f"✓ 完了: {len(videos)}本の動画を取得しました")
+        print(f"  - Movie: {sum(1 for v in videos if v['type'] == 'Movie')}本")
+        print(f"  - LiveArchive: {sum(1 for v in videos if v['type'] == 'LiveArchive')}本")
         
     except Exception as e:
         print(f"エラー: {str(e)}")
     
     return videos
 
-def load_history():
+def load_history(channel_name):
     """過去のデータを読み込む"""
-    history_file = 'video_history.json'
+    history_file = f'video_history_{channel_name}.json'
     if os.path.exists(history_file):
         try:
             with open(history_file, 'r', encoding='utf-8') as f:
@@ -136,21 +202,24 @@ def load_history():
             return {}
     return {}
 
-def save_history(videos, channel_stats):
+def save_history(videos, channel_stats, channel_name):
     """現在のデータを保存"""
-    history_file = 'video_history.json'
+    history_file = f'video_history_{channel_name}.json'
     history_data = {
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'channel_stats': channel_stats,
-        'videos': {video['動画ID']: video['再生数'] for video in videos}
+        'videos': {video['動画ID']: {
+            '再生数': video['再生数'],
+            'type': video['type']
+        } for video in videos}
     }
     with open(history_file, 'w', encoding='utf-8') as f:
         json.dump(history_data, f, ensure_ascii=False, indent=2)
     print(f"履歴を保存しました: {history_file}")
 
-def save_log(videos, channel_stats, achievements):
+def save_log(videos, channel_stats, achievements, channel_name):
     """ログファイルに追記"""
-    log_file = 'check_log.json'
+    log_file = f'check_log_{channel_name}.json'
     
     # 既存ログを読み込み
     if os.path.exists(log_file):
@@ -167,6 +236,8 @@ def save_log(videos, channel_stats, achievements):
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'channel_stats': channel_stats,
         'total_videos': len(videos),
+        'movie_count': sum(1 for v in videos if v['type'] == 'Movie'),
+        'archive_count': sum(1 for v in videos if v['type'] == 'LiveArchive'),
         'achievements': achievements
     }
     logs.append(log_entry)
@@ -178,6 +249,50 @@ def save_log(videos, channel_stats, achievements):
     with open(log_file, 'w', encoding='utf-8') as f:
         json.dump(logs, f, ensure_ascii=False, indent=2)
     print(f"ログを保存しました: {log_file}")
+
+def save_video_daily_history(videos, channel_name):
+    """動画ごとの履歴を保存"""
+    history_file = f'video_daily_history_{channel_name}.json'
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    # 既存履歴を読み込み
+    if os.path.exists(history_file):
+        try:
+            with open(history_file, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+        except:
+            history = {}
+    else:
+        history = {}
+    
+    # 各動画の履歴を追加
+    for video in videos:
+        video_id = video['動画ID']
+        
+        if video_id not in history:
+            history[video_id] = {
+                'タイトル': video['タイトル'],
+                '公開日': video['公開日'],
+                'type': video['type'],
+                'records': []
+            }
+        
+        # 新しいレコードを追加
+        history[video_id]['records'].append({
+            'timestamp': timestamp,
+            '再生数': video['再生数'],
+            'いいね数': video['いいね数'],
+            'コメント数': video['コメント数']
+        })
+        
+        # タイトルとタイプを更新
+        history[video_id]['タイトル'] = video['タイトル']
+        history[video_id]['type'] = video['type']
+    
+    # 保存
+    with open(history_file, 'w', encoding='utf-8') as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+    print(f"動画別履歴を保存しました: {history_file}")
 
 def check_milestones(current_videos, history):
     """キリ番達成をチェック"""
@@ -193,7 +308,7 @@ def check_milestones(current_videos, history):
         current_views = video['再生数']
         
         if video_id in old_data:
-            old_views = old_data[video_id]
+            old_views = old_data[video_id]['再生数']
             
             # 突破したキリ番を検出
             for milestone in MILESTONES:
@@ -202,72 +317,28 @@ def check_milestones(current_videos, history):
                         'タイトル': video['タイトル'],
                         'キリ番': milestone,
                         '現在の再生数': current_views,
-                        '動画ID': video_id
+                        '動画ID': video_id,
+                        'type': video['type']
                     })
     
     return achievements
 
-def send_email_notification(achievements):
-    """キリ番達成をメールで通知"""
-    if not EMAIL_ENABLED or not achievements:
-        return False
+def process_channel(youtube, channel_config):
+    """1つのチャンネルを処理"""
+    channel_name = channel_config['name']
+    channel_url = channel_config['url']
     
-    try:
-        # メール本文を作成
-        subject = f"🎉 YouTubeキリ番達成通知 - {len(achievements)}件"
-        
-        body = "YouTubeチャンネルでキリ番を達成しました！\n\n"
-        body += "=" * 50 + "\n\n"
-        
-        for i, achievement in enumerate(achievements, 1):
-            body += f"【{i}】{achievement['タイトル']}\n"
-            body += f"   🎯 {achievement['キリ番']:,}回再生を突破！\n"
-            body += f"   現在の再生数: {achievement['現在の再生数']:,}回\n"
-            body += f"   動画URL: https://www.youtube.com/watch?v={achievement['動画ID']}\n\n"
-        
-        body += "=" * 50 + "\n"
-        body += f"通知日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}\n"
-        
-        # MIMEメッセージを作成
-        msg = MIMEMultipart()
-        msg['From'] = SENDER_EMAIL
-        msg['To'] = RECEIVER_EMAIL
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain', 'utf-8'))
-        
-        # Gmailサーバーに接続して送信
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(SENDER_EMAIL, SENDER_PASSWORD)
-            server.send_message(msg)
-        
-        print(f"✉️ メール通知を送信しました: {len(achievements)}件")
-        return True
-    
-    except Exception as e:
-        print(f"メール送信エラー: {str(e)}")
-        return False
-
-def main():
-    """メイン処理"""
+    print("\n" + "=" * 50)
+    print(f"処理中: {channel_name}")
     print("=" * 50)
-    print("YouTube統計 自動チェック開始")
-    print(f"実行日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("=" * 50)
-    
-    if not API_KEY:
-        print("❌ エラー: YouTube API キーが設定されていません")
-        return
-    
-    # YouTube API クライアントを作成
-    youtube = build('youtube', 'v3', developerKey=API_KEY)
     
     # チャンネルIDを取得
-    print(f"\nチャンネルURL: {CHANNEL_URL}")
-    channel_id = get_channel_id(youtube, CHANNEL_URL)
+    print(f"\nチャンネルURL: {channel_url}")
+    channel_id = get_channel_id(youtube, channel_url)
     
     if not channel_id:
-        print("❌ エラー: チャンネルが見つかりませんでした")
-        return
+        print(f"❌ エラー: {channel_name} のチャンネルが見つかりませんでした")
+        return False
     
     print(f"チャンネルID: {channel_id}")
     
@@ -276,8 +347,8 @@ def main():
     channel_stats = get_channel_stats(youtube, channel_id)
     
     if not channel_stats:
-        print("❌ エラー: チャンネル情報を取得できませんでした")
-        return
+        print(f"❌ エラー: {channel_name} のチャンネル情報を取得できませんでした")
+        return False
     
     print(f"チャンネル名: {channel_stats['チャンネル名']}")
     print(f"登録者数: {channel_stats['登録者数']:,}人")
@@ -289,11 +360,11 @@ def main():
     videos = get_all_videos(youtube, channel_id)
     
     if not videos:
-        print("❌ エラー: 動画情報を取得できませんでした")
-        return
+        print(f"❌ エラー: {channel_name} の動画情報を取得できませんでした")
+        return False
     
     # 履歴を読み込み
-    history = load_history()
+    history = load_history(channel_name)
     
     # キリ番チェック
     achievements = check_milestones(videos, history)
@@ -301,20 +372,53 @@ def main():
     if achievements:
         print(f"\n🎉 キリ番達成: {len(achievements)}件")
         for achievement in achievements:
-            print(f"  - {achievement['タイトル']}: {achievement['キリ番']:,}回突破")
+            print(f"  - {achievement['タイトル']}: {achievement['キリ番']:,}回突破 [{achievement['type']}]")
         
         # メール通知
         if EMAIL_ENABLED:
-            send_email_notification(achievements)
+            if send_email_notification(achievements, channel_name):
+                print("✉️ メール通知を送信しました")
     else:
         print("\n新しいキリ番達成はありませんでした")
     
     # データを保存
-    save_history(videos, channel_stats)
-    save_log(videos, channel_stats, achievements)
+    save_history(videos, channel_stats, channel_name)
+    save_log(videos, channel_stats, achievements, channel_name)
+    save_video_daily_history(videos, channel_name)
+    
+    print(f"\n✓ {channel_name} の処理完了")
+    return True
+
+def main():
+    """メイン処理"""
+    print("=" * 50)
+    print("YouTube統計 自動チェック開始（複数チャンネル対応）")
+    print(f"実行日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("=" * 50)
+    
+    if not API_KEY:
+        print("❌ エラー: YouTube API キーが設定されていません")
+        return
+    
+    if not CHANNELS:
+        print("❌ エラー: チャンネル設定が見つかりません")
+        return
+    
+    print(f"\n処理対象チャンネル数: {len(CHANNELS)}")
+    for ch in CHANNELS:
+        print(f"  - {ch['name']}")
+    
+    # YouTube API クライアントを作成
+    youtube = build('youtube', 'v3', developerKey=API_KEY)
+    
+    # 各チャンネルを処理
+    success_count = 0
+    for channel_config in CHANNELS:
+        if process_channel(youtube, channel_config):
+            success_count += 1
     
     print("\n" + "=" * 50)
-    print("✓ 処理完了")
+    print(f"✓ 全処理完了: {success_count}/{len(CHANNELS)} チャンネル成功")
     print("=" * 50)
 
 if __name__ == '__main__':
