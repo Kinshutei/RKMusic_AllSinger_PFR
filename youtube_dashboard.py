@@ -1,36 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-YouTube チャンネル統計ダッシュボード (Streamlit Cloud版)
-ライトモード/ダークモード切り替え対応
-"""
-
-import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
-import plotly.express as px
-import plotly.graph_objects as go
-import json
-import os
-import glob
-
-# ページ設定
-st.set_page_config(
-    page_title="RK Music 統計ダッシュボード",
-    page_icon="🎵",
-    layout="wide"
-)
-
-# セッション状態の初期化
-if 'theme' not in st.session_state:
-    st.session_state.theme = 'light'  # デフォルトはライトモード
-if 'selected_talent' not in st.session_state:
-    st.session_state.selected_talent = None
-
-# テーマに応じたCSS - HTMLとして直接埋め込む
-def apply_theme_css(theme):
-    """テーマに応じたCSSを適用"""
+# テーマに応じたCSSを返す（修正版）
+def get_theme_css(theme):
+    """テーマに応じたCSSを返す"""
     
+    # ベースCSS（<style>タグなし）
     base_css = """
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
     
@@ -117,8 +89,9 @@ def apply_theme_css(theme):
     }
     """
     
+    # テーマ別CSS（<style>タグなし）
     if theme == 'dark':
-        theme_css = base_css + """
+        theme_css = """
         /* ダークモード */
         .stApp {
             background: linear-gradient(135deg, #0E1117 0%, #1a1d29 100%);
@@ -215,8 +188,9 @@ def apply_theme_css(theme):
             background: #5a5a6a;
         }
         """
+    
     else:  # light mode
-        theme_css = base_css + """
+        theme_css = """
         /* ライトモード */
         .stApp {
             background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
@@ -313,14 +287,8 @@ def apply_theme_css(theme):
         }
         """
     
-    # HTMLコンポーネントとして埋め込み（表示されないように）
-    st.components.v1.html(
-        f"<style>{theme_css}</style>",
-        height=0,
-    )
+    # 最後に一つの<style>タグで囲んで返す
+    return f"<style>{base_css}{theme_css}</style>"
 
-# CSSを適用（画面に表示されない）
-apply_theme_css(st.session_state.theme)
-
-# 以下、元のコードと同じ...
-# （キリ番のリスト以降は変更なし）
+# CSSを適用
+st.markdown(get_theme_css(st.session_state.theme), unsafe_allow_html=True)
