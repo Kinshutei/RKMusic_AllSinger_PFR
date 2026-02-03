@@ -2,8 +2,8 @@ name: YouTube Stats Auto Check
 
 on:
   schedule:
-    # 3時間ごとに実行 (UTC時刻: 0, 3, 6, 9, 12, 15, 18, 21時)
-    - cron: '0 */3 * * *'
+    # JST 0, 6, 12, 18, 21時に実行 (UTC: 15, 21, 3, 9, 12時)
+    - cron: '0 15,21,3,9,12 * * *'
   workflow_dispatch:  # 手動実行も可能
 
 jobs:
