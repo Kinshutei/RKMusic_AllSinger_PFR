@@ -364,14 +364,28 @@ with tab2:
             table_data.append({
                 'タイトル': video_data['タイトル'],
                 '再生数': current_views,
-                f'増加数({period})': f"+{growth:,}" if growth > 0 else "0"
+                f'増加数({period})': growth,
+                '動画ID': video_id
             })
     
     # 再生数でソート
     table_df = pd.DataFrame(table_data)
     table_df = table_df.sort_values('再生数', ascending=False)
     
-    st.dataframe(table_df, use_container_width=True, height=500)
+    # タイトルをリンクとして表示
+    st.markdown("クリックして動画を視聴できます")
+    
+    for idx, row in table_df.iterrows():
+        video_url = f"https://www.youtube.com/watch?v={row['動画ID']}"
+        growth_text = f"+{row[f'増加数({period})']:,}" if row[f'増加数({period})'] > 0 else "0"
+        
+        col1, col2, col3 = st.columns([3, 1, 1])
+        with col1:
+            st.markdown(f"[{row['タイトル']}]({video_url})")
+        with col2:
+            st.text(f"{row['再生数']:,}回")
+        with col3:
+            st.text(growth_text)
 
 with tab3:
     st.header("🔴 アーカイブ（LiveArchive）")
@@ -456,14 +470,28 @@ with tab3:
             table_data_archive.append({
                 'タイトル': video_data['タイトル'],
                 '再生数': current_views,
-                f'増加数({period_archive})': f"+{growth:,}" if growth > 0 else "0"
+                f'増加数({period_archive})': growth,
+                '動画ID': video_id
             })
     
     # 再生数でソート
     table_df_archive = pd.DataFrame(table_data_archive)
     table_df_archive = table_df_archive.sort_values('再生数', ascending=False)
     
-    st.dataframe(table_df_archive, use_container_width=True, height=500)
+    # タイトルをリンクとして表示
+    st.markdown("クリックして動画を視聴できます")
+    
+    for idx, row in table_df_archive.iterrows():
+        video_url = f"https://www.youtube.com/watch?v={row['動画ID']}"
+        growth_text = f"+{row[f'増加数({period_archive})']:,}" if row[f'増加数({period_archive})'] > 0 else "0"
+        
+        col1, col2, col3 = st.columns([3, 1, 1])
+        with col1:
+            st.markdown(f"[{row['タイトル']}]({video_url})")
+        with col2:
+            st.text(f"{row['再生数']:,}回")
+        with col3:
+            st.text(growth_text)
 
 # フッター
 st.markdown("---")
