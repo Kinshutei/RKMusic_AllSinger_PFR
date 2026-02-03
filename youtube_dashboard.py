@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 YouTube チャンネル統計ダッシュボード (Streamlit Cloud版)
-Playboard風ダークモードデザイン
+ライトモード/ダークモード切り替え対応
 """
 
 import streamlit as st
@@ -21,186 +21,309 @@ st.set_page_config(
     layout="wide"
 )
 
-# Playboard風ダークモードCSS
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+# セッション状態の初期化
+if 'theme' not in st.session_state:
+    st.session_state.theme = 'light'  # デフォルトはライトモード
+if 'selected_talent' not in st.session_state:
+    st.session_state.selected_talent = None
 
-/* ベース設定 */
-html, body, [class*="css"]  {
-    font-family: 'Noto Sans JP', sans-serif !important;
-}
+# テーマに応じたCSS
+def get_theme_css(theme):
+    """テーマに応じたCSSを返す"""
+    
+    base_css = """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+    
+    html, body, [class*="css"]  {
+        font-family: 'Noto Sans JP', sans-serif !important;
+    }
+    
+    /* タブ */
+    button[data-baseweb="tab"] {
+        background: transparent !important;
+        font-weight: 500 !important;
+        padding: 12px 24px !important;
+    }
+    
+    button[data-baseweb="tab"]:hover {
+        font-weight: 600 !important;
+    }
+    
+    button[data-baseweb="tab"][aria-selected="true"] {
+        font-weight: 700 !important;
+    }
+    
+    /* ボタン */
+    .stButton > button {
+        width: 100%;
+        border-radius: 8px !important;
+        padding: 12px 20px !important;
+        font-size: 16px !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
+        margin: 4px 0 !important;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+    }
+    
+    /* サブヘッダー */
+    h2, h3 {
+        font-weight: 700 !important;
+        margin-bottom: 16px !important;
+    }
+    
+    /* リンク */
+    a {
+        text-decoration: none !important;
+        transition: all 0.2s ease !important;
+        font-weight: 500 !important;
+    }
+    
+    a:hover {
+        text-decoration: underline !important;
+    }
+    
+    /* キャプション */
+    div[data-testid="stCaption"] {
+        font-size: 12px !important;
+    }
+    
+    /* スクロールバー */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        border-radius: 4px;
+    }
+    
+    /* メトリクス */
+    div[data-testid="stMetric"] {
+        padding: 16px;
+        border-radius: 10px;
+    }
+    
+    div[data-testid="stMetricLabel"] {
+        font-size: 14px !important;
+        font-weight: 500 !important;
+    }
+    
+    div[data-testid="stMetricValue"] {
+        font-size: 28px !important;
+        font-weight: 700 !important;
+    }
+    </style>
+    """
+    
+    if theme == 'dark':
+        dark_css = """
+        <style>
+        /* ダークモード */
+        .stApp {
+            background: linear-gradient(135deg, #0E1117 0%, #1a1d29 100%);
+        }
+        
+        section[data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+        }
+        
+        section[data-testid="stSidebar"] > div {
+            background: transparent;
+        }
+        
+        div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
+            background: rgba(38, 39, 48, 0.6);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        div[data-testid="stMetric"] {
+            background: linear-gradient(135deg, #1e2330 0%, #262730 100%);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        div[data-testid="stMetricLabel"] {
+            color: #a0a0b0 !important;
+        }
+        
+        div[data-testid="stMetricValue"] {
+            color: #ffffff !important;
+        }
+        
+        button[data-baseweb="tab"] {
+            color: #a0a0b0 !important;
+            border-bottom: 2px solid transparent !important;
+        }
+        
+        button[data-baseweb="tab"]:hover {
+            color: #ffffff !important;
+            border-bottom: 2px solid #4a9eff !important;
+        }
+        
+        button[data-baseweb="tab"][aria-selected="true"] {
+            color: #4a9eff !important;
+            border-bottom: 2px solid #4a9eff !important;
+        }
+        
+        .stButton > button {
+            background: #1e2330 !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        }
+        
+        .stButton > button:hover {
+            background: #262730 !important;
+            border: 1px solid #4a9eff !important;
+            box-shadow: 0 4px 8px rgba(74, 158, 255, 0.2) !important;
+        }
+        
+        h2, h3 {
+            color: #ffffff !important;
+        }
+        
+        p, span, div {
+            color: #d0d0d8 !important;
+        }
+        
+        a {
+            color: #4a9eff !important;
+        }
+        
+        a:hover {
+            color: #6eb5ff !important;
+        }
+        
+        div[data-testid="stCaption"] {
+            color: #8a8a9a !important;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1a1d29;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #4a4a5a;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5a5a6a;
+        }
+        </style>
+        """
+        return base_css + dark_css
+    
+    else:  # light mode
+        light_css = """
+        <style>
+        /* ライトモード */
+        .stApp {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+        }
+        
+        section[data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+        }
+        
+        section[data-testid="stSidebar"] > div {
+            background: transparent;
+        }
+        
+        div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        div[data-testid="stMetric"] {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        
+        div[data-testid="stMetricLabel"] {
+            color: #6c757d !important;
+        }
+        
+        div[data-testid="stMetricValue"] {
+            color: #212529 !important;
+        }
+        
+        button[data-baseweb="tab"] {
+            color: #6c757d !important;
+            border-bottom: 2px solid transparent !important;
+        }
+        
+        button[data-baseweb="tab"]:hover {
+            color: #212529 !important;
+            border-bottom: 2px solid #0d6efd !important;
+        }
+        
+        button[data-baseweb="tab"][aria-selected="true"] {
+            color: #0d6efd !important;
+            border-bottom: 2px solid #0d6efd !important;
+        }
+        
+        .stButton > button {
+            background: #ffffff !important;
+            color: #212529 !important;
+            border: 1px solid #dee2e6 !important;
+        }
+        
+        .stButton > button:hover {
+            background: #f8f9fa !important;
+            border: 1px solid #0d6efd !important;
+            box-shadow: 0 4px 8px rgba(13, 110, 253, 0.15) !important;
+        }
+        
+        h2, h3 {
+            color: #212529 !important;
+        }
+        
+        p, span, div {
+            color: #495057 !important;
+        }
+        
+        a {
+            color: #0d6efd !important;
+        }
+        
+        a:hover {
+            color: #0a58ca !important;
+        }
+        
+        div[data-testid="stCaption"] {
+            color: #6c757d !important;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f8f9fa;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #dee2e6;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #adb5bd;
+        }
+        </style>
+        """
+        return base_css + light_css
 
-/* メイン背景 */
-.stApp {
-    background: linear-gradient(135deg, #0E1117 0%, #1a1d29 100%);
-}
-
-/* サイドバー */
-section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
-}
-
-section[data-testid="stSidebar"] > div {
-    background: transparent;
-}
-
-/* カード型コンテナ */
-div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
-    background: rgba(38, 39, 48, 0.6);
-    border-radius: 12px;
-    padding: 20px;
-    margin: 10px 0;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* メトリクスカード */
-div[data-testid="stMetric"] {
-    background: linear-gradient(135deg, #1e2330 0%, #262730 100%);
-    padding: 16px;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-div[data-testid="stMetricLabel"] {
-    color: #a0a0b0 !important;
-    font-size: 14px !important;
-    font-weight: 500 !important;
-}
-
-div[data-testid="stMetricValue"] {
-    color: #ffffff !important;
-    font-size: 28px !important;
-    font-weight: 700 !important;
-}
-
-/* タブ */
-button[data-baseweb="tab"] {
-    background: transparent !important;
-    color: #a0a0b0 !important;
-    border-bottom: 2px solid transparent !important;
-    font-weight: 500 !important;
-    padding: 12px 24px !important;
-}
-
-button[data-baseweb="tab"]:hover {
-    color: #ffffff !important;
-    border-bottom: 2px solid #4a9eff !important;
-}
-
-button[data-baseweb="tab"][aria-selected="true"] {
-    color: #4a9eff !important;
-    border-bottom: 2px solid #4a9eff !important;
-    font-weight: 700 !important;
-}
-
-/* タレント選択ボタン */
-.stButton > button {
-    width: 100%;
-    background: #1e2330 !important;
-    color: #ffffff !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 8px !important;
-    padding: 12px 20px !important;
-    font-size: 16px !important;
-    font-weight: 500 !important;
-    transition: all 0.3s ease !important;
-    margin: 4px 0 !important;
-}
-
-.stButton > button:hover {
-    background: #262730 !important;
-    border: 1px solid #4a9eff !important;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(74, 158, 255, 0.2) !important;
-}
-
-/* サブヘッダー */
-h2, h3 {
-    color: #ffffff !important;
-    font-weight: 700 !important;
-    margin-bottom: 16px !important;
-}
-
-/* テキスト */
-p, span, div {
-    color: #d0d0d8 !important;
-}
-
-/* リンク */
-a {
-    color: #4a9eff !important;
-    text-decoration: none !important;
-    transition: all 0.2s ease !important;
-    font-weight: 500 !important;
-}
-
-a:hover {
-    color: #6eb5ff !important;
-    text-decoration: underline !important;
-}
-
-/* プログレスバー等 */
-div[data-testid="stCaption"] {
-    color: #8a8a9a !important;
-    font-size: 12px !important;
-}
-
-/* スクロールバー */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: #1a1d29;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #4a4a5a;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #5a5a6a;
-}
-
-/* グラフ背景 */
-.js-plotly-plot {
-    background: rgba(38, 39, 48, 0.3) !important;
-    border-radius: 8px;
-}
-
-/* 統計情報ボックス */
-.stat-box {
-    background: linear-gradient(135deg, #1e2330 0%, #262730 100%);
-    border-radius: 10px;
-    padding: 20px;
-    margin: 10px 0;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* 動画リストのカラム */
-.video-row {
-    background: rgba(30, 35, 48, 0.5);
-    border-radius: 8px;
-    padding: 12px;
-    margin: 6px 0;
-    border-left: 3px solid #4a9eff;
-    transition: all 0.2s ease;
-}
-
-.video-row:hover {
-    background: rgba(38, 39, 48, 0.8);
-    transform: translateX(4px);
-    box-shadow: 0 2px 8px rgba(74, 158, 255, 0.2);
-}
-</style>
-""", unsafe_allow_html=True)
+# CSSを適用
+st.markdown(get_theme_css(st.session_state.theme), unsafe_allow_html=True)
 
 # キリ番のリスト
 MILESTONES = [5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000]
@@ -284,10 +407,6 @@ def calculate_growth(records, period='1DAY'):
         return records[-1]['再生数'] - old_record['再生数']
     return 0
 
-# セッション状態の初期化
-if 'selected_talent' not in st.session_state:
-    st.session_state.selected_talent = None
-
 # メインUI
 st.title("🎵 RK Music 統計ダッシュボード")
 st.markdown("*自動取得データを表示中（JST 0, 6, 12, 18, 21時更新）*")
@@ -295,6 +414,17 @@ st.markdown("---")
 
 # サイドバー
 with st.sidebar:
+    # テーマ切り替えボタン
+    if st.session_state.theme == 'light':
+        if st.button("🌙 ダークモードに切り替え", use_container_width=True):
+            st.session_state.theme = 'dark'
+            st.rerun()
+    else:
+        if st.button("☀️ ライトモードに切り替え", use_container_width=True):
+            st.session_state.theme = 'light'
+            st.rerun()
+    
+    st.markdown("---")
     st.header("🎵 RK Music")
     st.markdown("---")
     st.subheader("タレント")
@@ -342,6 +472,22 @@ if not history:
     st.stop()
 
 channel_stats = history.get('channel_stats', {})
+
+# グラフのテーマ設定
+def get_plot_theme():
+    """グラフのテーマを返す"""
+    if st.session_state.theme == 'dark':
+        return {
+            'plot_bgcolor': 'rgba(30, 35, 48, 0.3)',
+            'paper_bgcolor': 'rgba(38, 39, 48, 0.3)',
+            'font_color': '#d0d0d8'
+        }
+    else:
+        return {
+            'plot_bgcolor': 'rgba(255, 255, 255, 0.8)',
+            'paper_bgcolor': 'rgba(255, 255, 255, 0.8)',
+            'font_color': '#495057'
+        }
 
 # タブ表示
 tab1, tab2, tab3, tab4 = st.tabs(["🏠 General", "📹 Movie", "🎬 Short", "🔴 Archive"])
@@ -459,12 +605,13 @@ def render_video_tab(video_history, video_type, type_name, emoji):
     if plot_data:
         df_plot = pd.DataFrame(plot_data)
         fig = px.line(df_plot, x='日時', y='再生数', color='動画', title=f'再生数推移 TOP5', markers=True)
+        theme = get_plot_theme()
         fig.update_layout(
             height=500,
             font_family='Noto Sans JP',
-            plot_bgcolor='rgba(30, 35, 48, 0.3)',
-            paper_bgcolor='rgba(38, 39, 48, 0.3)',
-            font_color='#d0d0d8'
+            plot_bgcolor=theme['plot_bgcolor'],
+            paper_bgcolor=theme['paper_bgcolor'],
+            font_color=theme['font_color']
         )
         st.plotly_chart(fig, use_container_width=True)
     
@@ -491,7 +638,6 @@ def render_video_tab(video_history, video_type, type_name, emoji):
         video_url = f"https://www.youtube.com/watch?v={row['動画ID']}"
         growth_text = f"+{row['増加数']:,}" if row['増加数'] > 0 else "0"
         
-        st.markdown(f'<div class="video-row">', unsafe_allow_html=True)
         col1, col2, col3 = st.columns([3, 1, 1])
         with col1:
             st.markdown(f"[{row['タイトル']}]({video_url})")
@@ -499,7 +645,6 @@ def render_video_tab(video_history, video_type, type_name, emoji):
             st.text(f"{row['再生数']:,}回")
         with col3:
             st.text(growth_text)
-        st.markdown('</div>', unsafe_allow_html=True)
 
 with tab2:
     render_video_tab(video_history, 'Movie', '動画（Movie）', '📹')
