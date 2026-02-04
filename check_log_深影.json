@@ -43,5 +43,20 @@
     "short_count": 23,
     "archive_count": 123,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-04 10:13:27",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 21400,
+      "総再生数": 1661781,
+      "動画数": 169,
+      "取得日時": "2026-02-04 10:13:11"
+    },
+    "total_videos": 159,
+    "movie_count": 13,
+    "short_count": 23,
+    "archive_count": 123,
+    "achievements": []
   }
 ]
