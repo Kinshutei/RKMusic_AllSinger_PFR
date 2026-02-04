@@ -1,15 +1,15 @@
 {
-  "timestamp": "2026-02-04 02:09:41",
+  "timestamp": "2026-02-04 02:25:21",
   "channel_stats": {
     "チャンネル名": "深影",
     "登録者数": 21300,
     "総再生数": 1661781,
     "動画数": 169,
-    "取得日時": "2026-02-04 02:06:49"
+    "取得日時": "2026-02-04 02:22:42"
   },
   "videos": {
     "dng1YYx9VFg": {
-      "再生数": 4178,
+      "再生数": 4193,
       "type": "LiveArchive"
     },
     "cFMnp5j8xjY": {
@@ -21,11 +21,11 @@
       "type": "LiveArchive"
     },
     "beLIyIKt2vY": {
-      "再生数": 4469,
+      "再生数": 4472,
       "type": "Short"
     },
     "LXjR6CfR9Q0": {
-      "再生数": 15579,
+      "再生数": 15591,
       "type": "LiveArchive"
     },
     "dy1q4Mwb9Eg": {
@@ -37,7 +37,7 @@
       "type": "LiveArchive"
     },
     "gOWNiaFMKS0": {
-      "再生数": 1962,
+      "再生数": 1961,
       "type": "LiveArchive"
     },
     "rrCOr8_OdQk": {
@@ -77,7 +77,7 @@
       "type": "LiveArchive"
     },
     "xdA63Qt3qFs": {
-      "再生数": 6338,
+      "再生数": 6337,
       "type": "LiveArchive"
     },
     "FzVA6irYIbs": {
@@ -93,7 +93,7 @@
       "type": "Short"
     },
     "bj2VZ_FaVyM": {
-      "再生数": 6292,
+      "再生数": 6293,
       "type": "LiveArchive"
     },
     "tATj6GfwJxI": {
@@ -161,7 +161,7 @@
       "type": "LiveArchive"
     },
     "TaChGBzjSiM": {
-      "再生数": 5701,
+      "再生数": 5703,
       "type": "Short"
     },
     "CVUE--YBF7U": {
@@ -209,7 +209,7 @@
       "type": "Short"
     },
     "tvULVpzqHlU": {
-      "再生数": 354613,
+      "再生数": 354655,
       "type": "LiveArchive"
     },
     "V60jXq6zqv8": {
@@ -309,7 +309,7 @@
       "type": "LiveArchive"
     },
     "qmYvqosYF1A": {
-      "再生数": 4994,
+      "再生数": 4995,
       "type": "Short"
     },
     "CL_B7VlK9ts": {
@@ -481,7 +481,7 @@
       "type": "LiveArchive"
     },
     "OfHhq9Uux8E": {
-      "再生数": 3532,
+      "再生数": 3533,
       "type": "Short"
     },
     "2YpUBL04rzo": {
@@ -593,7 +593,7 @@
       "type": "Movie"
     },
     "mFRPu8Ew_is": {
-      "再生数": 8541,
+      "再生数": 8540,
       "type": "LiveArchive"
     },
     "zOMkGRj98K8": {
