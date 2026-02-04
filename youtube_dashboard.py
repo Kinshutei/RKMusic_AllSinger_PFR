@@ -432,6 +432,28 @@ def calculate_growth(records, period='1DAY'):
         return records[-1]['再生数'] - old_record['再生数']
     return 0
 
+def aggregate_records_by_date(records):
+    """同じ日付のレコードは最新のみを使用"""
+    date_records = {}
+    
+    for record in records:
+        try:
+            timestamp = datetime.strptime(record['timestamp'], '%Y-%m-%d %H:%M:%S')
+            date_key = timestamp.strftime('%Y-%m-%d')  # 日付のみ
+            
+            # 既存データがないか、より新しいタイムスタンプなら更新
+            if date_key not in date_records:
+                date_records[date_key] = record
+            else:
+                existing_time = datetime.strptime(date_records[date_key]['timestamp'], '%Y-%m-%d %H:%M:%S')
+                if timestamp > existing_time:
+                    date_records[date_key] = record  # より新しい方を採用
+        except:
+            continue
+    
+    # タイムスタンプでソートして返す
+    return sorted(date_records.values(), key=lambda x: x['timestamp'])
+
 # メインUI
 st.title("🎵 RK Music 統計ダッシュボード")
 st.markdown("*自動取得データを表示中（JST 0, 6, 12, 18, 21時更新）*")
@@ -628,13 +650,17 @@ def render_video_tab(video_history, video_type, type_name, emoji):
     for video_id in top5_ids:
         video_data = filtered_history[video_id]
         records = video_data.get('records', [])
+        
+        # 日付で集約（同じ日は最新のみ）
+        records = aggregate_records_by_date(records)
+        
         # 期間でフィルタリング
         for record in records:
             try:
                 record_date = datetime.strptime(record['timestamp'], '%Y-%m-%d %H:%M:%S')
                 if record_date >= cutoff:
                     plot_data.append({
-                        '日時': record['timestamp'],
+                        '日時': record['timestamp'][:10],  # 日付のみ表示
                         '動画': video_data['タイトル'][:30] + '...',
                         '再生数': record['再生数']
                     })
