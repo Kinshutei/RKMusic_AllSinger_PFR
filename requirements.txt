@@ -3,3 +3,4 @@ streamlit==1.53.1
 pandas==2.3.3
 plotly==6.5.2
 requests==2.31.0
+isodate==0.6.1
