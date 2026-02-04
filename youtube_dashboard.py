@@ -145,6 +145,33 @@ def get_theme_css(theme):
     div[data-baseweb="select"] {
         margin-bottom: 0.5rem !important;
     }
+    
+    /* コンテンツブロックの罫線とスペーシング */
+    .content-block {
+        border: 1px solid;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+    
+    /* カラム間の間隔を詰める */
+    div[data-testid="column"] {
+        padding: 0 4px !important;
+    }
+    
+    div[data-testid="column"]:first-child {
+        padding-left: 0 !important;
+    }
+    
+    div[data-testid="column"]:last-child {
+        padding-right: 0 !important;
+    }
+    
+    /* サブヘッダーのマージンを調整 */
+    .content-block h3 {
+        margin-top: 0 !important;
+        margin-bottom: 12px !important;
+    }
     """
     
     if theme == 'dark':
@@ -244,6 +271,11 @@ def get_theme_css(theme):
         ::-webkit-scrollbar-thumb:hover {
             background: #5a5a6a;
         }
+        
+        .content-block {
+            border-color: rgba(255, 255, 255, 0.1);
+            background: rgba(38, 39, 48, 0.4);
+        }
         """
     
     else:  # light mode
@@ -341,6 +373,11 @@ def get_theme_css(theme):
         
         ::-webkit-scrollbar-thumb:hover {
             background: #adb5bd;
+        }
+        
+        .content-block {
+            border-color: rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.8);
         }
         """
     
@@ -540,39 +577,42 @@ tab1, tab2, tab3, tab4 = st.tabs(["🏠 General", "📹 Movie", "🎬 Short", "�
 with tab1:
     st.header(f"📺 {channel_stats.get('チャンネル名', selected_talent)}")
     
-    col1, col2 = st.columns(2)
+    # 1行目: チャンネル概要（全幅）
+    st.markdown('<div class="content-block">', unsafe_allow_html=True)
+    st.subheader("📊 チャンネル概要")
+    metric_col1, metric_col2, metric_col3 = st.columns(3)
+    with metric_col1:
+        st.metric("登録者数", f"{channel_stats['登録者数']:,}人")
+    with metric_col2:
+        st.metric("総再生数", f"{channel_stats['総再生数']:,}回")
+    with metric_col3:
+        st.metric("動画数", f"{channel_stats['動画数']:,}本")
+    st.caption(f"最終更新: {history.get('timestamp', 'N/A')}")
+    st.markdown('</div>', unsafe_allow_html=True)
     
-    with col1:
-        st.subheader("📊 チャンネル概要")
-        metric_col1, metric_col2, metric_col3 = st.columns(3)
-        with metric_col1:
-            st.metric("登録者数", f"{channel_stats['登録者数']:,}人")
-        with metric_col2:
-            st.metric("総再生数", f"{channel_stats['総再生数']:,}回")
-        with metric_col3:
-            st.metric("動画数", f"{channel_stats['動画数']:,}本")
-        st.caption(f"最終更新: {history.get('timestamp', 'N/A')}")
+    # 2行目: 再生数TOP5（全幅）
+    st.markdown('<div class="content-block">', unsafe_allow_html=True)
+    st.subheader("🏆 再生数TOP5")
+    if video_history:
+        video_list = []
+        for video_id, video_data in video_history.items():
+            records = video_data.get('records', [])
+            if records:
+                video_type = video_data.get('type', 'Movie')
+                emoji = "📹" if video_type == 'Movie' else ("🎬" if video_type == 'Short' else "🔴")
+                video_list.append({
+                    'タイトル': video_data['タイトル'],
+                    '再生数': records[-1]['再生数'],
+                    'emoji': emoji
+                })
+        video_list.sort(key=lambda x: x['再生数'], reverse=True)
+        for i, video in enumerate(video_list[:5], 1):
+            st.markdown(f"{i}. {video['emoji']} {video['タイトル'][:40]}... - **{video['再生数']:,}回**")
+    else:
+        st.info("データを蓄積中...")
+    st.markdown('</div>', unsafe_allow_html=True)
     
-    with col2:
-        st.subheader("🏆 再生数TOP5")
-        if video_history:
-            video_list = []
-            for video_id, video_data in video_history.items():
-                records = video_data.get('records', [])
-                if records:
-                    video_type = video_data.get('type', 'Movie')
-                    emoji = "📹" if video_type == 'Movie' else ("🎬" if video_type == 'Short' else "🔴")
-                    video_list.append({
-                        'タイトル': video_data['タイトル'],
-                        '再生数': records[-1]['再生数'],
-                        'emoji': emoji
-                    })
-            video_list.sort(key=lambda x: x['再生数'], reverse=True)
-            for i, video in enumerate(video_list[:5], 1):
-                st.markdown(f"{i}. {video['emoji']} {video['タイトル'][:40]}... - **{video['再生数']:,}回**")
-        else:
-            st.info("データを蓄積中...")
-    
+    # 3行目: 急上昇セクション（3カラム）
     col3, col4, col5 = st.columns(3)
     
     for col, video_type, title, emoji in [
@@ -581,6 +621,7 @@ with tab1:
         (col5, 'LiveArchive', '急上昇 Archive', '🔴')
     ]:
         with col:
+            st.markdown('<div class="content-block">', unsafe_allow_html=True)
             st.subheader(f"{emoji} {title}")
             if video_history:
                 growth_list = []
@@ -602,6 +643,7 @@ with tab1:
                     st.markdown(f"{i}. {video['タイトル'][:30]}... - **+{video['増加数']:,}回** ({video['伸び率']:.1f}%)")
             else:
                 st.info("データを蓄積中...")
+            st.markdown('</div>', unsafe_allow_html=True)
 
 def render_video_tab(video_history, video_type, type_name, emoji):
     """動画タブの共通レンダリング"""
