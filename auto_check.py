@@ -44,18 +44,29 @@ def is_short_video(video_id):
         return False
 
 def determine_video_type(video):
-    """動画タイプを判定（Movie/Short/LiveArchive）"""
-    # 実際にライブ配信されたかチェック（actualStartTimeがあれば配信済み）
-    if 'liveStreamingDetails' in video:
-        if 'actualStartTime' in video['liveStreamingDetails']:
-            return 'LiveArchive'
+    """動画タイプを判定（Movie/Short/LiveArchive）
     
-    # ShortかどうかをURLで判定
+    判定順序：
+    1. Short: URLで判定（/shorts/パス）- 最優先
+    2. LiveArchive: liveBroadcastContent が "completed"
+    3. Movie: それ以外
+    """
+    # ShortかどうかをURLで判定（最優先）
     video_id = video['id']
     if is_short_video(video_id):
         return 'Short'
     
-    # それ以外はMovie（プレミア公開含む）
+    # ライブ配信のアーカイブかチェック（liveBroadcastContentで判定）
+    live_broadcast_content = video['snippet'].get('liveBroadcastContent', 'none')
+    if live_broadcast_content == 'completed':
+        return 'LiveArchive'
+    
+    # liveStreamingDetailsがある場合も念のためチェック（フォールバック）
+    if 'liveStreamingDetails' in video:
+        if 'actualStartTime' in video['liveStreamingDetails']:
+            return 'LiveArchive'
+    
+    # それ以外はMovie（通常動画、プレミア公開含む）
     return 'Movie'
 
 def send_email_notification(achievements, channel_name):
