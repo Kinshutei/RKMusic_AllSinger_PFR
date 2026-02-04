@@ -232,8 +232,20 @@ def load_history(channel_name):
     return {}
 
 def save_history(videos, channel_stats, channel_name):
-    """現在のデータを保存"""
+    """現在のデータを保存（タイプ自動修正機能付き）"""
     history_file = f'video_history_{channel_name}.json'
+    
+    # 既存データを読み込んでタイプ変更を検出
+    old_data = {}
+    if os.path.exists(history_file):
+        try:
+            with open(history_file, 'r', encoding='utf-8') as f:
+                old_history = json.load(f)
+                old_data = old_history.get('videos', {})
+        except:
+            pass
+    
+    # 新しいデータを作成
     history_data = {
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'channel_stats': channel_stats,
@@ -242,9 +254,24 @@ def save_history(videos, channel_stats, channel_name):
             'type': video['type']
         } for video in videos}
     }
+    
+    # タイプ変更をカウント（video_daily_historyと重複するが、整合性のため）
+    type_changes = 0
+    for video in videos:
+        video_id = video['動画ID']
+        if video_id in old_data:
+            old_type = old_data[video_id].get('type', 'Unknown')
+            new_type = video['type']
+            if old_type != new_type and old_type != 'Unknown':
+                type_changes += 1
+    
     with open(history_file, 'w', encoding='utf-8') as f:
         json.dump(history_data, f, ensure_ascii=False, indent=2)
-    print(f"履歴を保存しました: {history_file}")
+    
+    if type_changes > 0:
+        print(f"履歴を保存しました: {history_file} ({type_changes}件のタイプ修正)")
+    else:
+        print(f"履歴を保存しました: {history_file}")
 
 def save_log(videos, channel_stats, achievements, channel_name):
     """ログファイルに追記"""
@@ -281,7 +308,7 @@ def save_log(videos, channel_stats, achievements, channel_name):
     print(f"ログを保存しました: {log_file}")
 
 def save_video_daily_history(videos, channel_name):
-    """動画ごとの履歴を保存"""
+    """動画ごとの履歴を保存（タイプ自動修正機能付き）"""
     history_file = f'video_daily_history_{channel_name}.json'
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
@@ -295,17 +322,39 @@ def save_video_daily_history(videos, channel_name):
     else:
         history = {}
     
+    # タイプ変更のカウンター
+    type_changes = {'Movie': 0, 'Short': 0, 'LiveArchive': 0}
+    type_change_details = []
+    
     # 各動画の履歴を追加
     for video in videos:
         video_id = video['動画ID']
+        new_type = video['type']
         
         if video_id not in history:
+            # 新規動画
             history[video_id] = {
                 'タイトル': video['タイトル'],
                 '公開日': video['公開日'],
-                'type': video['type'],
+                'type': new_type,
                 'records': []
             }
+        else:
+            # 既存動画：タイプをチェック
+            old_type = history[video_id].get('type', 'Unknown')
+            
+            if old_type != new_type:
+                # タイプが変更された
+                print(f"  🔄 タイプ修正: [{video['タイトル'][:40]}...] {old_type} → {new_type}")
+                type_changes[new_type] += 1
+                type_change_details.append({
+                    'タイトル': video['タイトル'],
+                    '動画ID': video_id,
+                    '旧タイプ': old_type,
+                    '新タイプ': new_type
+                })
+                # タイプを更新
+                history[video_id]['type'] = new_type
         
         # 新しいレコードを追加
         history[video_id]['records'].append({
@@ -315,14 +364,24 @@ def save_video_daily_history(videos, channel_name):
             'コメント数': video['コメント数']
         })
         
-        # タイトルとタイプを更新
+        # タイトルを更新（変更された場合に対応）
         history[video_id]['タイトル'] = video['タイトル']
-        history[video_id]['type'] = video['type']
     
     # 保存
     with open(history_file, 'w', encoding='utf-8') as f:
         json.dump(history, f, ensure_ascii=False, indent=2)
     print(f"動画別履歴を保存しました: {history_file}")
+    
+    # タイプ変更があった場合は集計を表示
+    if any(count > 0 for count in type_changes.values()):
+        total_changes = sum(type_changes.values())
+        print(f"\n📝 タイプ修正サマリー: {total_changes}件")
+        if type_changes['Movie'] > 0:
+            print(f"  → Movie: {type_changes['Movie']}件")
+        if type_changes['Short'] > 0:
+            print(f"  → Short: {type_changes['Short']}件")
+        if type_changes['LiveArchive'] > 0:
+            print(f"  → LiveArchive: {type_changes['LiveArchive']}件")
 
 def check_milestones(current_videos, history):
     """キリ番達成をチェック"""
