@@ -38,11 +38,17 @@ def get_theme_css(theme):
         font-family: 'Noto Sans JP', sans-serif !important;
     }
     
+    /* 全体的なスペーシングを圧縮 */
+    .block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 1rem !important;
+    }
+    
     /* タブ */
     button[data-baseweb="tab"] {
         background: transparent !important;
         font-weight: 500 !important;
-        padding: 12px 24px !important;
+        padding: 8px 16px !important;
     }
     
     button[data-baseweb="tab"]:hover {
@@ -57,11 +63,11 @@ def get_theme_css(theme):
     .stButton > button {
         width: 100%;
         border-radius: 8px !important;
-        padding: 12px 20px !important;
-        font-size: 16px !important;
+        padding: 8px 16px !important;
+        font-size: 15px !important;
         font-weight: 500 !important;
         transition: all 0.3s ease !important;
-        margin: 4px 0 !important;
+        margin: 2px 0 !important;
     }
     
     .stButton > button:hover {
@@ -69,9 +75,20 @@ def get_theme_css(theme):
     }
     
     /* サブヘッダー */
+    h1 {
+        margin-bottom: 0.5rem !important;
+        padding-bottom: 0 !important;
+    }
+    
     h2, h3 {
         font-weight: 700 !important;
-        margin-bottom: 16px !important;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* 段落とテキスト */
+    p {
+        margin-bottom: 0.5rem !important;
     }
     
     /* リンク */
@@ -88,6 +105,14 @@ def get_theme_css(theme):
     /* キャプション */
     div[data-testid="stCaption"] {
         font-size: 12px !important;
+        margin-top: 0.2rem !important;
+        margin-bottom: 0.2rem !important;
+    }
+    
+    /* 区切り線 */
+    hr {
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
     }
     
     /* スクロールバー */
@@ -102,18 +127,23 @@ def get_theme_css(theme):
     
     /* メトリクス */
     div[data-testid="stMetric"] {
-        padding: 16px;
+        padding: 10px !important;
         border-radius: 10px;
     }
     
     div[data-testid="stMetricLabel"] {
-        font-size: 14px !important;
+        font-size: 13px !important;
         font-weight: 500 !important;
     }
     
     div[data-testid="stMetricValue"] {
-        font-size: 28px !important;
+        font-size: 24px !important;
         font-weight: 700 !important;
+    }
+    
+    /* セレクトボックス */
+    div[data-baseweb="select"] {
+        margin-bottom: 0.5rem !important;
     }
     """
     
@@ -135,8 +165,8 @@ def get_theme_css(theme):
         div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
             background: rgba(38, 39, 48, 0.6);
             border-radius: 12px;
-            padding: 20px;
-            margin: 10px 0;
+            padding: 12px !important;
+            margin: 5px 0 !important;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.05);
@@ -234,8 +264,8 @@ def get_theme_css(theme):
         div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
             background: rgba(255, 255, 255, 0.9);
             border-radius: 12px;
-            padding: 20px;
-            margin: 10px 0;
+            padding: 12px !important;
+            margin: 5px 0 !important;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             border: 1px solid rgba(0, 0, 0, 0.05);
         }
@@ -405,7 +435,6 @@ def calculate_growth(records, period='1DAY'):
 # メインUI
 st.title("🎵 RK Music 統計ダッシュボード")
 st.markdown("*自動取得データを表示中（JST 0, 6, 12, 18, 21時更新）*")
-st.markdown("---")
 
 # サイドバー
 with st.sidebar:
@@ -421,7 +450,6 @@ with st.sidebar:
     
     st.markdown("---")
     st.header("🎵 RK Music")
-    st.markdown("---")
     st.subheader("タレント")
     
     available_talents = get_available_talents()
@@ -568,9 +596,19 @@ def render_video_tab(video_history, video_type, type_name, emoji):
         return
     
     period = st.selectbox("期間", ['1DAY', '1WEEK', '1MONTH'], index=1, key=f'period_{video_type}')
-    st.markdown("---")
     
     st.subheader("📈 再生数推移")
+    
+    # 期間のカットオフ時刻を計算
+    now = datetime.now()
+    if period == '1DAY':
+        cutoff = now - timedelta(days=1)
+    elif period == '1WEEK':
+        cutoff = now - timedelta(days=7)
+    elif period == '1MONTH':
+        cutoff = now - timedelta(days=30)
+    else:
+        cutoff = now - timedelta(days=7)  # デフォルト
     
     plot_data = []
     video_list = []
@@ -590,23 +628,30 @@ def render_video_tab(video_history, video_type, type_name, emoji):
     for video_id in top5_ids:
         video_data = filtered_history[video_id]
         records = video_data.get('records', [])
+        # 期間でフィルタリング
         for record in records:
-            plot_data.append({
-                '日時': record['timestamp'],
-                '動画': video_data['タイトル'][:30] + '...',
-                '再生数': record['再生数']
-            })
+            try:
+                record_date = datetime.strptime(record['timestamp'], '%Y-%m-%d %H:%M:%S')
+                if record_date >= cutoff:
+                    plot_data.append({
+                        '日時': record['timestamp'],
+                        '動画': video_data['タイトル'][:30] + '...',
+                        '再生数': record['再生数']
+                    })
+            except:
+                continue
     
     if plot_data:
         df_plot = pd.DataFrame(plot_data)
         fig = px.line(df_plot, x='日時', y='再生数', color='動画', title=f'再生数推移 TOP5', markers=True)
         theme = get_plot_theme()
         fig.update_layout(
-            height=500,
+            height=400,
             font_family='Noto Sans JP',
             plot_bgcolor=theme['plot_bgcolor'],
             paper_bgcolor=theme['paper_bgcolor'],
-            font_color=theme['font_color']
+            font_color=theme['font_color'],
+            margin=dict(l=40, r=40, t=40, b=40)
         )
         st.plotly_chart(fig, use_container_width=True)
     
@@ -650,5 +695,4 @@ with tab3:
 with tab4:
     render_video_tab(video_history, 'LiveArchive', 'アーカイブ（LiveArchive）', '🔴')
 
-st.markdown("---")
 st.caption("Powered by GitHub Actions + Streamlit Cloud | 自動更新: JST 0, 6, 12, 18, 21時")
