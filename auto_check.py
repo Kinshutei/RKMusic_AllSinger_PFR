@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-YouTube チャンネル統計 自動チェックスクリプト（複数チャンネル対応版）
+YouTube チャンネル統計 自動チェックスクリプト（複数チャンネル対応・並列処理版）
 GitHub Actionsで定期実行される
-Movie/Short/LiveArchive判別機能付き（ShortはURL判定）
+Movie/Short/LiveArchive判別機能付き（Short判定は並列処理で高速化）
+タイプ自動修正機能付き
 """
 
 import os
@@ -14,6 +15,8 @@ from googleapiclient.discovery import build
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 
 # 環境変数から設定を読み込み
 API_KEY = os.environ.get('YOUTUBE_API_KEY')
@@ -32,6 +35,9 @@ except:
 # キリ番のリスト
 MILESTONES = [5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000]
 
+# 並列処理の設定
+MAX_WORKERS = 10  # Short判定の同時実行数
+
 def is_short_video(video_id):
     """動画IDがShortsかどうかをURLで判別"""
     try:
@@ -43,18 +49,65 @@ def is_short_video(video_id):
         # エラーの場合はShortではないと判断
         return False
 
-def determine_video_type(video):
+def check_shorts_batch(video_ids):
+    """複数の動画IDを並列でShortチェック"""
+    results = {}
+    
+    if not video_ids:
+        return results
+    
+    print(f"  並列Short判定開始: {len(video_ids)}本 (最大{MAX_WORKERS}並列)")
+    start_time = time.time()
+    
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        # 全ての動画IDに対してShortチェックを投入
+        future_to_id = {
+            executor.submit(is_short_video, vid): vid 
+            for vid in video_ids
+        }
+        
+        # 完了したものから結果を取得
+        completed = 0
+        for future in as_completed(future_to_id):
+            video_id = future_to_id[future]
+            try:
+                results[video_id] = future.result()
+                completed += 1
+                if completed % 20 == 0:
+                    print(f"    → {completed}/{len(video_ids)}本完了")
+            except Exception as e:
+                print(f"  ⚠️ Short判定エラー [{video_id}]: {str(e)}")
+                results[video_id] = False
+    
+    elapsed = time.time() - start_time
+    short_count = sum(1 for v in results.values() if v)
+    print(f"  並列Short判定完了: {elapsed:.1f}秒 ({short_count}本がShort)")
+    
+    return results
+
+def determine_video_type(video, short_cache=None):
     """動画タイプを判定（Movie/Short/LiveArchive）
     
     判定順序：
-    1. Short: URLで判定（/shorts/パス）- 最優先
+    1. Short: キャッシュから判定（事前に並列取得済み）またはURL判定
     2. LiveArchive: liveBroadcastContent が "completed"
     3. Movie: それ以外
+    
+    Args:
+        video: YouTube API からの動画データ
+        short_cache: 事前に取得したShort判定結果のキャッシュ（dict）
     """
-    # ShortかどうかをURLで判定（最優先）
     video_id = video['id']
-    if is_short_video(video_id):
-        return 'Short'
+    
+    # Shortかどうかを判定（最優先）
+    if short_cache is not None:
+        # キャッシュから判定（並列処理済み）
+        if short_cache.get(video_id, False):
+            return 'Short'
+    else:
+        # キャッシュがない場合は直接判定（フォールバック）
+        if is_short_video(video_id):
+            return 'Short'
     
     # ライブ配信のアーカイブかチェック（liveBroadcastContentで判定）
     live_broadcast_content = video['snippet'].get('liveBroadcastContent', 'none')
@@ -150,7 +203,7 @@ def get_channel_stats(youtube, channel_id):
     return None
 
 def get_all_videos(youtube, channel_id):
-    """チャンネルの全動画情報を取得（Movie/Short/LiveArchive判別付き）"""
+    """チャンネルの全動画情報を取得（並列Short判定版）"""
     videos = []
     
     try:
@@ -188,8 +241,12 @@ def get_all_videos(youtube, channel_id):
             
             print(f"取得中... {len(videos)}本の動画を取得しました")
             
+            # Short判定を並列実行（ここが改善点！）
+            short_cache = check_shorts_batch(video_ids)
+            
+            # 各動画のタイプを判定（キャッシュ使用）
             for video in videos_response['items']:
-                video_type = determine_video_type(video)
+                video_type = determine_video_type(video, short_cache)
                 
                 video_data = {
                     '動画ID': video['id'],
@@ -201,10 +258,6 @@ def get_all_videos(youtube, channel_id):
                     'type': video_type
                 }
                 videos.append(video_data)
-                
-                # 進捗表示
-                if len(videos) % 10 == 0:
-                    print(f"  判別中... {len(videos)}本完了")
             
             next_page_token = playlist_response.get('nextPageToken')
             if not next_page_token:
