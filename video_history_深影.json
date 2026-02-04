@@ -1,15 +1,15 @@
 {
-  "timestamp": "2026-02-04 03:52:43",
+  "timestamp": "2026-02-04 05:39:20",
   "channel_stats": {
     "チャンネル名": "深影",
-    "登録者数": 21300,
+    "登録者数": 21400,
     "総再生数": 1661781,
     "動画数": 169,
-    "取得日時": "2026-02-04 03:52:25"
+    "取得日時": "2026-02-04 05:38:58"
   },
   "videos": {
     "dng1YYx9VFg": {
-      "再生数": 4228,
+      "再生数": 4273,
       "type": "LiveArchive"
     },
     "cFMnp5j8xjY": {
@@ -17,15 +17,15 @@
       "type": "Movie"
     },
     "UcXs68hiBdo": {
-      "再生数": 6282,
+      "再生数": 6285,
       "type": "LiveArchive"
     },
     "beLIyIKt2vY": {
-      "再生数": 4474,
+      "再生数": 4484,
       "type": "Short"
     },
     "LXjR6CfR9Q0": {
-      "再生数": 15732,
+      "再生数": 15899,
       "type": "Movie"
     },
     "dy1q4Mwb9Eg": {
@@ -33,15 +33,15 @@
       "type": "LiveArchive"
     },
     "kuKYSP8OBHs": {
-      "再生数": 3562,
+      "再生数": 3564,
       "type": "LiveArchive"
     },
     "gOWNiaFMKS0": {
-      "再生数": 1962,
+      "再生数": 1963,
       "type": "LiveArchive"
     },
     "rrCOr8_OdQk": {
-      "再生数": 3728,
+      "再生数": 3731,
       "type": "LiveArchive"
     },
     "DO3Mi7IQaAo": {
@@ -65,7 +65,7 @@
       "type": "LiveArchive"
     },
     "Mnr_AUkdn_4": {
-      "再生数": 4569,
+      "再生数": 4572,
       "type": "LiveArchive"
     },
     "FRE7nDzg9UY": {
@@ -89,11 +89,11 @@
       "type": "LiveArchive"
     },
     "ocNMIiXEQXE": {
-      "再生数": 5555,
+      "再生数": 5556,
       "type": "Short"
     },
     "bj2VZ_FaVyM": {
-      "再生数": 6292,
+      "再生数": 6293,
       "type": "LiveArchive"
     },
     "tATj6GfwJxI": {
@@ -105,7 +105,7 @@
       "type": "LiveArchive"
     },
     "I3c-KuiBvVc": {
-      "再生数": 3839,
+      "再生数": 3840,
       "type": "LiveArchive"
     },
     "l0DxDVyjd2Y": {
@@ -113,11 +113,11 @@
       "type": "LiveArchive"
     },
     "6H1wEX3C-IQ": {
-      "再生数": 5217,
+      "再生数": 5218,
       "type": "Short"
     },
     "huxfOAjOIsU": {
-      "再生数": 18361,
+      "再生数": 18381,
       "type": "Movie"
     },
     "HYiVahtWnvs": {
@@ -161,7 +161,7 @@
       "type": "LiveArchive"
     },
     "TaChGBzjSiM": {
-      "再生数": 5704,
+      "再生数": 5703,
       "type": "Short"
     },
     "CVUE--YBF7U": {
@@ -209,8 +209,8 @@
       "type": "Short"
     },
     "tvULVpzqHlU": {
-      "再生数": 354883,
-      "type": "LiveArchive"
+      "再生数": 355208,
+      "type": "Movie"
     },
     "V60jXq6zqv8": {
       "再生数": 4618,
@@ -249,11 +249,11 @@
       "type": "LiveArchive"
     },
     "xFCoqMlkOuQ": {
-      "再生数": 7686,
+      "再生数": 7687,
       "type": "Short"
     },
     "y9oxKwOQwnY": {
-      "再生数": 123018,
+      "再生数": 123023,
       "type": "Movie"
     },
     "xgr--Osxtes": {
@@ -297,7 +297,7 @@
       "type": "LiveArchive"
     },
     "yYgZ-gPwfd0": {
-      "再生数": 3627,
+      "再生数": 3628,
       "type": "Short"
     },
     "7YLSPvfnkxo": {
@@ -305,7 +305,7 @@
       "type": "LiveArchive"
     },
     "C7XKR0zak-I": {
-      "再生数": 3504,
+      "再生数": 3505,
       "type": "LiveArchive"
     },
     "qmYvqosYF1A": {
@@ -357,7 +357,7 @@
       "type": "Short"
     },
     "c6I-bWqApXc": {
-      "再生数": 40113,
+      "再生数": 40117,
       "type": "Movie"
     },
     "B-rye3BsEyw": {
@@ -369,7 +369,7 @@
       "type": "LiveArchive"
     },
     "pFgqSd07yAQ": {
-      "再生数": 5037,
+      "再生数": 5038,
       "type": "LiveArchive"
     },
     "n6tvpwOQAlU": {
@@ -481,11 +481,11 @@
       "type": "LiveArchive"
     },
     "OfHhq9Uux8E": {
-      "再生数": 3533,
+      "再生数": 3532,
       "type": "Short"
     },
     "2YpUBL04rzo": {
-      "再生数": 65348,
+      "再生数": 65368,
       "type": "Movie"
     },
     "YdV_sZbfEsM": {
