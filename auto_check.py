@@ -17,6 +17,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+import isodate
 
 # 環境変数から設定を読み込み
 API_KEY = os.environ.get('YOUTUBE_API_KEY')
@@ -37,6 +38,29 @@ MILESTONES = [5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000]
 
 # 並列処理の設定
 MAX_WORKERS = 10  # Short判定の同時実行数
+
+def get_duration_minutes(video):
+    """動画の長さを分単位で取得"""
+    try:
+        duration_str = video['contentDetails']['duration']
+        duration = isodate.parse_duration(duration_str)
+        return duration.total_seconds() / 60
+    except:
+        return 0
+
+def load_video_type_overrides():
+    """例外設定ファイルを読み込む"""
+    override_file = 'video_type_overrides.json'
+    if os.path.exists(override_file):
+        try:
+            with open(override_file, 'r', encoding='utf-8') as f:
+                overrides = json.load(f)
+                print(f"✓ 例外設定を読み込みました: {sum(len(v) for v in overrides.values())}件")
+                return overrides
+        except Exception as e:
+            print(f"⚠️ 例外設定の読み込みエラー: {str(e)}")
+            return {}
+    return {}
 
 def is_short_video(video_id):
     """動画IDがShortsかどうかをURLで判別"""
@@ -85,21 +109,31 @@ def check_shorts_batch(video_ids):
     
     return results
 
-def determine_video_type(video, short_cache=None):
-    """動画タイプを判定（Movie/Short/LiveArchive）
+def determine_video_type(video, short_cache=None, overrides=None, channel_name=None):
+    """動画タイプを判定（例外設定優先）
     
     判定順序：
-    1. Short: キャッシュから判定（事前に並列取得済み）またはURL判定
-    2. LiveArchive: liveBroadcastContent が "completed"
-    3. Movie: それ以外
+    1. 例外設定（video_type_overrides.json）← 最優先
+    2. Short: キャッシュから判定（事前に並列取得済み）またはURL判定
+    3. LiveArchive/Movie: duration（5分未満=Movie, 5分以上=LiveArchive）
+    4. Movie: それ以外
     
     Args:
         video: YouTube API からの動画データ
         short_cache: 事前に取得したShort判定結果のキャッシュ（dict）
+        overrides: 例外設定（dict）
+        channel_name: チャンネル名
     """
     video_id = video['id']
     
-    # Shortかどうかを判定（最優先）
+    # 1. 例外設定をチェック（最優先）
+    if overrides and channel_name and channel_name in overrides:
+        if video_id in overrides[channel_name]:
+            override_type = overrides[channel_name][video_id]
+            print(f"  ⚙️ 例外設定適用: [{video['snippet']['title'][:40]}...] → {override_type}")
+            return override_type
+    
+    # 2. Shortかどうかを判定
     if short_cache is not None:
         # キャッシュから判定（並列処理済み）
         if short_cache.get(video_id, False):
@@ -109,17 +143,26 @@ def determine_video_type(video, short_cache=None):
         if is_short_video(video_id):
             return 'Short'
     
-    # ライブ配信のアーカイブかチェック（liveBroadcastContentで判定）
+    # 3. ライブ配信のアーカイブかチェック
     live_broadcast_content = video['snippet'].get('liveBroadcastContent', 'none')
     if live_broadcast_content == 'completed':
-        return 'LiveArchive'
+        # 動画の長さで判定（5分未満=Movie, 5分以上=LiveArchive）
+        duration_minutes = get_duration_minutes(video)
+        if duration_minutes < 5:
+            return 'Movie'  # プレミア公開のMV
+        else:
+            return 'LiveArchive'  # 通常の配信
     
     # liveStreamingDetailsがある場合も念のためチェック（フォールバック）
     if 'liveStreamingDetails' in video:
         if 'actualStartTime' in video['liveStreamingDetails']:
-            return 'LiveArchive'
+            duration_minutes = get_duration_minutes(video)
+            if duration_minutes < 5:
+                return 'Movie'
+            else:
+                return 'LiveArchive'
     
-    # それ以外はMovie（通常動画、プレミア公開含む）
+    # 4. それ以外はMovie（通常動画、プレミア公開含む）
     return 'Movie'
 
 def send_email_notification(achievements, channel_name):
@@ -202,8 +245,8 @@ def get_channel_stats(youtube, channel_id):
         print(f"エラー: {str(e)}")
     return None
 
-def get_all_videos(youtube, channel_id):
-    """チャンネルの全動画情報を取得（並列Short判定版）"""
+def get_all_videos(youtube, channel_id, channel_name, overrides):
+    """チャンネルの全動画情報を取得（並列Short判定版・例外設定対応）"""
     videos = []
     
     try:
@@ -232,9 +275,9 @@ def get_all_videos(youtube, channel_id):
             video_ids = [item['snippet']['resourceId']['videoId'] 
                         for item in playlist_response['items']]
             
-            # 動画の詳細情報を取得
+            # 動画の詳細情報を取得（contentDetails追加）
             videos_request = youtube.videos().list(
-                part='snippet,statistics,liveStreamingDetails',
+                part='snippet,statistics,liveStreamingDetails,contentDetails',
                 id=','.join(video_ids)
             )
             videos_response = videos_request.execute()
@@ -244,9 +287,9 @@ def get_all_videos(youtube, channel_id):
             # Short判定を並列実行（ここが改善点！）
             short_cache = check_shorts_batch(video_ids)
             
-            # 各動画のタイプを判定（キャッシュ使用）
+            # 各動画のタイプを判定（キャッシュ・例外設定使用）
             for video in videos_response['items']:
-                video_type = determine_video_type(video, short_cache)
+                video_type = determine_video_type(video, short_cache, overrides, channel_name)
                 
                 video_data = {
                     '動画ID': video['id'],
@@ -465,8 +508,8 @@ def check_milestones(current_videos, history):
     
     return achievements
 
-def process_channel(youtube, channel_config):
-    """1つのチャンネルを処理"""
+def process_channel(youtube, channel_config, overrides):
+    """1つのチャンネルを処理（例外設定対応）"""
     channel_name = channel_config['name']
     channel_url = channel_config['url']
     
@@ -497,9 +540,9 @@ def process_channel(youtube, channel_config):
     print(f"総再生数: {channel_stats['総再生数']:,}回")
     print(f"動画数: {channel_stats['動画数']:,}本")
     
-    # 全動画情報を取得
+    # 全動画情報を取得（例外設定を渡す）
     print("\n全動画情報を取得中...")
-    videos = get_all_videos(youtube, channel_id)
+    videos = get_all_videos(youtube, channel_id, channel_name, overrides)
     
     if not videos:
         print(f"❌ エラー: {channel_name} の動画情報を取得できませんでした")
@@ -550,13 +593,17 @@ def main():
     for ch in CHANNELS:
         print(f"  - {ch['name']}")
     
+    # 例外設定を読み込み
+    print("\n例外設定を読み込み中...")
+    overrides = load_video_type_overrides()
+    
     # YouTube API クライアントを作成
     youtube = build('youtube', 'v3', developerKey=API_KEY)
     
     # 各チャンネルを処理
     success_count = 0
     for channel_config in CHANNELS:
-        if process_channel(youtube, channel_config):
+        if process_channel(youtube, channel_config, overrides):
             success_count += 1
     
     print("\n" + "=" * 50)
