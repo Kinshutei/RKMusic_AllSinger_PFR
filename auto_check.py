@@ -296,7 +296,7 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
                     'タイトル': video['snippet']['title'],
                     '公開日': video['snippet']['publishedAt'][:10],
                     '再生数': int(video['statistics'].get('viewCount', 0)),
-                    'いいね数': int(video['statistics'].get('likeCount', 0)),
+                    '高評価数': int(video['statistics'].get('likeCount', 0)),
                     'コメント数': int(video['statistics'].get('commentCount', 0)),
                     'type': video_type
                 }
@@ -456,7 +456,7 @@ def save_video_daily_history(videos, channel_name):
         history[video_id]['records'].append({
             'timestamp': timestamp,
             '再生数': video['再生数'],
-            'いいね数': video['いいね数'],
+            '高評価数': video['高評価数'],
             'コメント数': video['コメント数']
         })
         
