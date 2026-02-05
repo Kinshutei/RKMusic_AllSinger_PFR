@@ -592,17 +592,6 @@ def aggregate_records_by_date(records):
 
 # サイドバー
 with st.sidebar:
-    # テーマ切り替えボタン
-    if st.session_state.theme == 'light':
-        if st.button("🌙 ダークモードに切り替え", use_container_width=True):
-            st.session_state.theme = 'dark'
-            st.rerun()
-    else:
-        if st.button("☀️ ライトモードに切り替え", use_container_width=True):
-            st.session_state.theme = 'light'
-            st.rerun()
-    
-    st.markdown("---")
     st.header("🎵 RK Music")
     st.subheader("タレント")
     
