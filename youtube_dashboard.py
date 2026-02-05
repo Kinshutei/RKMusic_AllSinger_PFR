@@ -681,17 +681,43 @@ with st.sidebar:
         if st.session_state.selected_talent is None:
             st.session_state.selected_talent = available_talents[0]
         
-        # radioボタンで選択（CSSでカスタマイズ）
-        selected_talent = st.radio(
-            "タレント選択",
-            available_talents,
-            index=available_talents.index(st.session_state.selected_talent) if st.session_state.selected_talent in available_talents else 0,
-            label_visibility="collapsed"
-        )
+        # 各タレントのバナー画像付きボタンを表示
+        for i, talent in enumerate(available_talents):
+            # 履歴データからバナー画像URLを取得
+            history = load_history(talent)
+            banner_url = None
+            if history and 'channel_stats' in history:
+                banner_url = history['channel_stats'].get('バナー画像URL')
+            
+            # 選択中かどうか
+            is_selected = (talent == st.session_state.selected_talent)
+            border_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.2)"
+            text_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.7)"
+            font_weight = "600" if is_selected else "400"
+            
+            # タレント名を表示（小さめ）
+            st.markdown(f'<p style="font-size: 12px; font-weight: {font_weight}; margin-bottom: 6px; color: {text_color};">{talent}</p>', unsafe_allow_html=True)
+            
+            # バナー画像がある場合
+            if banner_url:
+                # 画像を表示
+                st.markdown(f'<img src="{banner_url}" style="width: 100%; border-radius: 6px; border: 2px solid {border_color}; margin-bottom: 4px;">', unsafe_allow_html=True)
+                
+                # 透明なボタンを配置（画像の下）
+                if st.button(f"選択", key=f"select_{i}", use_container_width=True):
+                    st.session_state.selected_talent = talent
+                    st.rerun()
+            else:
+                # バナー画像がない場合は普通のボタン
+                if st.button(talent, key=f"select_{i}", use_container_width=True):
+                    st.session_state.selected_talent = talent
+                    st.rerun()
+            
+            # 区切り線
+            if talent != available_talents[-1]:
+                st.markdown('<hr style="margin: 12px 0; opacity: 0.2;">', unsafe_allow_html=True)
         
-        if selected_talent != st.session_state.selected_talent:
-            st.session_state.selected_talent = selected_talent
-            st.rerun()
+        selected_talent = st.session_state.selected_talent
 
 if not selected_talent:
     st.info("📡 タレントを選択してください")
