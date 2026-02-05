@@ -87,7 +87,7 @@ def get_theme_css(theme):
         font-size: 0 !important;
         border-radius: 8px !important;
         margin-top: -78px !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 0 !important;
         background: transparent !important;
         border: none !important;
         text-align: center !important;
@@ -760,7 +760,7 @@ with st.sidebar:
                     border: 2px solid {border_color};
                     border-radius: 8px;
                     overflow: hidden;
-                    margin-bottom: 8px;
+                    margin-bottom: 4px;
                     cursor: pointer;
                     transition: all 0.2s ease;
                 ">
