@@ -16,8 +16,8 @@ import glob
 
 # ページ設定
 st.set_page_config(
-    page_title="RK Music 統計ダッシュボード",
-    page_icon="🎵",
+    page_title="YouTube Stats Dashboard",
+    page_icon="📊",
     layout="wide"
 )
 
@@ -154,6 +154,77 @@ def get_theme_css(theme):
         margin-bottom: 12px;
     }
     
+    /* 動画カードのスタイル */
+    .video-card {
+        border: 1px solid;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+        transition: all 0.2s ease;
+    }
+    
+    .video-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .video-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    
+    .video-stats {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+    }
+    
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .stat-label {
+        font-size: 12px;
+        font-weight: 500;
+        margin-bottom: 4px;
+        opacity: 0.7;
+    }
+    
+    .stat-value {
+        font-size: 18px;
+        font-weight: 700;
+    }
+    
+    .stat-change {
+        font-size: 14px;
+        margin-left: 8px;
+    }
+    
+    .positive-change {
+        color: #28a745;
+    }
+    
+    .neutral-change {
+        color: #6c757d;
+    }
+    
+    /* 区切り線 */
+    .divider {
+        border-top: 1px solid;
+        margin: 20px 0;
+    }
+    
+    /* ページヘッダー */
+    .page-header {
+        margin-bottom: 8px;
+    }
+    
+    .page-header h1 {
+        margin-bottom: 0 !important;
+    }
+    
     /* カラム間の間隔を詰める */
     div[data-testid="column"] {
         padding: 0 4px !important;
@@ -276,6 +347,20 @@ def get_theme_css(theme):
             border-color: rgba(255, 255, 255, 0.1);
             background: rgba(38, 39, 48, 0.4);
         }
+        
+        .video-card {
+            border-color: rgba(255, 255, 255, 0.15);
+            background: rgba(38, 39, 48, 0.5);
+        }
+        
+        .video-card:hover {
+            border-color: rgba(74, 158, 255, 0.4);
+            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
+        }
+        
+        .divider {
+            border-color: rgba(255, 255, 255, 0.1);
+        }
         """
     
     else:  # light mode
@@ -378,6 +463,20 @@ def get_theme_css(theme):
         .content-block {
             border-color: rgba(0, 0, 0, 0.1);
             background: rgba(255, 255, 255, 0.8);
+        }
+        
+        .video-card {
+            border-color: rgba(0, 0, 0, 0.12);
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .video-card:hover {
+            border-color: rgba(13, 110, 253, 0.4);
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
+        }
+        
+        .divider {
+            border-color: rgba(0, 0, 0, 0.1);
         }
         """
     
@@ -515,7 +614,6 @@ with st.sidebar:
     
     if not available_talents:
         st.warning("⚠️ データが見つかりません")
-        st.info("初回の自動実行を待っています...")
         selected_talent = None
     else:
         if st.session_state.selected_talent is None:
@@ -527,22 +625,9 @@ with st.sidebar:
                 st.rerun()
         
         selected_talent = st.session_state.selected_talent
-        
-        if selected_talent:
-            history = load_history(selected_talent)
-            if history and 'channel_stats' in history:
-                stats = history['channel_stats']
-                st.markdown("---")
-                st.metric("登録者数", f"{stats['登録者数']:,}人")
-                st.metric("総再生数", f"{stats['総再生数']:,}回")
-                st.metric("動画数", f"{stats['動画数']:,}本")
-                st.caption(f"最終更新: {history.get('timestamp', 'N/A')}")
-    
-    st.markdown("---")
-    st.caption("🔄 自動更新: JST 0, 6, 12, 18, 21時")
 
 if not selected_talent:
-    st.info("📡 データを取得中です。初回の自動実行（GitHub Actions）を待っています。")
+    st.info("📡 タレントを選択してください")
     st.stop()
 
 history = load_history(selected_talent)
@@ -555,212 +640,99 @@ if not history:
 
 channel_stats = history.get('channel_stats', {})
 
-# グラフのテーマ設定
-def get_plot_theme():
-    """グラフのテーマを返す"""
-    if st.session_state.theme == 'dark':
-        return {
-            'plot_bgcolor': 'rgba(30, 35, 48, 0.3)',
-            'paper_bgcolor': 'rgba(38, 39, 48, 0.3)',
-            'font_color': '#d0d0d8'
-        }
-    else:
-        return {
-            'plot_bgcolor': 'rgba(255, 255, 255, 0.8)',
-            'paper_bgcolor': 'rgba(255, 255, 255, 0.8)',
-            'font_color': '#495057'
-        }
+# ページヘッダー
+st.markdown('<div class="page-header">', unsafe_allow_html=True)
+st.title(f"📺 {channel_stats.get('チャンネル名', selected_talent)}")
+st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
-# タブ表示
-tab1, tab2, tab3, tab4 = st.tabs(["🏠 General", "📹 Movie", "🎬 Short", "🔴 Archive"])
+# チャンネル統計
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("登録者数", f"{channel_stats['登録者数']:,}人")
+with col2:
+    st.metric("総再生数", f"{channel_stats['総再生数']:,}回")
+with col3:
+    st.metric("動画数", f"{channel_stats['動画数']:,}本")
 
-with tab1:
-    st.header(f"📺 {channel_stats.get('チャンネル名', selected_talent)}")
-    
-    # 1行目: チャンネル概要（全幅）
-    st.markdown('<div class="content-block">', unsafe_allow_html=True)
-    st.subheader("📊 チャンネル概要")
-    metric_col1, metric_col2, metric_col3 = st.columns(3)
-    with metric_col1:
-        st.metric("登録者数", f"{channel_stats['登録者数']:,}人")
-    with metric_col2:
-        st.metric("総再生数", f"{channel_stats['総再生数']:,}回")
-    with metric_col3:
-        st.metric("動画数", f"{channel_stats['動画数']:,}本")
-    st.caption(f"最終更新: {history.get('timestamp', 'N/A')}")
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # 2行目: 再生数TOP5（全幅）
-    st.markdown('<div class="content-block">', unsafe_allow_html=True)
-    st.subheader("🏆 再生数TOP5")
-    if video_history:
-        video_list = []
-        for video_id, video_data in video_history.items():
-            records = video_data.get('records', [])
-            if records:
-                video_type = video_data.get('type', 'Movie')
-                emoji = "📹" if video_type == 'Movie' else ("🎬" if video_type == 'Short' else "🔴")
-                video_list.append({
-                    'タイトル': video_data['タイトル'],
-                    '再生数': records[-1]['再生数'],
-                    'emoji': emoji
-                })
-        video_list.sort(key=lambda x: x['再生数'], reverse=True)
-        for i, video in enumerate(video_list[:5], 1):
-            st.markdown(f"{i}. {video['emoji']} {video['タイトル'][:40]}... - **{video['再生数']:,}回**")
-    else:
-        st.info("データを蓄積中...")
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # 3行目: 急上昇セクション（3カラム）
-    col3, col4, col5 = st.columns(3)
-    
-    for col, video_type, title, emoji in [
-        (col3, 'Movie', '急上昇 Movie', '📈'),
-        (col4, 'Short', '急上昇 Short', '🎬'),
-        (col5, 'LiveArchive', '急上昇 Archive', '🔴')
-    ]:
-        with col:
-            st.markdown('<div class="content-block">', unsafe_allow_html=True)
-            st.subheader(f"{emoji} {title}")
-            if video_history:
-                growth_list = []
-                for video_id, video_data in video_history.items():
-                    if video_data.get('type') == video_type:
-                        records = video_data.get('records', [])
-                        if len(records) >= 2:
-                            growth = calculate_growth(records, '1WEEK')
-                            if growth > 0:
-                                start_views = records[0]['再生数']
-                                growth_rate = (growth / start_views * 100) if start_views > 0 else 0
-                                growth_list.append({
-                                    'タイトル': video_data['タイトル'],
-                                    '増加数': growth,
-                                    '伸び率': growth_rate
-                                })
-                growth_list.sort(key=lambda x: x['増加数'], reverse=True)
-                for i, video in enumerate(growth_list[:5], 1):
-                    st.markdown(f"{i}. {video['タイトル'][:30]}... - **+{video['増加数']:,}回** ({video['伸び率']:.1f}%)")
-            else:
-                st.info("データを蓄積中...")
-            st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
-def render_video_tab(video_history, video_type, type_name, emoji):
-    """動画タブの共通レンダリング"""
-    st.header(f"{emoji} {type_name}")
-    
-    if not video_history:
-        st.info("📡 動画別履歴データを蓄積中です。")
-        return
-    
-    filtered_history = filter_videos_by_type(video_history, video_type)
-    
-    if not filtered_history:
-        st.warning(f"{type_name}データがありません")
-        return
-    
-    period = st.selectbox("期間", ['1DAY', '1WEEK', '1MONTH'], index=1, key=f'period_{video_type}')
-    
-    st.subheader("📈 再生数推移")
-    
-    # 期間のカットオフ時刻を計算
-    now = datetime.now()
-    if period == '1DAY':
-        cutoff = now - timedelta(days=1)
-    elif period == '1WEEK':
-        cutoff = now - timedelta(days=7)
-    elif period == '1MONTH':
-        cutoff = now - timedelta(days=30)
-    else:
-        cutoff = now - timedelta(days=7)  # デフォルト
-    
-    plot_data = []
+# 動画リスト
+if not video_history:
+    st.info("📡 動画データを蓄積中です。")
+else:
+    # 全動画をリストアップ
     video_list = []
-    
-    for video_id, video_data in filtered_history.items():
+    for video_id, video_data in video_history.items():
         records = video_data.get('records', [])
-        if records:
+        if len(records) >= 1:
+            current_record = records[-1]
+            current_views = current_record.get('再生数', 0)
+            current_likes = current_record.get('高評価数', 0)  # 新しく追加
+            
+            # 前日比を計算
+            views_change = 0
+            views_change_rate = 0.0
+            likes_change = 0
+            likes_change_rate = 0.0
+            
+            if len(records) >= 2:
+                previous_record = records[-2]
+                previous_views = previous_record.get('再生数', 0)
+                previous_likes = previous_record.get('高評価数', 0)
+                
+                views_change = current_views - previous_views
+                if previous_views > 0:
+                    views_change_rate = (views_change / previous_views) * 100
+                
+                likes_change = current_likes - previous_likes
+                if previous_likes > 0:
+                    likes_change_rate = (likes_change / previous_likes) * 100
+            
             video_list.append({
                 'id': video_id,
                 'タイトル': video_data['タイトル'],
-                '再生数': records[-1]['再生数']
-            })
-    
-    video_list.sort(key=lambda x: x['再生数'], reverse=True)
-    top5_ids = [v['id'] for v in video_list[:5]]
-    
-    for video_id in top5_ids:
-        video_data = filtered_history[video_id]
-        records = video_data.get('records', [])
-        
-        # 日付で集約（同じ日は最新のみ）
-        records = aggregate_records_by_date(records)
-        
-        # 期間でフィルタリング
-        for record in records:
-            try:
-                record_date = datetime.strptime(record['timestamp'], '%Y-%m-%d %H:%M:%S')
-                if record_date >= cutoff:
-                    plot_data.append({
-                        '日時': record['timestamp'][:10],  # 日付のみ表示
-                        '動画': video_data['タイトル'][:30] + '...',
-                        '再生数': record['再生数']
-                    })
-            except:
-                continue
-    
-    if plot_data:
-        df_plot = pd.DataFrame(plot_data)
-        fig = px.line(df_plot, x='日時', y='再生数', color='動画', title=f'再生数推移 TOP5', markers=True)
-        theme = get_plot_theme()
-        fig.update_layout(
-            height=400,
-            font_family='Noto Sans JP',
-            plot_bgcolor=theme['plot_bgcolor'],
-            paper_bgcolor=theme['paper_bgcolor'],
-            font_color=theme['font_color'],
-            margin=dict(l=40, r=40, t=40, b=40)
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    st.subheader(f"📋 {type_name}リスト")
-    st.markdown("クリックして動画を視聴できます")
-    
-    table_data = []
-    for video_id, video_data in filtered_history.items():
-        records = video_data.get('records', [])
-        if records:
-            current_views = records[-1]['再生数']
-            growth = calculate_growth(records, period)
-            table_data.append({
-                'タイトル': video_data['タイトル'],
+                'type': video_data.get('type', 'Movie'),
                 '再生数': current_views,
-                '増加数': growth,
-                '動画ID': video_id
+                '再生数増加': views_change,
+                '再生数増加率': views_change_rate,
+                '高評価数': current_likes,
+                '高評価増加': likes_change,
+                '高評価増加率': likes_change_rate
             })
     
-    table_df = pd.DataFrame(table_data)
-    table_df = table_df.sort_values('再生数', ascending=False)
+    # 再生数でソート
+    video_list.sort(key=lambda x: x['再生数'], reverse=True)
     
-    for idx, row in table_df.iterrows():
-        video_url = f"https://www.youtube.com/watch?v={row['動画ID']}"
-        growth_text = f"+{row['増加数']:,}" if row['増加数'] > 0 else "0"
+    # 動画カードを表示
+    for video in video_list:
+        video_url = f"https://www.youtube.com/watch?v={video['id']}"
+        type_emoji = "📹" if video['type'] == 'Movie' else ("🎬" if video['type'] == 'Short' else "🔴")
         
-        col1, col2, col3 = st.columns([3, 1, 1])
-        with col1:
-            st.markdown(f"[{row['タイトル']}]({video_url})")
-        with col2:
-            st.text(f"{row['再生数']:,}回")
-        with col3:
-            st.text(growth_text)
-
-with tab2:
-    render_video_tab(video_history, 'Movie', '動画（Movie）', '📹')
-
-with tab3:
-    render_video_tab(video_history, 'Short', 'Short動画', '🎬')
-
-with tab4:
-    render_video_tab(video_history, 'LiveArchive', 'アーカイブ（LiveArchive）', '🔴')
-
-st.caption("Powered by GitHub Actions + Streamlit Cloud | 自動更新: JST 0, 6, 12, 18, 21時")
+        st.markdown(f'''
+        <div class="video-card">
+            <div class="video-title">
+                {type_emoji} <a href="{video_url}" target="_blank">{video['タイトル']}</a>
+            </div>
+            <div class="video-stats">
+                <div class="stat-item">
+                    <div class="stat-label">再生数</div>
+                    <div>
+                        <span class="stat-value">{video['再生数']:,}</span>
+                        <span class="stat-change {'positive-change' if video['再生数増加'] > 0 else 'neutral-change'}">
+                            (+{video['再生数増加']:,}, {video['再生数増加率']:.1f}%)
+                        </span>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">高評価数</div>
+                    <div>
+                        <span class="stat-value">{video['高評価数']:,}</span>
+                        <span class="stat-change {'positive-change' if video['高評価増加'] > 0 else 'neutral-change'}">
+                            (+{video['高評価増加']:,}, {video['高評価増加率']:.1f}%)
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
