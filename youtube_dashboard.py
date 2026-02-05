@@ -83,20 +83,24 @@ def get_theme_css(theme):
     
     /* サイドバー内のタレント選択ボタン */
     section[data-testid="stSidebar"] .stButton > button {
-        padding: 2px 8px !important;
-        font-size: 12px !important;
+        padding: 4px 6px !important;
+        font-size: 10px !important;
         border-radius: 4px !important;
         margin: 0 !important;
         background: transparent !important;
-        border: none !important;
-        text-align: left !important;
-        font-weight: 400 !important;
+        border: 1px solid rgba(128, 128, 128, 0.3) !important;
+        text-align: center !important;
+        font-weight: 500 !important;
         box-shadow: none !important;
+        height: 100% !important;
+        writing-mode: vertical-rl !important;
+        text-orientation: mixed !important;
     }
     
     section[data-testid="stSidebar"] .stButton > button:hover {
         transform: none;
         font-weight: 600 !important;
+        border-color: rgba(128, 128, 128, 0.6) !important;
     }
     
     /* サイドバーのボタンコンテナ */
@@ -741,27 +745,32 @@ with st.sidebar:
             text_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.7)"
             font_weight = "600" if is_selected else "400"
             
-            # バナー画像がある場合
             if banner_url:
-                # トップ画像を表示（下のボーダーは消す）
-                st.markdown(f'<img src="{banner_url}" style="width: 100%; border-radius: 6px 6px 0 0; border: 2px solid {border_color}; border-bottom: none; margin-bottom: 0; display: block;">', unsafe_allow_html=True)
+                # カード全体のコンテナ
+                st.markdown(f'<div style="border: 2px solid {border_color}; border-radius: 8px; overflow: hidden; margin-bottom: 2px;">', unsafe_allow_html=True)
                 
-                # タレント名を表示（画像とぴったりくっつける）
-                st.markdown(f'<div style="width: 100%; border: 2px solid {border_color}; border-top: none; border-radius: 0 0 6px 6px; padding: 4px 8px; margin: 0; font-size: 12px; font-weight: {font_weight}; color: {text_color}; text-align: center; background: transparent;">{talent}</div>', unsafe_allow_html=True)
+                # 画像とボタンを横並びで配置
+                col_img, col_btn = st.columns([0.85, 0.15])
                 
-                # 透明なボタンでクリック処理
-                if st.button("　", key=f"select_{i}", use_container_width=True):
-                    st.session_state.selected_talent = talent
-                    st.rerun()
+                with col_img:
+                    # 画像を表示
+                    st.markdown(f'<img src="{banner_url}" style="width: 100%; display: block; margin: 0;">', unsafe_allow_html=True)
+                
+                with col_btn:
+                    # 小さな選択ボタン
+                    if st.button("選択", key=f"talent_btn_{i}"):
+                        st.session_state.selected_talent = talent
+                        st.rerun()
+                
+                # タレント名を下部に表示
+                st.markdown(f'<div style="padding: 4px 8px; text-align: center; font-size: 12px; font-weight: {font_weight}; color: {text_color}; margin: 0;">{talent}</div>', unsafe_allow_html=True)
+                
+                st.markdown('</div>', unsafe_allow_html=True)
             else:
                 # バナー画像がない場合は普通のボタン
-                if st.button(talent, key=f"select_{i}", use_container_width=True):
+                if st.button(talent, key=f"talent_btn_{i}", use_container_width=True):
                     st.session_state.selected_talent = talent
                     st.rerun()
-            
-            # タレント間の間隔（最後以外は2px）
-            if i < len(available_talents) - 1:
-                st.markdown('<div style="margin-bottom: 2px;"></div>', unsafe_allow_html=True)
         
         selected_talent = st.session_state.selected_talent
 
