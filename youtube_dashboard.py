@@ -81,6 +81,24 @@ def get_theme_css(theme):
         transform: translateY(-2px);
     }
     
+    /* サイドバー内のタレント選択ボタン */
+    section[data-testid="stSidebar"] .stButton > button {
+        padding: 2px 8px !important;
+        font-size: 12px !important;
+        border-radius: 4px !important;
+        margin: 0 0 4px 0 !important;
+        background: transparent !important;
+        border: none !important;
+        text-align: left !important;
+        font-weight: 400 !important;
+        box-shadow: none !important;
+    }
+    
+    section[data-testid="stSidebar"] .stButton > button:hover {
+        transform: none;
+        font-weight: 600 !important;
+    }
+    
     /* ラジオボタンをテキストリンク風にカスタマイズ */
     div[role="radiogroup"] {
         gap: 0 !important;
@@ -426,6 +444,15 @@ def get_theme_css(theme):
         div[role="radiogroup"] label[data-checked="true"]:hover {
             color: #6eb5ff !important;
         }
+        
+        /* サイドバーのタレント選択ボタン */
+        section[data-testid="stSidebar"] .stButton > button {
+            color: #a0a0b0 !important;
+        }
+        
+        section[data-testid="stSidebar"] .stButton > button:hover {
+            color: #ffffff !important;
+        }
         """
     
     else:  # light mode
@@ -561,6 +588,15 @@ def get_theme_css(theme):
         
         div[role="radiogroup"] label[data-checked="true"]:hover {
             color: #0a58ca !important;
+        }
+        
+        /* サイドバーのタレント選択ボタン */
+        section[data-testid="stSidebar"] .stButton > button {
+            color: #6c757d !important;
+        }
+        
+        section[data-testid="stSidebar"] .stButton > button:hover {
+            color: #212529 !important;
         }
         """
     
@@ -699,27 +735,16 @@ with st.sidebar:
             text_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.7)"
             font_weight = "600" if is_selected else "400"
             
-            # タレント名を表示（小さめ）
-            st.markdown(f'<p style="font-size: 12px; font-weight: {font_weight}; margin-bottom: 6px; color: {text_color};">{talent}</p>', unsafe_allow_html=True)
+            # タレント名をクリッカブルなボタンとして表示
+            if st.button(talent, key=f"select_{i}", use_container_width=True):
+                st.session_state.selected_talent = talent
+                st.rerun()
             
             # バナー画像がある場合
             if banner_url:
-                # 画像を表示
-                st.markdown(f'<img src="{banner_url}" style="width: 100%; border-radius: 6px; border: 2px solid {border_color}; margin-bottom: 4px;">', unsafe_allow_html=True)
-                
-                # 透明なボタンを配置（画像の下）
-                if st.button(f"選択", key=f"select_{i}", use_container_width=True):
-                    st.session_state.selected_talent = talent
-                    st.rerun()
-            else:
-                # バナー画像がない場合は普通のボタン
-                if st.button(talent, key=f"select_{i}", use_container_width=True):
-                    st.session_state.selected_talent = talent
-                    st.rerun()
-            
-            # 区切り線
-            if talent != available_talents[-1]:
-                st.markdown('<hr style="margin: 12px 0; opacity: 0.2;">', unsafe_allow_html=True)
+                # 画像を表示（タレント間は1pxのマージン）
+                margin_bottom = "1px" if i < len(available_talents) - 1 else "0px"
+                st.markdown(f'<img src="{banner_url}" style="width: 100%; border-radius: 6px; border: 2px solid {border_color}; margin-bottom: {margin_bottom};">', unsafe_allow_html=True)
         
         selected_talent = st.session_state.selected_talent
 
