@@ -947,7 +947,7 @@ else:
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     sort_option = st.selectbox(
         "🔽 並び替え",
-        ["📊 再生数TOP", "👍 高評価TOP", "📈 伸び率TOP"]
+        ["📊 再生数TOP", "👍 高評価TOP", "📊📈 [再]増加率TOP", "👍💹 [高]増加率TOP"]
     )
     
     # ソート適用
@@ -955,8 +955,10 @@ else:
         video_list.sort(key=lambda x: x['再生数'], reverse=True)
     elif sort_option == "👍 高評価TOP":
         video_list.sort(key=lambda x: x['高評価数'], reverse=True)
-    elif sort_option == "📈 伸び率TOP":
+    elif sort_option == "📊📈 [再]増加率TOP":
         video_list.sort(key=lambda x: x['再生数増加率'], reverse=True)
+    elif sort_option == "👍💹 [高]増加率TOP":
+        video_list.sort(key=lambda x: x['高評価増加率'], reverse=True)
     
     # 動画カードを表示
     for video in video_list:
