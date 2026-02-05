@@ -81,26 +81,32 @@ def get_theme_css(theme):
         transform: translateY(-2px);
     }
     
-    /* サイドバー内のタレント選択ボタン */
+    /* サイドバー内のタレント選択ボタン（透明オーバーレイ用） */
     section[data-testid="stSidebar"] .stButton > button {
-        padding: 4px 6px !important;
-        font-size: 10px !important;
-        border-radius: 4px !important;
-        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 0 !important;
+        border-radius: 8px !important;
+        margin-top: -78px !important;
+        margin-bottom: 8px !important;
         background: transparent !important;
-        border: 1px solid rgba(128, 128, 128, 0.3) !important;
+        border: none !important;
         text-align: center !important;
         font-weight: 500 !important;
         box-shadow: none !important;
-        height: 100% !important;
-        writing-mode: vertical-rl !important;
-        text-orientation: mixed !important;
+        height: 80px !important;
+        min-height: 80px !important;
+        color: transparent !important;
+        cursor: pointer !important;
     }
     
     section[data-testid="stSidebar"] .stButton > button:hover {
         transform: none;
-        font-weight: 600 !important;
-        border-color: rgba(128, 128, 128, 0.6) !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        border: none !important;
+    }
+    
+    section[data-testid="stSidebar"] .stButton > button:active {
+        background: rgba(255, 255, 255, 0.2) !important;
     }
     
     /* サイドバーのボタンコンテナ */
@@ -741,31 +747,45 @@ with st.sidebar:
             
             # 選択中かどうか
             is_selected = (talent == st.session_state.selected_talent)
-            border_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.2)"
-            text_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.7)"
+            border_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.3)"
+            text_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.8)"
             font_weight = "600" if is_selected else "400"
+            bg_opacity = "0.95" if is_selected else "1"
             
             if banner_url:
-                # カード全体のコンテナ
-                st.markdown(f'<div style="border: 2px solid {border_color}; border-radius: 8px; overflow: hidden; margin-bottom: 2px;">', unsafe_allow_html=True)
+                # 画像とボタンを重ねたコンテナ
+                st.markdown(f'''
+                <div style="
+                    position: relative;
+                    border: 2px solid {border_color};
+                    border-radius: 8px;
+                    overflow: hidden;
+                    margin-bottom: 8px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                ">
+                    <img src="{banner_url}" style="
+                        width: 100%;
+                        display: block;
+                        margin: 0;
+                        opacity: {bg_opacity};
+                    ">
+                    <div style="
+                        padding: 6px 8px;
+                        text-align: center;
+                        font-size: 13px;
+                        font-weight: {font_weight};
+                        color: {text_color};
+                        background: rgba(255, 255, 255, 0.95);
+                        border-top: 1px solid rgba(128, 128, 128, 0.2);
+                    ">{talent}</div>
+                </div>
+                ''', unsafe_allow_html=True)
                 
-                # 画像とボタンを横並びで配置
-                col_img, col_btn = st.columns([0.85, 0.15])
-                
-                with col_img:
-                    # 画像を表示
-                    st.markdown(f'<img src="{banner_url}" style="width: 100%; display: block; margin: 0;">', unsafe_allow_html=True)
-                
-                with col_btn:
-                    # 小さな選択ボタン
-                    if st.button("選択", key=f"talent_btn_{i}"):
-                        st.session_state.selected_talent = talent
-                        st.rerun()
-                
-                # タレント名を下部に表示
-                st.markdown(f'<div style="padding: 4px 8px; text-align: center; font-size: 12px; font-weight: {font_weight}; color: {text_color}; margin: 0;">{talent}</div>', unsafe_allow_html=True)
-                
-                st.markdown('</div>', unsafe_allow_html=True)
+                # 透明なクリック可能ボタンを画像の上に配置
+                if st.button("　", key=f"talent_btn_{i}", use_container_width=True):
+                    st.session_state.selected_talent = talent
+                    st.rerun()
             else:
                 # バナー画像がない場合は普通のボタン
                 if st.button(talent, key=f"talent_btn_{i}", use_container_width=True):
