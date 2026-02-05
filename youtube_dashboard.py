@@ -228,6 +228,29 @@ def get_theme_css(theme):
         margin-bottom: 0.5rem !important;
     }
     
+    /* 動画ソート用セレクトボックス */
+    div[data-testid="stSelectbox"] > div {
+        background: rgba(13, 110, 253, 0.05) !important;
+        border: 2px solid rgba(13, 110, 253, 0.3) !important;
+        border-radius: 8px !important;
+        padding: 4px 8px !important;
+    }
+    
+    div[data-testid="stSelectbox"] > div:hover {
+        border-color: rgba(13, 110, 253, 0.6) !important;
+        background: rgba(13, 110, 253, 0.08) !important;
+    }
+    
+    div[data-testid="stSelectbox"] label {
+        font-weight: 600 !important;
+        font-size: 14px !important;
+        color: #0d6efd !important;
+    }
+    
+    div[data-testid="stSelectbox"] {
+        margin-bottom: 8px !important;
+    }
+    
     /* コンテンツブロックの罫線とスペーシング */
     .content-block {
         border: 1px solid;
@@ -923,9 +946,8 @@ else:
     # ソート選択
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     sort_option = st.selectbox(
-        "並び替え",
-        ["📊 再生数TOP", "👍 高評価TOP", "📈 伸び率TOP"],
-        label_visibility="collapsed"
+        "🔽 並び替え",
+        ["📊 再生数TOP", "👍 高評価TOP", "📈 伸び率TOP"]
     )
     
     # ソート適用
@@ -935,8 +957,6 @@ else:
         video_list.sort(key=lambda x: x['高評価数'], reverse=True)
     elif sort_option == "📈 伸び率TOP":
         video_list.sort(key=lambda x: x['再生数増加率'], reverse=True)
-    
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     
     # 動画カードを表示
     for video in video_list:
