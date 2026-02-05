@@ -113,6 +113,8 @@ def get_theme_css(theme):
     section[data-testid="stSidebar"] .stButton {
         margin: 0 !important;
         padding: 0 !important;
+        height: 0 !important;
+        overflow: visible !important;
     }
     
     /* ラジオボタンをテキストリンク風にカスタマイズ */
