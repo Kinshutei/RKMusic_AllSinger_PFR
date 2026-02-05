@@ -27,6 +27,13 @@ if 'theme' not in st.session_state:
 if 'selected_talent' not in st.session_state:
     st.session_state.selected_talent = None
 
+# タレントのバナー画像URL
+TALENT_BANNERS = {
+    "LEWNE": "https://yt3.googleusercontent.com/TjOjwrUdPkWglNkEgvhXt8dS36kqyKB7XwjMWwnnwWg_VgrN0EMm_XXTTR_WtI18AceNz-uY=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "wouca": "https://yt3.googleusercontent.com/VIJQxQkEkRO2OqxIYlabQLRbpeyRiGdZxjLad7YzVjT3tbXkE24XKL_ZirI1RDUMHQBsY7hK=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "深影": "https://yt3.googleusercontent.com/6REyrT4s7DrjAvRL0yJUJJxi3Ahb59XtcnnDNpu7lC7sojUKthxvBIWJDVSyExFi1BOyJPzZWg=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj"
+}
+
 # テーマに応じたCSS
 def get_theme_css(theme):
     """テーマに応じたCSSを返す"""
@@ -683,11 +690,8 @@ with st.sidebar:
         
         # 各タレントのバナー画像付きボタンを表示
         for i, talent in enumerate(available_talents):
-            # 履歴データからバナー画像URLを取得
-            history = load_history(talent)
-            banner_url = None
-            if history and 'channel_stats' in history:
-                banner_url = history['channel_stats'].get('バナー画像URL')
+            # バナー画像URLを辞書から取得
+            banner_url = TALENT_BANNERS.get(talent)
             
             # 選択中かどうか
             is_selected = (talent == st.session_state.selected_talent)
