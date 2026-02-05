@@ -590,10 +590,6 @@ def aggregate_records_by_date(records):
     # タイムスタンプでソートして返す
     return sorted(date_records.values(), key=lambda x: x['timestamp'])
 
-# メインUI
-st.title("🎵 RK Music 統計ダッシュボード")
-st.markdown("*自動取得データを表示中（JST 0, 6, 12, 18, 21時更新）*")
-
 # サイドバー
 with st.sidebar:
     # テーマ切り替えボタン
@@ -720,7 +716,7 @@ else:
                     <div>
                         <span class="stat-value">{video['再生数']:,}</span>
                         <span class="stat-change {'positive-change' if video['再生数増加'] > 0 else 'neutral-change'}">
-                            (+{video['再生数増加']:,}, {video['再生数増加率']:.1f}%)
+                            ({video['再生数増加']:,} / {video['再生数増加率']:.1f}%)
                         </span>
                     </div>
                 </div>
@@ -729,7 +725,7 @@ else:
                     <div>
                         <span class="stat-value">{video['高評価数']:,}</span>
                         <span class="stat-change {'positive-change' if video['高評価増加'] > 0 else 'neutral-change'}">
-                            (+{video['高評価増加']:,}, {video['高評価増加率']:.1f}%)
+                            ({video['高評価増加']:,} / {video['高評価増加率']:.1f}%)
                         </span>
                     </div>
                 </div>
