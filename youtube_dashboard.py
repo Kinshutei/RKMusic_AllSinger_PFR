@@ -26,6 +26,12 @@ if 'theme' not in st.session_state:
     st.session_state.theme = 'light'  # デフォルトはライトモード
 if 'selected_talent' not in st.session_state:
     st.session_state.selected_talent = None
+if 'selected_videos' not in st.session_state:
+    st.session_state.selected_videos = []
+if 'show_views_graph' not in st.session_state:
+    st.session_state.show_views_graph = True
+if 'show_likes_graph' not in st.session_state:
+    st.session_state.show_likes_graph = True
 
 # タレントのバナー画像URL
 TALENT_BANNERS = {
@@ -820,11 +826,13 @@ with st.sidebar:
                 # 透明なクリック可能ボタンを画像の上に配置
                 if st.button("　", key=f"talent_btn_{i}", use_container_width=True):
                     st.session_state.selected_talent = talent
+                    st.session_state.selected_videos = []  # タレント変更時に選択をクリア
                     st.rerun()
             else:
                 # バナー画像がない場合は普通のボタン
                 if st.button(talent, key=f"talent_btn_{i}", use_container_width=True):
                     st.session_state.selected_talent = talent
+                    st.session_state.selected_videos = []  # タレント変更時に選択をクリア
                     st.rerun()
         
         selected_talent = st.session_state.selected_talent
@@ -906,6 +914,98 @@ with col3:
 
 st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
+# グラフエリア（選択された動画がある場合のみ表示）
+if st.session_state.selected_videos and video_history:
+    st.subheader("📈 選択動画の推移")
+    
+    # グラフ表示内容選択
+    col_graph1, col_graph2 = st.columns([1, 4])
+    with col_graph1:
+        show_views = st.checkbox("📊 再生数", value=st.session_state.show_views_graph, key="views_check")
+        show_likes = st.checkbox("👍 高評価数", value=st.session_state.show_likes_graph, key="likes_check")
+        st.session_state.show_views_graph = show_views
+        st.session_state.show_likes_graph = show_likes
+    
+    # グラフ作成
+    if show_views or show_likes:
+        fig = go.Figure()
+        
+        for video_id in st.session_state.selected_videos:
+            if video_id not in video_history:
+                continue
+            
+            video_data = video_history[video_id]
+            video_title = video_data.get('タイトル', '')
+            records = video_data.get('records', [])
+            
+            if not records:
+                continue
+            
+            # データを日付順にソート
+            sorted_records = sorted(records, key=lambda x: x.get('timestamp', ''))
+            
+            dates = []
+            views = []
+            likes = []
+            
+            for record in sorted_records:
+                timestamp_str = record.get('timestamp', '')
+                try:
+                    timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+                    dates.append(timestamp.strftime('%Y-%m-%d'))
+                    views.append(record.get('再生数', 0))
+                    # 'いいね数'と'高評価数'の両方に対応
+                    likes.append(record.get('高評価数', record.get('いいね数', 0)))
+                except:
+                    continue
+            
+            # 短いタイトルを作成（最初の30文字）
+            short_title = video_title[:30] + '...' if len(video_title) > 30 else video_title
+            
+            # 再生数のグラフ
+            if show_views and dates:
+                fig.add_trace(go.Scatter(
+                    x=dates,
+                    y=views,
+                    mode='lines+markers',
+                    name=f"{short_title} (再生数)",
+                    line=dict(width=2),
+                    marker=dict(size=6)
+                ))
+            
+            # 高評価数のグラフ
+            if show_likes and dates:
+                fig.add_trace(go.Scatter(
+                    x=dates,
+                    y=likes,
+                    mode='lines+markers',
+                    name=f"{short_title} (高評価)",
+                    line=dict(width=2, dash='dot'),
+                    marker=dict(size=6, symbol='diamond')
+                ))
+        
+        # レイアウト設定
+        fig.update_layout(
+            height=400,
+            xaxis_title="日付",
+            yaxis_title="数値",
+            hovermode='x unified',
+            legend=dict(
+                orientation="v",
+                yanchor="top",
+                y=1,
+                xanchor="left",
+                x=1.02
+            ),
+            margin=dict(l=50, r=150, t=30, b=50)
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("📊 グラフに表示する項目を選択してください")
+    
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+
 # 動画リスト
 if not video_history:
     st.info("📡 動画データを蓄積中です。")
@@ -971,34 +1071,47 @@ else:
         video_list.sort(key=lambda x: x['高評価増加率'], reverse=True)
     
     # 動画カードを表示
-    for video in video_list:
+    for idx, video in enumerate(video_list):
         video_url = f"https://www.youtube.com/watch?v={video['id']}"
         type_emoji = "📹" if video['type'] == 'Movie' else ("🎬" if video['type'] == 'Short' else "🔴")
         
-        st.markdown(f'''
-        <div class="video-card">
-            <div class="video-title">
-                {type_emoji} <a href="{video_url}" target="_blank">{video['タイトル']}</a>
-            </div>
-            <div class="video-stats">
-                <div class="stat-item">
-                    <div class="stat-label">再生数</div>
-                    <div>
-                        <span class="stat-value">{video['再生数']:,}</span>
-                        <span class="stat-change {'positive-change' if video['再生数増加'] > 0 else 'neutral-change'}">
-                            ({video['再生数増加']:,} / {video['再生数増加率']:.1f}%)
-                        </span>
+        # チェックボックスとカードを横並び
+        col_check, col_card = st.columns([0.05, 0.95])
+        
+        with col_check:
+            is_selected = video['id'] in st.session_state.selected_videos
+            if st.checkbox("", value=is_selected, key=f"video_check_{idx}_{video['id']}"):
+                if video['id'] not in st.session_state.selected_videos:
+                    st.session_state.selected_videos.append(video['id'])
+            else:
+                if video['id'] in st.session_state.selected_videos:
+                    st.session_state.selected_videos.remove(video['id'])
+        
+        with col_card:
+            st.markdown(f'''
+            <div class="video-card">
+                <div class="video-title">
+                    {type_emoji} <a href="{video_url}" target="_blank">{video['タイトル']}</a>
+                </div>
+                <div class="video-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">再生数</div>
+                        <div>
+                            <span class="stat-value">{video['再生数']:,}</span>
+                            <span class="stat-change {'positive-change' if video['再生数増加'] > 0 else 'neutral-change'}">
+                                ({video['再生数増加']:,} / {video['再生数増加率']:.1f}%)
+                            </span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">高評価数</div>
+                        <div>
+                            <span class="stat-value">{video['高評価数']:,}</span>
+                            <span class="stat-change {'positive-change' if video['高評価増加'] > 0 else 'neutral-change'}">
+                                ({video['高評価増加']:,} / {video['高評価増加率']:.1f}%)
+                            </span>
+                        </div>
                     </div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-label">高評価数</div>
-                    <div>
-                        <span class="stat-value">{video['高評価数']:,}</span>
-                        <span class="stat-change {'positive-change' if video['高評価増加'] > 0 else 'neutral-change'}">
-                            ({video['高評価増加']:,} / {video['高評価増加率']:.1f}%)
-                        </span>
-                    </div>
-                </div>
             </div>
-        </div>
-        ''', unsafe_allow_html=True)
+            ''', unsafe_allow_html=True)
