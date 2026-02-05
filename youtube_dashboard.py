@@ -818,12 +818,58 @@ st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
 # チャンネル統計
 col1, col2, col3 = st.columns(3)
+
+# 前日比計算（logsから取得）
+subscribers_change = 0
+subscribers_change_rate = 0.0
+total_views_change = 0
+total_views_change_rate = 0.0
+video_count_change = 0
+video_count_change_rate = 0.0
+
+if len(logs) >= 2:
+    current_log = logs[-1]
+    previous_log = logs[-2]
+    
+    # 登録者数の変化
+    current_subs = current_log.get('登録者数', 0)
+    previous_subs = previous_log.get('登録者数', 0)
+    subscribers_change = current_subs - previous_subs
+    if previous_subs > 0:
+        subscribers_change_rate = (subscribers_change / previous_subs) * 100
+    
+    # 総再生数の変化
+    current_views = current_log.get('総再生数', 0)
+    previous_views = previous_log.get('総再生数', 0)
+    total_views_change = current_views - previous_views
+    if previous_views > 0:
+        total_views_change_rate = (total_views_change / previous_views) * 100
+    
+    # 動画数の変化
+    current_videos = current_log.get('動画数', 0)
+    previous_videos = previous_log.get('動画数', 0)
+    video_count_change = current_videos - previous_videos
+    if previous_videos > 0:
+        video_count_change_rate = (video_count_change / previous_videos) * 100
+
 with col1:
-    st.metric("登録者数", f"{channel_stats['登録者数']:,}人")
+    st.metric(
+        "登録者数", 
+        f"{channel_stats['登録者数']:,}人",
+        f"{subscribers_change:+,} ({subscribers_change_rate:+.1f}%)" if subscribers_change != 0 else None
+    )
 with col2:
-    st.metric("総再生数", f"{channel_stats['総再生数']:,}回")
+    st.metric(
+        "総再生数", 
+        f"{channel_stats['総再生数']:,}回",
+        f"{total_views_change:+,} ({total_views_change_rate:+.1f}%)" if total_views_change != 0 else None
+    )
 with col3:
-    st.metric("動画数", f"{channel_stats['動画数']:,}本")
+    st.metric(
+        "動画数", 
+        f"{channel_stats['動画数']:,}本",
+        f"{video_count_change:+,}" if video_count_change != 0 else None
+    )
 
 st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
@@ -873,6 +919,24 @@ else:
     
     # 再生数でソート
     video_list.sort(key=lambda x: x['再生数'], reverse=True)
+    
+    # ソート選択
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    sort_option = st.selectbox(
+        "並び替え",
+        ["📊 再生数TOP", "👍 高評価TOP", "📈 伸び率TOP"],
+        label_visibility="collapsed"
+    )
+    
+    # ソート適用
+    if sort_option == "📊 再生数TOP":
+        video_list.sort(key=lambda x: x['再生数'], reverse=True)
+    elif sort_option == "👍 高評価TOP":
+        video_list.sort(key=lambda x: x['高評価数'], reverse=True)
+    elif sort_option == "📈 伸び率TOP":
+        video_list.sort(key=lambda x: x['再生数増加率'], reverse=True)
+    
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     
     # 動画カードを表示
     for video in video_list:
