@@ -86,7 +86,7 @@ def get_theme_css(theme):
         padding: 2px 8px !important;
         font-size: 12px !important;
         border-radius: 4px !important;
-        margin: 0 0 4px 0 !important;
+        margin: 0 !important;
         background: transparent !important;
         border: none !important;
         text-align: left !important;
@@ -97,6 +97,12 @@ def get_theme_css(theme):
     section[data-testid="stSidebar"] .stButton > button:hover {
         transform: none;
         font-weight: 600 !important;
+    }
+    
+    /* サイドバーのボタンコンテナ */
+    section[data-testid="stSidebar"] .stButton {
+        margin: 0 !important;
+        padding: 0 !important;
     }
     
     /* ラジオボタンをテキストリンク風にカスタマイズ */
@@ -735,16 +741,27 @@ with st.sidebar:
             text_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.7)"
             font_weight = "600" if is_selected else "400"
             
-            # タレント名をクリッカブルなボタンとして表示
-            if st.button(talent, key=f"select_{i}", use_container_width=True):
-                st.session_state.selected_talent = talent
-                st.rerun()
-            
             # バナー画像がある場合
             if banner_url:
-                # 画像を表示（タレント間は1pxのマージン）
-                margin_bottom = "1px" if i < len(available_talents) - 1 else "0px"
-                st.markdown(f'<img src="{banner_url}" style="width: 100%; border-radius: 6px; border: 2px solid {border_color}; margin-bottom: {margin_bottom};">', unsafe_allow_html=True)
+                # トップ画像を表示（下のボーダーは消す）
+                st.markdown(f'<img src="{banner_url}" style="width: 100%; border-radius: 6px 6px 0 0; border: 2px solid {border_color}; border-bottom: none; margin-bottom: 0; display: block;">', unsafe_allow_html=True)
+                
+                # タレント名を表示（画像とぴったりくっつける）
+                st.markdown(f'<div style="width: 100%; border: 2px solid {border_color}; border-top: none; border-radius: 0 0 6px 6px; padding: 4px 8px; margin: 0; font-size: 12px; font-weight: {font_weight}; color: {text_color}; text-align: center; background: transparent;">{talent}</div>', unsafe_allow_html=True)
+                
+                # 透明なボタンでクリック処理
+                if st.button("　", key=f"select_{i}", use_container_width=True):
+                    st.session_state.selected_talent = talent
+                    st.rerun()
+            else:
+                # バナー画像がない場合は普通のボタン
+                if st.button(talent, key=f"select_{i}", use_container_width=True):
+                    st.session_state.selected_talent = talent
+                    st.rerun()
+            
+            # タレント間の間隔（最後以外は2px）
+            if i < len(available_talents) - 1:
+                st.markdown('<div style="margin-bottom: 2px;"></div>', unsafe_allow_html=True)
         
         selected_talent = st.session_state.selected_talent
 
