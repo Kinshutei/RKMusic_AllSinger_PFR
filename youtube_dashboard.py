@@ -762,7 +762,7 @@ with st.sidebar:
                     border: 2px solid {border_color};
                     border-radius: 8px;
                     overflow: hidden;
-                    margin-bottom: 4px;
+                    margin-bottom: 1px;
                     cursor: pointer;
                     transition: all 0.2s ease;
                 ">
