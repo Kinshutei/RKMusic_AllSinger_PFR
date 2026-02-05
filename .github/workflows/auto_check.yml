@@ -44,6 +44,9 @@ jobs:
           RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
         run: python auto_check.py
       
+      - name: Aggregate daily data
+        run: python aggregate_daily_data.py
+      
       - name: Commit and push changes
         run: |
           git config --local user.email "action@github.com"
