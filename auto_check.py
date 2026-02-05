@@ -33,11 +33,36 @@ try:
 except:
     CHANNELS = []
 
-# キリ番のリスト
-MILESTONES = [5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000]
-
 # 並列処理の設定
 MAX_WORKERS = 10  # Short判定の同時実行数
+
+def generate_view_milestones(max_value=100000000):
+    """再生数のキリ番を生成"""
+    milestones = [500]  # 最初のキリ番
+    
+    # 1,000～9,000（1,000刻み）
+    for i in range(1000, 10000, 1000):
+        milestones.append(i)
+    
+    # 10,000以降（5,000刻み）
+    current = 10000
+    while current <= max_value:
+        milestones.append(current)
+        current += 5000
+    
+    return milestones
+
+def generate_like_milestones(max_value=1000000):
+    """高評価数のキリ番を生成"""
+    milestones = []
+    
+    # 100刻み
+    current = 100
+    while current <= max_value:
+        milestones.append(current)
+        current += 100
+    
+    return milestones
 
 def get_duration_minutes(video):
     """動画の長さを分単位で取得"""
@@ -178,9 +203,13 @@ def send_email_notification(achievements, channel_name):
         body += "=" * 50 + "\n\n"
         
         for i, achievement in enumerate(achievements, 1):
+            metric_type = achievement['タイプ']
+            emoji = "📺" if metric_type == "再生数" else "👍"
+            unit = "回" if metric_type == "再生数" else "件"
+            
             body += f"【{i}】{achievement['タイトル']}\n"
-            body += f"   🎯 {achievement['キリ番']:,}回再生を突破！\n"
-            body += f"   現在の再生数: {achievement['現在の再生数']:,}回\n"
+            body += f"   {emoji} {metric_type}: {achievement['キリ番']:,}{unit}を突破！\n"
+            body += f"   現在の{metric_type}: {achievement['現在の値']:,}{unit}\n"
             body += f"   タイプ: {achievement.get('type', 'N/A')}\n"
             body += f"   動画URL: https://www.youtube.com/watch?v={achievement['動画ID']}\n\n"
         
@@ -347,6 +376,7 @@ def save_history(videos, channel_stats, channel_name):
         'channel_stats': channel_stats,
         'videos': {video['動画ID']: {
             '再生数': video['再生数'],
+            '高評価数': video['高評価数'],
             'type': video['type']
         } for video in videos}
     }
@@ -480,7 +510,7 @@ def save_video_daily_history(videos, channel_name):
             print(f"  → LiveArchive: {type_changes['LiveArchive']}件")
 
 def check_milestones(current_videos, history):
-    """キリ番達成をチェック"""
+    """キリ番達成をチェック（再生数・高評価数）"""
     achievements = []
     
     if not history or 'videos' not in history:
@@ -488,20 +518,39 @@ def check_milestones(current_videos, history):
     
     old_data = history['videos']
     
+    # キリ番リストを生成
+    view_milestones = generate_view_milestones()
+    like_milestones = generate_like_milestones()
+    
     for video in current_videos:
         video_id = video['動画ID']
         current_views = video['再生数']
+        current_likes = video['高評価数']
         
         if video_id in old_data:
-            old_views = old_data[video_id]['再生数']
+            old_views = old_data[video_id].get('再生数', 0)
+            old_likes = old_data[video_id].get('高評価数', 0)
             
-            # 突破したキリ番を検出
-            for milestone in MILESTONES:
+            # 再生数のキリ番チェック
+            for milestone in view_milestones:
                 if old_views < milestone <= current_views:
                     achievements.append({
+                        'タイプ': '再生数',
                         'タイトル': video['タイトル'],
                         'キリ番': milestone,
-                        '現在の再生数': current_views,
+                        '現在の値': current_views,
+                        '動画ID': video_id,
+                        'type': video['type']
+                    })
+            
+            # 高評価数のキリ番チェック
+            for milestone in like_milestones:
+                if old_likes < milestone <= current_likes:
+                    achievements.append({
+                        'タイプ': '高評価数',
+                        'タイトル': video['タイトル'],
+                        'キリ番': milestone,
+                        '現在の値': current_likes,
                         '動画ID': video_id,
                         'type': video['type']
                     })
@@ -557,7 +606,9 @@ def process_channel(youtube, channel_config, overrides):
     if achievements:
         print(f"\n🎉 キリ番達成: {len(achievements)}件")
         for achievement in achievements:
-            print(f"  - {achievement['タイトル']}: {achievement['キリ番']:,}回突破 [{achievement['type']}]")
+            metric_type = achievement['タイプ']
+            unit = "回" if metric_type == "再生数" else "件"
+            print(f"  - {achievement['タイトル']}: {metric_type} {achievement['キリ番']:,}{unit}突破 [{achievement['type']}]")
         
         # メール通知
         if EMAIL_ENABLED:
