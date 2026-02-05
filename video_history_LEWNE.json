@@ -1,15 +1,15 @@
 {
-  "timestamp": "2026-02-05 11:11:31",
+  "timestamp": "2026-02-05 11:49:24",
   "channel_stats": {
     "チャンネル名": "LEWNE",
     "登録者数": 10500,
     "総再生数": 869493,
     "動画数": 154,
-    "取得日時": "2026-02-05 11:11:16"
+    "取得日時": "2026-02-05 11:49:09"
   },
   "videos": {
     "2h6BAazTv08": {
-      "再生数": 1742,
+      "再生数": 1749,
       "type": "LiveArchive"
     },
     "pXlDB0FaN-g": {
@@ -17,7 +17,7 @@
       "type": "Short"
     },
     "_ZlCh1UF7NI": {
-      "再生数": 3296,
+      "再生数": 3298,
       "type": "Short"
     },
     "oUI-PZuUpbc": {
@@ -37,7 +37,7 @@
       "type": "LiveArchive"
     },
     "HtNQDWwIRGA": {
-      "再生数": 6714,
+      "再生数": 6713,
       "type": "Short"
     },
     "ni_G_XW-Wnk": {
@@ -45,7 +45,7 @@
       "type": "Short"
     },
     "IUlqQ60Klcc": {
-      "再生数": 3916,
+      "再生数": 3917,
       "type": "LiveArchive"
     },
     "mjLoGasa_E4": {
@@ -101,7 +101,7 @@
       "type": "Short"
     },
     "lYMBgNaTKMo": {
-      "再生数": 15080,
+      "再生数": 15090,
       "type": "Movie"
     },
     "Rrj02TxP6Sk": {
@@ -169,7 +169,7 @@
       "type": "Short"
     },
     "0MSFrMDD2T4": {
-      "再生数": 7264,
+      "再生数": 7267,
       "type": "Movie"
     },
     "a5a5DBmBY0k": {
@@ -269,7 +269,7 @@
       "type": "LiveArchive"
     },
     "Ffs7-PdBcAk": {
-      "再生数": 12083,
+      "再生数": 12082,
       "type": "Movie"
     },
     "kassrKMC9oo": {
@@ -533,7 +533,7 @@
       "type": "LiveArchive"
     },
     "agtCjFWlMEQ": {
-      "再生数": 2801,
+      "再生数": 2800,
       "type": "LiveArchive"
     },
     "bg7KtBevXxk": {
@@ -557,7 +557,7 @@
       "type": "Movie"
     },
     "Ng6kXPc7gzU": {
-      "再生数": 210954,
+      "再生数": 210953,
       "type": "Movie"
     },
     "IIWMk_Xgzs8": {
