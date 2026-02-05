@@ -253,21 +253,30 @@ def get_channel_id(youtube, channel_url):
     return None
 
 def get_channel_stats(youtube, channel_id):
-    """チャンネルの統計情報を取得"""
+    """チャンネルの統計情報を取得（バナー画像URLも含む）"""
     try:
         request = youtube.channels().list(
-            part='statistics,snippet',
+            part='statistics,snippet,brandingSettings',
             id=channel_id
         )
         response = request.execute()
         
         if response['items']:
             item = response['items'][0]
+            
+            # バナー画像URLを取得（存在しない場合はNone）
+            banner_url = None
+            try:
+                banner_url = item['brandingSettings']['image']['bannerExternalUrl']
+            except:
+                pass
+            
             return {
                 'チャンネル名': item['snippet']['title'],
                 '登録者数': int(item['statistics']['subscriberCount']),
                 '総再生数': int(item['statistics']['viewCount']),
                 '動画数': int(item['statistics']['videoCount']),
+                'バナー画像URL': banner_url,
                 '取得日時': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
     except Exception as e:
