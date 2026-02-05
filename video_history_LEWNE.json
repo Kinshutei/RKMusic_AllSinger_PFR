@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-02-05 13:08:52",
+  "timestamp": "2026-02-05 13:42:59",
   "channel_stats": {
     "チャンネル名": "LEWNE",
     "登録者数": 10500,
     "総再生数": 869493,
     "動画数": 154,
-    "取得日時": "2026-02-05 13:08:32"
+    "取得日時": "2026-02-05 13:42:42"
   },
   "videos": {
     "2h6BAazTv08": {
@@ -14,8 +14,8 @@
       "type": "LiveArchive"
     },
     "pXlDB0FaN-g": {
-      "再生数": 2954,
-      "高評価数": 152,
+      "再生数": 2971,
+      "高評価数": 153,
       "type": "Short"
     },
     "_ZlCh1UF7NI": {
@@ -44,8 +44,8 @@
       "type": "LiveArchive"
     },
     "HtNQDWwIRGA": {
-      "再生数": 6713,
-      "高評価数": 637,
+      "再生数": 6717,
+      "高評価数": 638,
       "type": "Short"
     },
     "ni_G_XW-Wnk": {
@@ -74,8 +74,8 @@
       "type": "LiveArchive"
     },
     "miSXhbHY5fU": {
-      "再生数": 2824,
-      "高評価数": 173,
+      "再生数": 2825,
+      "高評価数": 174,
       "type": "Short"
     },
     "lP-pcmoktFY": {
@@ -135,7 +135,7 @@
     },
     "rAGYCJtDU_Q": {
       "再生数": 3715,
-      "高評価数": 278,
+      "高評価数": 279,
       "type": "Short"
     },
     "SOxYs8DJ6wU": {
@@ -314,7 +314,7 @@
       "type": "LiveArchive"
     },
     "yQS9_-AbLI4": {
-      "再生数": 1728,
+      "再生数": 1727,
       "高評価数": 239,
       "type": "LiveArchive"
     },
@@ -409,7 +409,7 @@
       "type": "LiveArchive"
     },
     "Du3rEW5wfDU": {
-      "再生数": 1438,
+      "再生数": 1437,
       "高評価数": 247,
       "type": "LiveArchive"
     },
@@ -479,7 +479,7 @@
       "type": "Short"
     },
     "mqQKbAWMl30": {
-      "再生数": 168057,
+      "再生数": 168203,
       "高評価数": 2004,
       "type": "LiveArchive"
     },
@@ -529,7 +529,7 @@
       "type": "LiveArchive"
     },
     "ijx2L_FY2-M": {
-      "再生数": 1303,
+      "再生数": 1304,
       "高評価数": 172,
       "type": "LiveArchive"
     },
@@ -664,7 +664,7 @@
       "type": "LiveArchive"
     },
     "agtCjFWlMEQ": {
-      "再生数": 2801,
+      "再生数": 2800,
       "高評価数": 346,
       "type": "LiveArchive"
     },
@@ -694,7 +694,7 @@
       "type": "Movie"
     },
     "Ng6kXPc7gzU": {
-      "再生数": 210955,
+      "再生数": 210963,
       "高評価数": 2151,
       "type": "Movie"
     },
