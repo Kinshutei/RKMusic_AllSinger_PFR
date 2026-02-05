@@ -683,7 +683,17 @@ def load_logs(talent_name):
     return []
 
 def load_video_daily_history(talent_name):
-    """動画別履歴データを読み込む"""
+    """動画別履歴データを読み込む（集約データを優先）"""
+    # 集約データを優先的に読み込む
+    aggregated_file = f'video_daily_aggregated_{talent_name}.json'
+    if os.path.exists(aggregated_file):
+        try:
+            with open(aggregated_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            pass
+    
+    # 集約データがない場合は生データを読み込む
     history_file = f'video_daily_history_{talent_name}.json'
     if os.path.exists(history_file):
         try:
