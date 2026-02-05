@@ -118,5 +118,28 @@
     "short_count": 13,
     "archive_count": 29,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-05 06:13:02",
+    "channel_stats": {
+      "チャンネル名": "wouca",
+      "登録者数": 10500,
+      "総再生数": 1278739,
+      "動画数": 50,
+      "取得日時": "2026-02-05 06:12:55"
+    },
+    "total_videos": 47,
+    "movie_count": 5,
+    "short_count": 13,
+    "archive_count": 29,
+    "achievements": [
+      {
+        "タイトル": "【歌枠】睡眠導入ソングを歌います✽みんなで寝よウカ‥【wouca : RK Music】#utawouca 24 / #shorts #vtuber #vsinger",
+        "キリ番": 5000,
+        "現在の再生数": 5260,
+        "動画ID": "3Qq9OBKhybA",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]
