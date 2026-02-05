@@ -63,11 +63,11 @@ def get_theme_css(theme):
     .stButton > button {
         width: 100%;
         border-radius: 8px !important;
-        padding: 8px 16px !important;
+        padding: 4px 16px !important;
         font-size: 15px !important;
         font-weight: 500 !important;
         transition: all 0.3s ease !important;
-        margin: 2px 0 !important;
+        margin: 3px 0 !important;
     }
     
     .stButton > button:hover {
