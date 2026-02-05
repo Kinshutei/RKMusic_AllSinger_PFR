@@ -74,6 +74,45 @@ def get_theme_css(theme):
         transform: translateY(-2px);
     }
     
+    /* ラジオボタンをテキストリンク風にカスタマイズ */
+    div[role="radiogroup"] {
+        gap: 0 !important;
+    }
+    
+    div[role="radiogroup"] label {
+        display: flex !important;
+        align-items: center !important;
+        padding: 8px 0 !important;
+        margin: 0 !important;
+        border-bottom: 1px solid rgba(128, 128, 128, 0.2) !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    div[role="radiogroup"] label:hover {
+        padding-left: 4px !important;
+    }
+    
+    /* ラジオボタンの丸を非表示 */
+    div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
+        margin-left: 0 !important;
+    }
+    
+    div[role="radiogroup"] label > div:first-child {
+        display: none !important;
+    }
+    
+    /* 選択されていないタレント */
+    div[role="radiogroup"] label[data-baseweb="radio"] {
+        font-weight: 400 !important;
+    }
+    
+    /* テキスト部分 */
+    div[role="radiogroup"] label p {
+        margin: 0 !important;
+        font-size: 15px !important;
+    }
+    
     /* サブヘッダー */
     h1 {
         margin-bottom: 0.5rem !important;
@@ -361,6 +400,25 @@ def get_theme_css(theme):
         .divider {
             border-color: rgba(255, 255, 255, 0.1);
         }
+        
+        /* タレント選択 - ラジオボタン */
+        div[role="radiogroup"] label {
+            color: #a0a0b0 !important;
+        }
+        
+        div[role="radiogroup"] label:hover {
+            color: #ffffff !important;
+        }
+        
+        /* 選択されたタレント */
+        div[role="radiogroup"] label[data-checked="true"] {
+            color: #4a9eff !important;
+            font-weight: 600 !important;
+        }
+        
+        div[role="radiogroup"] label[data-checked="true"]:hover {
+            color: #6eb5ff !important;
+        }
         """
     
     else:  # light mode
@@ -477,6 +535,25 @@ def get_theme_css(theme):
         
         .divider {
             border-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        /* タレント選択 - ラジオボタン */
+        div[role="radiogroup"] label {
+            color: #6c757d !important;
+        }
+        
+        div[role="radiogroup"] label:hover {
+            color: #212529 !important;
+        }
+        
+        /* 選択されたタレント */
+        div[role="radiogroup"] label[data-checked="true"] {
+            color: #0d6efd !important;
+            font-weight: 600 !important;
+        }
+        
+        div[role="radiogroup"] label[data-checked="true"]:hover {
+            color: #0a58ca !important;
         }
         """
     
@@ -604,12 +681,17 @@ with st.sidebar:
         if st.session_state.selected_talent is None:
             st.session_state.selected_talent = available_talents[0]
         
-        for talent in available_talents:
-            if st.button(talent, key=f"talent_{talent}"):
-                st.session_state.selected_talent = talent
-                st.rerun()
+        # radioボタンで選択（CSSでカスタマイズ）
+        selected_talent = st.radio(
+            "タレント選択",
+            available_talents,
+            index=available_talents.index(st.session_state.selected_talent) if st.session_state.selected_talent in available_talents else 0,
+            label_visibility="collapsed"
+        )
         
-        selected_talent = st.session_state.selected_talent
+        if selected_talent != st.session_state.selected_talent:
+            st.session_state.selected_talent = selected_talent
+            st.rerun()
 
 if not selected_talent:
     st.info("📡 タレントを選択してください")
