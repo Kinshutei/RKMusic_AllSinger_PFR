@@ -7327,5 +7327,69 @@
         "type": "Movie"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-05 21:56:16",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 21500,
+      "総再生数": 1679388,
+      "動画数": 171,
+      "取得日時": "2026-02-05 21:55:55"
+    },
+    "total_videos": 160,
+    "movie_count": 13,
+    "short_count": 23,
+    "archive_count": 124,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】感情泥棒【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 500,
+        "現在の値": 3107,
+        "動画ID": "cFMnp5j8xjY",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】感情泥棒【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 1000,
+        "現在の値": 3107,
+        "動画ID": "cFMnp5j8xjY",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】感情泥棒【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 2000,
+        "現在の値": 3107,
+        "動画ID": "cFMnp5j8xjY",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】感情泥棒【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 3000,
+        "現在の値": 3107,
+        "動画ID": "cFMnp5j8xjY",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】感情泥棒【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 300,
+        "現在の値": 472,
+        "動画ID": "cFMnp5j8xjY",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】感情泥棒【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 400,
+        "現在の値": 472,
+        "動画ID": "cFMnp5j8xjY",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]

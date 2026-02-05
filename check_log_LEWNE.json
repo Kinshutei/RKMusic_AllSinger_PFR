@@ -3038,5 +3038,53 @@
     "short_count": 30,
     "archive_count": 106,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-05 21:56:43",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10500,
+      "総再生数": 869493,
+      "動画数": 156,
+      "取得日時": "2026-02-05 21:56:24"
+    },
+    "total_videos": 146,
+    "movie_count": 9,
+    "short_count": 30,
+    "archive_count": 107,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【#歌枠 /#karaoke 】泣きたい夜に泣けばいい。そんな夜の弾き語り配信│聴くだけで大丈夫 #新人vtuber #shorts #縦型配信 #vsinger 【LEWNE / RK Music】",
+        "キリ番": 1000,
+        "現在の値": 2047,
+        "動画ID": "lNT3wK62c7E",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【#歌枠 /#karaoke 】泣きたい夜に泣けばいい。そんな夜の弾き語り配信│聴くだけで大丈夫 #新人vtuber #shorts #縦型配信 #vsinger 【LEWNE / RK Music】",
+        "キリ番": 2000,
+        "現在の値": 2047,
+        "動画ID": "lNT3wK62c7E",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【#歌枠 /#karaoke 】泣きたい夜に泣けばいい。そんな夜の弾き語り配信│聴くだけで大丈夫 #新人vtuber #shorts #縦型配信 #vsinger 【LEWNE / RK Music】",
+        "キリ番": 300,
+        "現在の値": 309,
+        "動画ID": "lNT3wK62c7E",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "『 アヤノの幸福理論 / じん 』歌わせていただきました #shorts #cover 【LEWNE/ #RKMusic 】 #歌ってみた #vsinger #vtuber #切り抜き",
+        "キリ番": 3000,
+        "現在の値": 3019,
+        "動画ID": "pXlDB0FaN-g",
+        "type": "Short"
+      }
+    ]
   }
 ]
