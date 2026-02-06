@@ -7527,5 +7527,29 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-06 21:55:17",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 21600,
+      "総再生数": 1683758,
+      "動画数": 172,
+      "取得日時": "2026-02-06 21:54:55"
+    },
+    "total_videos": 161,
+    "movie_count": 13,
+    "short_count": 24,
+    "archive_count": 124,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "季節は次々死んでいく / amazarashi 【深影 / RKMusic】【東京喰種√A ED】#cover       #歌ってみた #vtuber #vsinger",
+        "キリ番": 6000,
+        "現在の値": 6003,
+        "動画ID": "xCph-KLlD_w",
+        "type": "Short"
+      }
+    ]
   }
 ]
