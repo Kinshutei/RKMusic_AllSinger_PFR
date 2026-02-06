@@ -3156,5 +3156,29 @@
     "short_count": 13,
     "archive_count": 29,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-06 11:07:31",
+    "channel_stats": {
+      "チャンネル名": "wouca",
+      "登録者数": 10500,
+      "総再生数": 1280689,
+      "動画数": 52,
+      "取得日時": "2026-02-06 11:07:25"
+    },
+    "total_videos": 48,
+    "movie_count": 5,
+    "short_count": 14,
+    "archive_count": 29,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【歌枠】歌ヲウ✽【wouca : RK Music】#utawouca 25 / #shorts #vtuber #vsinger",
+        "キリ番": 100,
+        "現在の値": 100,
+        "動画ID": "K53odhKrgWg",
+        "type": "Movie"
+      }
+    ]
   }
 ]
