@@ -7391,5 +7391,45 @@
         "type": "LiveArchive"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-06 06:08:45",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 21600,
+      "総再生数": 1683758,
+      "動画数": 172,
+      "取得日時": "2026-02-06 06:08:25"
+    },
+    "total_videos": 161,
+    "movie_count": 13,
+    "short_count": 24,
+    "archive_count": 124,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "私が明日死ぬなら / 深影【Cover】",
+        "キリ番": 20000,
+        "現在の値": 20419,
+        "動画ID": "LXjR6CfR9Q0",
+        "type": "Movie"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "季節は次々死んでいく / amazarashi 【深影 / RKMusic】【東京喰種√A ED】#cover       #歌ってみた #vtuber #vsinger",
+        "キリ番": 700,
+        "現在の値": 700,
+        "動画ID": "xCph-KLlD_w",
+        "type": "Short"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "季節は次々死んでいく / 深影【Cover】",
+        "キリ番": 6700,
+        "現在の値": 6713,
+        "動画ID": "tvULVpzqHlU",
+        "type": "Movie"
+      }
+    ]
   }
 ]
