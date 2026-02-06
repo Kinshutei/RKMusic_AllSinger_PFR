@@ -3116,5 +3116,29 @@
     "short_count": 31,
     "archive_count": 107,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-06 14:28:01",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10500,
+      "総再生数": 869493,
+      "動画数": 157,
+      "取得日時": "2026-02-06 14:27:42"
+    },
+    "total_videos": 147,
+    "movie_count": 9,
+    "short_count": 31,
+    "archive_count": 107,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "『 かくれんぼ / 優里 』歌わせていただきました #shorts #cover 【LEWNE/ #RKMusic 】 #歌ってみた #vsinger #vtuber #切り抜き",
+        "キリ番": 1000,
+        "現在の値": 1203,
+        "動画ID": "SukqtUSHF1o",
+        "type": "Short"
+      }
+    ]
   }
 ]
