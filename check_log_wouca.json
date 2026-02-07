@@ -3404,5 +3404,29 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-07 15:52:33",
+    "channel_stats": {
+      "チャンネル名": "wouca",
+      "登録者数": 10500,
+      "総再生数": 1286033,
+      "動画数": 53,
+      "取得日時": "2026-02-07 15:52:27"
+    },
+    "total_videos": 49,
+    "movie_count": 5,
+    "short_count": 15,
+    "archive_count": 29,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【アカペラ】アワータイムイエロー / ReGLOSS [Cover] #shorts #歌ってみた #acapella #wouca",
+        "キリ番": 7000,
+        "現在の値": 7003,
+        "動画ID": "BYuT-5eDKU4",
+        "type": "Short"
+      }
+    ]
   }
 ]
