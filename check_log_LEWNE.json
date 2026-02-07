@@ -3209,5 +3209,53 @@
     "short_count": 32,
     "archive_count": 107,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-07 13:56:05",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10600,
+      "総再生数": 869493,
+      "動画数": 159,
+      "取得日時": "2026-02-07 13:55:47"
+    },
+    "total_videos": 149,
+    "movie_count": 9,
+    "short_count": 32,
+    "archive_count": 108,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【 #究極ボイス歌枠リレー 】感情のこもった歌声を君に #新人Vtuber 【LEWNE / RK Music】",
+        "キリ番": 500,
+        "現在の値": 846,
+        "動画ID": "ADfC7loyvfk",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 #究極ボイス歌枠リレー 】感情のこもった歌声を君に #新人Vtuber 【LEWNE / RK Music】",
+        "キリ番": 100,
+        "現在の値": 222,
+        "動画ID": "ADfC7loyvfk",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 #究極ボイス歌枠リレー 】感情のこもった歌声を君に #新人Vtuber 【LEWNE / RK Music】",
+        "キリ番": 200,
+        "現在の値": 222,
+        "動画ID": "ADfC7loyvfk",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "『 レオ / 優里 』歌わせていただきました #shorts #cover 【LEWNE/ #RKMusic 】 #歌ってみた #vsinger #vtuber #切り抜き",
+        "キリ番": 1000,
+        "現在の値": 1329,
+        "動画ID": "3j-aE7ESTfE",
+        "type": "Short"
+      }
+    ]
   }
 ]
