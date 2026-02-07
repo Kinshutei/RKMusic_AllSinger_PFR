@@ -3257,5 +3257,20 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-07 15:52:50",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10600,
+      "総再生数": 869493,
+      "動画数": 159,
+      "取得日時": "2026-02-07 15:52:34"
+    },
+    "total_videos": 149,
+    "movie_count": 9,
+    "short_count": 32,
+    "archive_count": 108,
+    "achievements": []
   }
 ]
