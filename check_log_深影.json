@@ -7685,5 +7685,20 @@
         "type": "LiveArchive"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-08 09:56:13",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 21700,
+      "総再生数": 1708115,
+      "動画数": 172,
+      "取得日時": "2026-02-08 09:55:57"
+    },
+    "total_videos": 161,
+    "movie_count": 13,
+    "short_count": 24,
+    "archive_count": 124,
+    "achievements": []
   }
 ]
