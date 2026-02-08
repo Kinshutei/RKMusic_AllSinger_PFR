@@ -3367,5 +3367,29 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-08 15:54:45",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10600,
+      "総再生数": 883619,
+      "動画数": 160,
+      "取得日時": "2026-02-08 15:54:25"
+    },
+    "total_videos": 150,
+    "movie_count": 9,
+    "short_count": 33,
+    "archive_count": 108,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "『 レオ / 優里 』歌わせていただきました #shorts #cover 【LEWNE/ #RKMusic 】 #歌ってみた #vsinger #vtuber #切り抜き",
+        "キリ番": 100,
+        "現在の値": 104,
+        "動画ID": "3j-aE7ESTfE",
+        "type": "Short"
+      }
+    ]
   }
 ]
