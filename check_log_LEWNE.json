@@ -3391,5 +3391,29 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-08 21:55:41",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10600,
+      "総再生数": 883619,
+      "動画数": 160,
+      "取得日時": "2026-02-08 21:55:23"
+    },
+    "total_videos": 150,
+    "movie_count": 9,
+    "short_count": 33,
+    "archive_count": 108,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【 #究極ボイス歌枠リレー 】感情のこもった歌声を君に #新人Vtuber 【LEWNE / RK Music】",
+        "キリ番": 1000,
+        "現在の値": 1004,
+        "動画ID": "ADfC7loyvfk",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]

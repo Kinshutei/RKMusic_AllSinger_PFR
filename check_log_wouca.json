@@ -3587,5 +3587,20 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-08 21:55:23",
+    "channel_stats": {
+      "チャンネル名": "wouca",
+      "登録者数": 10500,
+      "総再生数": 1290832,
+      "動画数": 54,
+      "取得日時": "2026-02-08 21:55:16"
+    },
+    "total_videos": 50,
+    "movie_count": 5,
+    "short_count": 16,
+    "archive_count": 29,
+    "achievements": []
   }
 ]
