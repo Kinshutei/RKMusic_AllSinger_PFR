@@ -7732,5 +7732,61 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-08 15:54:18",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 21700,
+      "総再生数": 1708115,
+      "動画数": 172,
+      "取得日時": "2026-02-08 15:53:57"
+    },
+    "total_videos": 161,
+    "movie_count": 13,
+    "short_count": 24,
+    "archive_count": 124,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】新人Vっていつまで名乗っていいの【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 500,
+        "現在の値": 798,
+        "動画ID": "rUX8PEBAuC4",
+        "type": "Movie"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】新人Vっていつまで名乗っていいの【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 100,
+        "現在の値": 417,
+        "動画ID": "rUX8PEBAuC4",
+        "type": "Movie"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】新人Vっていつまで名乗っていいの【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 200,
+        "現在の値": 417,
+        "動画ID": "rUX8PEBAuC4",
+        "type": "Movie"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】新人Vっていつまで名乗っていいの【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 300,
+        "現在の値": 417,
+        "動画ID": "rUX8PEBAuC4",
+        "type": "Movie"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】新人Vっていつまで名乗っていいの【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 400,
+        "現在の値": 417,
+        "動画ID": "rUX8PEBAuC4",
+        "type": "Movie"
+      }
+    ]
   }
 ]
