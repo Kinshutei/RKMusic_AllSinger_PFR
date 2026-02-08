@@ -7661,5 +7661,29 @@
         "type": "Movie"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-08 06:07:34",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 21700,
+      "総再生数": 1708115,
+      "動画数": 170,
+      "取得日時": "2026-02-08 06:07:14"
+    },
+    "total_videos": 161,
+    "movie_count": 13,
+    "short_count": 24,
+    "archive_count": 124,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】感情泥棒【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 500,
+        "現在の値": 501,
+        "動画ID": "cFMnp5j8xjY",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]
