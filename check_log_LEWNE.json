@@ -3335,5 +3335,37 @@
     "short_count": 33,
     "archive_count": 108,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-08 13:57:23",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10600,
+      "総再生数": 879833,
+      "動画数": 160,
+      "取得日時": "2026-02-08 13:57:07"
+    },
+    "total_videos": 150,
+    "movie_count": 9,
+    "short_count": 33,
+    "archive_count": 108,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "『 高嶺の花子さん / backnumber 』歌わせていただきました #shorts #cover 【LEWNE/ #RKMusic 】 #歌ってみた #vsinger #vtuber #切り抜き",
+        "キリ番": 1000,
+        "現在の値": 1117,
+        "動画ID": "ZD97FKozkn0",
+        "type": "Short"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "『 レオ / 優里 』歌わせていただきました #shorts #cover 【LEWNE/ #RKMusic 】 #歌ってみた #vsinger #vtuber #切り抜き",
+        "キリ番": 2000,
+        "現在の値": 2022,
+        "動画ID": "3j-aE7ESTfE",
+        "type": "Short"
+      }
+    ]
   }
 ]

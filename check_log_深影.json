@@ -7700,5 +7700,37 @@
     "short_count": 24,
     "archive_count": 124,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-08 13:57:00",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 21700,
+      "総再生数": 1708115,
+      "動画数": 172,
+      "取得日時": "2026-02-08 13:56:42"
+    },
+    "total_videos": 161,
+    "movie_count": 13,
+    "short_count": 24,
+    "archive_count": 124,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "季節は次々死んでいく / 深影【Cover】",
+        "キリ番": 6900,
+        "現在の値": 6923,
+        "動画ID": "tvULVpzqHlU",
+        "type": "Movie"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【cover】more than words/羊文学（TVアニメ『呪術廻戦』「渋谷事変」エンディングテーマ）【深影 / RK Music】 #vsinger  #vtuber  #歌ってみた",
+        "キリ番": 800,
+        "現在の値": 801,
+        "動画ID": "o0p22EDsmPA",
+        "type": "Short"
+      }
+    ]
   }
 ]
