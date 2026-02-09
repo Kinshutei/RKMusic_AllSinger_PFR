@@ -8028,5 +8028,77 @@
         "type": "Movie"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-09 23:06:29",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 22000,
+      "総再生数": 1708115,
+      "動画数": 174,
+      "取得日時": "2026-02-09 23:06:11"
+    },
+    "total_videos": 163,
+    "movie_count": 13,
+    "short_count": 24,
+    "archive_count": 126,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】チャンネル登録2，2000名様目指す（ゆる）【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 2000,
+        "現在の値": 5770,
+        "動画ID": "BwdAUy-U85o",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】チャンネル登録2，2000名様目指す（ゆる）【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 3000,
+        "現在の値": 5770,
+        "動画ID": "BwdAUy-U85o",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】チャンネル登録2，2000名様目指す（ゆる）【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 4000,
+        "現在の値": 5770,
+        "動画ID": "BwdAUy-U85o",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】チャンネル登録2，2000名様目指す（ゆる）【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 5000,
+        "現在の値": 5770,
+        "動画ID": "BwdAUy-U85o",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】チャンネル登録2，2000名様目指す（ゆる）【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 600,
+        "現在の値": 826,
+        "動画ID": "BwdAUy-U85o",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】チャンネル登録2，2000名様目指す（ゆる）【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 700,
+        "現在の値": 826,
+        "動画ID": "BwdAUy-U85o",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】チャンネル登録2，2000名様目指す（ゆる）【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 800,
+        "現在の値": 826,
+        "動画ID": "BwdAUy-U85o",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]
