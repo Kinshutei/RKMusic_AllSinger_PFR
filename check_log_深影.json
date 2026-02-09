@@ -7916,5 +7916,29 @@
         "type": "Movie"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-09 15:14:06",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 21800,
+      "総再生数": 1708115,
+      "動画数": 173,
+      "取得日時": "2026-02-09 15:13:48"
+    },
+    "total_videos": 162,
+    "movie_count": 13,
+    "short_count": 24,
+    "archive_count": 125,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "私が明日死ぬなら / 深影【Cover】 #vtuber #歌ってみた #vsinger #cover #キタニタツヤ",
+        "キリ番": 5000,
+        "現在の値": 5008,
+        "動画ID": "beLIyIKt2vY",
+        "type": "Short"
+      }
+    ]
   }
 ]
