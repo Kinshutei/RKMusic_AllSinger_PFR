@@ -3602,5 +3602,37 @@
     "short_count": 16,
     "archive_count": 29,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-09 06:47:24",
+    "channel_stats": {
+      "チャンネル名": "wouca",
+      "登録者数": 10500,
+      "総再生数": 1295188,
+      "動画数": 54,
+      "取得日時": "2026-02-09 06:47:18"
+    },
+    "total_videos": 50,
+    "movie_count": 5,
+    "short_count": 16,
+    "archive_count": 29,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "春よ、来い / 松任谷由実 を歌わせていただきました #shorts #vsinger #歌ってみた #切り抜き",
+        "キリ番": 300,
+        "現在の値": 315,
+        "動画ID": "ih4s-i4FqGo",
+        "type": "Short"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【歌枠】睡眠導入ソングを歌います✽みんなで寝よウカ‥【wouca : RK Music】#utawouca 24 / #shorts #vtuber #vsinger",
+        "キリ番": 6000,
+        "現在の値": 6014,
+        "動画ID": "3Qq9OBKhybA",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]
