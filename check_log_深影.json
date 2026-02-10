@@ -8164,5 +8164,37 @@
         "type": "Movie"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-10 15:47:47",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 22000,
+      "総再生数": 1735074,
+      "動画数": 174,
+      "取得日時": "2026-02-10 15:47:30"
+    },
+    "total_videos": 163,
+    "movie_count": 13,
+    "short_count": 24,
+    "archive_count": 126,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】感情泥棒【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 500,
+        "現在の値": 500,
+        "動画ID": "cFMnp5j8xjY",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "JANE DOE / 深影【Cover】",
+        "キリ番": 125000,
+        "現在の値": 125024,
+        "動画ID": "y9oxKwOQwnY",
+        "type": "Movie"
+      }
+    ]
   }
 ]
