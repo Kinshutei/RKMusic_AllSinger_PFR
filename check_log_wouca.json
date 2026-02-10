@@ -3744,5 +3744,53 @@
     "short_count": 17,
     "archive_count": 29,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-10 06:47:09",
+    "channel_stats": {
+      "チャンネル名": "wouca",
+      "登録者数": 10600,
+      "総再生数": 1299159,
+      "動画数": 55,
+      "取得日時": "2026-02-10 06:47:02"
+    },
+    "total_videos": 51,
+    "movie_count": 5,
+    "short_count": 17,
+    "archive_count": 29,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "スノースマイル / BUMP OF CHICKEN を歌わせていただきました #shorts #vsinger #歌ってみた #切り抜き",
+        "キリ番": 3000,
+        "現在の値": 3242,
+        "動画ID": "SnQFpagCXHI",
+        "type": "Short"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "スノースマイル / BUMP OF CHICKEN を歌わせていただきました #shorts #vsinger #歌ってみた #切り抜き",
+        "キリ番": 300,
+        "現在の値": 378,
+        "動画ID": "SnQFpagCXHI",
+        "type": "Short"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "もらい泣き / 一青窈 を歌わせていただきました #shorts #vsinger #歌ってみた #切り抜き",
+        "キリ番": 5000,
+        "現在の値": 5171,
+        "動画ID": "ci9iO4n28_Q",
+        "type": "Short"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【弾き語り】いつかのメリークリスマス / B'z  [Cover] #shorts #歌ってみた #wouca",
+        "キリ番": 4000,
+        "現在の値": 4002,
+        "動画ID": "lCsxFsIEYtc",
+        "type": "Short"
+      }
+    ]
   }
 ]
