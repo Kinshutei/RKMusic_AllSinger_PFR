@@ -3952,5 +3952,29 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-11 11:33:23",
+    "channel_stats": {
+      "チャンネル名": "wouca",
+      "登録者数": 10600,
+      "総再生数": 1306047,
+      "動画数": 56,
+      "取得日時": "2026-02-11 11:33:15"
+    },
+    "total_videos": 52,
+    "movie_count": 5,
+    "short_count": 18,
+    "archive_count": 29,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "東京フラッシュ / Vaundy を歌わせていただきました #shorts #vsinger #歌ってみた #切り抜き",
+        "キリ番": 3000,
+        "現在の値": 3184,
+        "動画ID": "RO5xNkWfGzw",
+        "type": "Short"
+      }
+    ]
   }
 ]
