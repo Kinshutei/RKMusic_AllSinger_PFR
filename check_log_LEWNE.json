@@ -3677,5 +3677,29 @@
         "type": "LiveArchive"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-11 22:03:09",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10700,
+      "総再生数": 883619,
+      "動画数": 161,
+      "取得日時": "2026-02-11 22:02:52"
+    },
+    "total_videos": 151,
+    "movie_count": 9,
+    "short_count": 33,
+    "archive_count": 109,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【#vsinger 】まさかの収益化配信で際どいワード⁉️⚠️#vtuber #shorts #切り抜き #vtuber",
+        "キリ番": 6000,
+        "現在の値": 6003,
+        "動画ID": "MzIlEEMMDgY",
+        "type": "Short"
+      }
+    ]
   }
 ]

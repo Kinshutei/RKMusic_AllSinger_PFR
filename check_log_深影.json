@@ -8401,5 +8401,69 @@
         "type": "Movie"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-11 22:02:44",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 22200,
+      "総再生数": 1735074,
+      "動画数": 175,
+      "取得日時": "2026-02-11 22:02:26"
+    },
+    "total_videos": 165,
+    "movie_count": 14,
+    "short_count": 24,
+    "archive_count": 127,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】春は曙、やうやう白くなりゆくハムケツ【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 1000,
+        "現在の値": 4405,
+        "動画ID": "9XoABjZfeK8",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】春は曙、やうやう白くなりゆくハムケツ【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 2000,
+        "現在の値": 4405,
+        "動画ID": "9XoABjZfeK8",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】春は曙、やうやう白くなりゆくハムケツ【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 3000,
+        "現在の値": 4405,
+        "動画ID": "9XoABjZfeK8",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】春は曙、やうやう白くなりゆくハムケツ【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 4000,
+        "現在の値": 4405,
+        "動画ID": "9XoABjZfeK8",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】春は曙、やうやう白くなりゆくハムケツ【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 500,
+        "現在の値": 610,
+        "動画ID": "9XoABjZfeK8",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】春は曙、やうやう白くなりゆくハムケツ【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 600,
+        "現在の値": 610,
+        "動画ID": "9XoABjZfeK8",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]
