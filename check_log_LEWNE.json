@@ -3637,5 +3637,45 @@
     "short_count": 33,
     "archive_count": 108,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-11 18:11:49",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10700,
+      "総再生数": 883619,
+      "動画数": 161,
+      "取得日時": "2026-02-11 18:11:29"
+    },
+    "total_videos": 151,
+    "movie_count": 9,
+    "short_count": 33,
+    "archive_count": 109,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【#歌枠 /#karaoke 】デビュー9か月＆歌枠リレーありがとう！！ #新人vtuber #shorts #縦型配信 #vsinger 【LEWNE / RK Music】",
+        "キリ番": 2000,
+        "現在の値": 3569,
+        "動画ID": "-mF9fJ2NMV4",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【#歌枠 /#karaoke 】デビュー9か月＆歌枠リレーありがとう！！ #新人vtuber #shorts #縦型配信 #vsinger 【LEWNE / RK Music】",
+        "キリ番": 3000,
+        "現在の値": 3569,
+        "動画ID": "-mF9fJ2NMV4",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【#歌枠 /#karaoke 】デビュー9か月＆歌枠リレーありがとう！！ #新人vtuber #shorts #縦型配信 #vsinger 【LEWNE / RK Music】",
+        "キリ番": 400,
+        "現在の値": 440,
+        "動画ID": "-mF9fJ2NMV4",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]
