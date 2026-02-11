@@ -8226,5 +8226,85 @@
     "short_count": 24,
     "archive_count": 126,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-11 06:43:20",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 22100,
+      "総再生数": 1735074,
+      "動画数": 174,
+      "取得日時": "2026-02-11 06:42:58"
+    },
+    "total_videos": 163,
+    "movie_count": 13,
+    "short_count": 24,
+    "archive_count": 126,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】チャンネル登録2，2000名様目指す（ゆる）【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 6000,
+        "現在の値": 6018,
+        "動画ID": "BwdAUy-U85o",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "季節は次々死んでいく / 深影【Cover】",
+        "キリ番": 7200,
+        "現在の値": 7204,
+        "動画ID": "tvULVpzqHlU",
+        "type": "Movie"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 歌枠 | #karaoke  】デビュー１ヵ月記念歌枠＆高評価509耐久【深影 / RK Music】#ghostreaming",
+        "キリ番": 100,
+        "現在の値": 600,
+        "動画ID": "5Hb2Qpgc02U",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 歌枠 | #karaoke  】デビュー１ヵ月記念歌枠＆高評価509耐久【深影 / RK Music】#ghostreaming",
+        "キリ番": 200,
+        "現在の値": 600,
+        "動画ID": "5Hb2Qpgc02U",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 歌枠 | #karaoke  】デビュー１ヵ月記念歌枠＆高評価509耐久【深影 / RK Music】#ghostreaming",
+        "キリ番": 300,
+        "現在の値": 600,
+        "動画ID": "5Hb2Qpgc02U",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 歌枠 | #karaoke  】デビュー１ヵ月記念歌枠＆高評価509耐久【深影 / RK Music】#ghostreaming",
+        "キリ番": 400,
+        "現在の値": 600,
+        "動画ID": "5Hb2Qpgc02U",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 歌枠 | #karaoke  】デビュー１ヵ月記念歌枠＆高評価509耐久【深影 / RK Music】#ghostreaming",
+        "キリ番": 500,
+        "現在の値": 600,
+        "動画ID": "5Hb2Qpgc02U",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 歌枠 | #karaoke  】デビュー１ヵ月記念歌枠＆高評価509耐久【深影 / RK Music】#ghostreaming",
+        "キリ番": 600,
+        "現在の値": 600,
+        "動画ID": "5Hb2Qpgc02U",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]

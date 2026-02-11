@@ -3928,5 +3928,29 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-11 06:43:29",
+    "channel_stats": {
+      "チャンネル名": "wouca",
+      "登録者数": 10600,
+      "総再生数": 1306047,
+      "動画数": 56,
+      "取得日時": "2026-02-11 06:43:21"
+    },
+    "total_videos": 52,
+    "movie_count": 5,
+    "short_count": 18,
+    "archive_count": 29,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "スノースマイル / BUMP OF CHICKEN を歌わせていただきました #shorts #vsinger #歌ってみた #切り抜き",
+        "キリ番": 500,
+        "現在の値": 521,
+        "動画ID": "SnQFpagCXHI",
+        "type": "Short"
+      }
+    ]
   }
 ]
