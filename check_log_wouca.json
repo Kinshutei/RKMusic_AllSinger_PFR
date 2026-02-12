@@ -4101,5 +4101,61 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-12 18:09:09",
+    "channel_stats": {
+      "チャンネル名": "wouca",
+      "登録者数": 10700,
+      "総再生数": 1313898,
+      "動画数": 58,
+      "取得日時": "2026-02-12 18:09:00"
+    },
+    "total_videos": 53,
+    "movie_count": 5,
+    "short_count": 19,
+    "archive_count": 29,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "帰ろう / 藤井風 を歌わせていただきました #shorts #vsinger #歌ってみた #切り抜き",
+        "キリ番": 2000,
+        "現在の値": 2084,
+        "動画ID": "Rwoq5MT-9LM",
+        "type": "Short"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "帰ろう / 藤井風 を歌わせていただきました #shorts #vsinger #歌ってみた #切り抜き",
+        "キリ番": 200,
+        "現在の値": 241,
+        "動画ID": "Rwoq5MT-9LM",
+        "type": "Short"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "スノースマイル / BUMP OF CHICKEN を歌わせていただきました #shorts #vsinger #歌ってみた #切り抜き",
+        "キリ番": 600,
+        "現在の値": 607,
+        "動画ID": "SnQFpagCXHI",
+        "type": "Short"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【歌枠】だいすきな歌をのびのびと歌ヲウ✽【wouca : RK Music】#utawouca 15 / #shorts #vtuber #vsinger",
+        "キリ番": 7000,
+        "現在の値": 7003,
+        "動画ID": "-UbbKrTczq0",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "LADY - 米津玄師 / wouca [Cover]",
+        "キリ番": 45000,
+        "現在の値": 45056,
+        "動画ID": "gCvCO9CCxek",
+        "type": "Movie"
+      }
+    ]
   }
 ]
