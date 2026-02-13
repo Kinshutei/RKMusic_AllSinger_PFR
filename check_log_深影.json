@@ -8576,5 +8576,29 @@
     "short_count": 24,
     "archive_count": 127,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-13 06:15:21",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 22300,
+      "総再生数": 1758900,
+      "動画数": 174,
+      "取得日時": "2026-02-13 06:15:01"
+    },
+    "total_videos": 165,
+    "movie_count": 14,
+    "short_count": 24,
+    "archive_count": 127,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "季節は次々死んでいく / 深影【Cover】",
+        "キリ番": 7400,
+        "現在の値": 7419,
+        "動画ID": "tvULVpzqHlU",
+        "type": "Movie"
+      }
+    ]
   }
 ]
