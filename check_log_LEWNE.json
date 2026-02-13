@@ -3853,5 +3853,29 @@
     "short_count": 34,
     "archive_count": 109,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-13 22:05:08",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10700,
+      "総再生数": 895346,
+      "動画数": 162,
+      "取得日時": "2026-02-13 22:04:48"
+    },
+    "total_videos": 152,
+    "movie_count": 9,
+    "short_count": 34,
+    "archive_count": 109,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "LEWNE BD 3DLIVE 2025【#LEWNEBD2025】",
+        "キリ番": 4000,
+        "現在の値": 4001,
+        "動画ID": "RkDbsGl0pVc",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]
