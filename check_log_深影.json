@@ -8725,5 +8725,77 @@
     "short_count": 24,
     "archive_count": 127,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-14 13:55:45",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 22300,
+      "総再生数": 1765369,
+      "動画数": 176,
+      "取得日時": "2026-02-14 13:55:23"
+    },
+    "total_videos": 166,
+    "movie_count": 14,
+    "short_count": 24,
+    "archive_count": 128,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】止まるんじゃねえぞ【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 500,
+        "現在の値": 2065,
+        "動画ID": "OFvlsUncJ5I",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】止まるんじゃねえぞ【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 1000,
+        "現在の値": 2065,
+        "動画ID": "OFvlsUncJ5I",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】止まるんじゃねえぞ【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 2000,
+        "現在の値": 2065,
+        "動画ID": "OFvlsUncJ5I",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】止まるんじゃねえぞ【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 100,
+        "現在の値": 412,
+        "動画ID": "OFvlsUncJ5I",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】止まるんじゃねえぞ【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 200,
+        "現在の値": 412,
+        "動画ID": "OFvlsUncJ5I",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】止まるんじゃねえぞ【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 300,
+        "現在の値": 412,
+        "動画ID": "OFvlsUncJ5I",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】止まるんじゃねえぞ【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 400,
+        "現在の値": 412,
+        "動画ID": "OFvlsUncJ5I",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]

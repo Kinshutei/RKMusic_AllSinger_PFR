@@ -3925,5 +3925,45 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-14 13:56:16",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10700,
+      "総再生数": 895346,
+      "動画数": 163,
+      "取得日時": "2026-02-14 13:55:55"
+    },
+    "total_videos": 153,
+    "movie_count": 9,
+    "short_count": 34,
+    "archive_count": 110,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【 #ウミガリ 】今日の夕飯はアジのなめろうです。 #新人vtuber #vsinger 【LEWNE / RK Music】",
+        "キリ番": 500,
+        "現在の値": 1184,
+        "動画ID": "qZOGM1yGLM0",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【 #ウミガリ 】今日の夕飯はアジのなめろうです。 #新人vtuber #vsinger 【LEWNE / RK Music】",
+        "キリ番": 1000,
+        "現在の値": 1184,
+        "動画ID": "qZOGM1yGLM0",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 #ウミガリ 】今日の夕飯はアジのなめろうです。 #新人vtuber #vsinger 【LEWNE / RK Music】",
+        "キリ番": 100,
+        "現在の値": 139,
+        "動画ID": "qZOGM1yGLM0",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]
