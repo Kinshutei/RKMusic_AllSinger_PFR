@@ -4308,5 +4308,29 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-14 05:35:43",
+    "channel_stats": {
+      "チャンネル名": "wouca",
+      "登録者数": 10700,
+      "総再生数": 1323881,
+      "動画数": 59,
+      "取得日時": "2026-02-14 05:35:35"
+    },
+    "total_videos": 53,
+    "movie_count": 4,
+    "short_count": 20,
+    "archive_count": 29,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【アカペラ】革命道中 - On The Way / アイナ・ジ・エンド【Cover】#shorts #歌ってみた #wouca",
+        "キリ番": 7000,
+        "現在の値": 7001,
+        "動画ID": "0UjwMOsJW28",
+        "type": "Short"
+      }
+    ]
   }
 ]

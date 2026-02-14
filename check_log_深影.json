@@ -8678,5 +8678,37 @@
     "short_count": 24,
     "archive_count": 127,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-14 05:35:35",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 22300,
+      "総再生数": 1765369,
+      "動画数": 174,
+      "取得日時": "2026-02-14 05:35:18"
+    },
+    "total_videos": 165,
+    "movie_count": 14,
+    "short_count": 24,
+    "archive_count": 127,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【縦型歌枠 /#karaoke 】春は曙、やうやう白くなりゆくハムケツ【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 600,
+        "現在の値": 637,
+        "動画ID": "9XoABjZfeK8",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "季節は次々死んでいく / 深影【Cover】",
+        "キリ番": 7500,
+        "現在の値": 7517,
+        "動画ID": "tvULVpzqHlU",
+        "type": "Movie"
+      }
+    ]
   }
 ]
