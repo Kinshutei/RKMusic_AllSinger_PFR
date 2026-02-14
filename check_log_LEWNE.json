@@ -3901,5 +3901,29 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-14 09:57:12",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10700,
+      "総再生数": 895346,
+      "動画数": 162,
+      "取得日時": "2026-02-14 09:56:56"
+    },
+    "total_videos": 153,
+    "movie_count": 10,
+    "short_count": 34,
+    "archive_count": 109,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "『 心做し / 蝶々P 』歌わせていただきました #shorts #cover 【LEWNE/ #RKMusic 】 #歌ってみた #vsinger #vtuber #切り抜き",
+        "キリ番": 2000,
+        "現在の値": 2232,
+        "動画ID": "GxZaDkOrWgs",
+        "type": "Short"
+      }
+    ]
   }
 ]
