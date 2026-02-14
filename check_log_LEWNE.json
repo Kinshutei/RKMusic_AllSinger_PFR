@@ -3965,5 +3965,37 @@
         "type": "LiveArchive"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-14 15:53:10",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10700,
+      "総再生数": 895346,
+      "動画数": 163,
+      "取得日時": "2026-02-14 15:52:52"
+    },
+    "total_videos": 153,
+    "movie_count": 9,
+    "short_count": 34,
+    "archive_count": 110,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "『 心做し / 蝶々P 』歌わせていただきました #shorts #cover 【LEWNE/ #RKMusic 】 #歌ってみた #vsinger #vtuber #切り抜き",
+        "キリ番": 300,
+        "現在の値": 303,
+        "動画ID": "GxZaDkOrWgs",
+        "type": "Short"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "My Dearest / LEWNE【Cover】",
+        "キリ番": 175000,
+        "現在の値": 175042,
+        "動画ID": "mqQKbAWMl30",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]
