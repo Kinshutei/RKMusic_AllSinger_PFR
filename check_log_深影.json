@@ -8869,5 +8869,29 @@
         "type": "Movie"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-15 09:57:22",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 22400,
+      "総再生数": 1765369,
+      "動画数": 176,
+      "取得日時": "2026-02-15 09:57:05"
+    },
+    "total_videos": 166,
+    "movie_count": 14,
+    "short_count": 24,
+    "archive_count": 128,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 歌枠 | #karaoke  】同接500名様で重大告知する歌枠【深影 / RK Music】#ghostreaming",
+        "キリ番": 100,
+        "現在の値": 112,
+        "動画ID": "UiYXeZMfnfE",
+        "type": "Movie"
+      }
+    ]
   }
 ]

@@ -4441,5 +4441,29 @@
     "short_count": 20,
     "archive_count": 29,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-15 09:57:28",
+    "channel_stats": {
+      "チャンネル名": "wouca",
+      "登録者数": 10700,
+      "総再生数": 1325514,
+      "動画数": 59,
+      "取得日時": "2026-02-15 09:57:22"
+    },
+    "total_videos": 53,
+    "movie_count": 4,
+    "short_count": 20,
+    "archive_count": 29,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "春よ、来い / 松任谷由実 を歌わせていただきました #shorts #vsinger #歌ってみた #切り抜き",
+        "キリ番": 4000,
+        "現在の値": 4000,
+        "動画ID": "ih4s-i4FqGo",
+        "type": "Short"
+      }
+    ]
   }
 ]
