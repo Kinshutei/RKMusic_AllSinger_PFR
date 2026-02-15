@@ -8893,5 +8893,117 @@
         "type": "Movie"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-15 13:56:15",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 22500,
+      "総再生数": 1765369,
+      "動画数": 177,
+      "取得日時": "2026-02-15 13:55:54"
+    },
+    "total_videos": 166,
+    "movie_count": 13,
+    "short_count": 24,
+    "archive_count": 129,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【 歌枠 | #karaoke  】同接500名様で重大告知する歌枠【深影 / RK Music】#ghostreaming",
+        "キリ番": 500,
+        "現在の値": 4103,
+        "動画ID": "UiYXeZMfnfE",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【 歌枠 | #karaoke  】同接500名様で重大告知する歌枠【深影 / RK Music】#ghostreaming",
+        "キリ番": 1000,
+        "現在の値": 4103,
+        "動画ID": "UiYXeZMfnfE",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【 歌枠 | #karaoke  】同接500名様で重大告知する歌枠【深影 / RK Music】#ghostreaming",
+        "キリ番": 2000,
+        "現在の値": 4103,
+        "動画ID": "UiYXeZMfnfE",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【 歌枠 | #karaoke  】同接500名様で重大告知する歌枠【深影 / RK Music】#ghostreaming",
+        "キリ番": 3000,
+        "現在の値": 4103,
+        "動画ID": "UiYXeZMfnfE",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【 歌枠 | #karaoke  】同接500名様で重大告知する歌枠【深影 / RK Music】#ghostreaming",
+        "キリ番": 4000,
+        "現在の値": 4103,
+        "動画ID": "UiYXeZMfnfE",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 歌枠 | #karaoke  】同接500名様で重大告知する歌枠【深影 / RK Music】#ghostreaming",
+        "キリ番": 200,
+        "現在の値": 874,
+        "動画ID": "UiYXeZMfnfE",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 歌枠 | #karaoke  】同接500名様で重大告知する歌枠【深影 / RK Music】#ghostreaming",
+        "キリ番": 300,
+        "現在の値": 874,
+        "動画ID": "UiYXeZMfnfE",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 歌枠 | #karaoke  】同接500名様で重大告知する歌枠【深影 / RK Music】#ghostreaming",
+        "キリ番": 400,
+        "現在の値": 874,
+        "動画ID": "UiYXeZMfnfE",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 歌枠 | #karaoke  】同接500名様で重大告知する歌枠【深影 / RK Music】#ghostreaming",
+        "キリ番": 500,
+        "現在の値": 874,
+        "動画ID": "UiYXeZMfnfE",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 歌枠 | #karaoke  】同接500名様で重大告知する歌枠【深影 / RK Music】#ghostreaming",
+        "キリ番": 600,
+        "現在の値": 874,
+        "動画ID": "UiYXeZMfnfE",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 歌枠 | #karaoke  】同接500名様で重大告知する歌枠【深影 / RK Music】#ghostreaming",
+        "キリ番": 700,
+        "現在の値": 874,
+        "動画ID": "UiYXeZMfnfE",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【 歌枠 | #karaoke  】同接500名様で重大告知する歌枠【深影 / RK Music】#ghostreaming",
+        "キリ番": 800,
+        "現在の値": 874,
+        "動画ID": "UiYXeZMfnfE",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]
