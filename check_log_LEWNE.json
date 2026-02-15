@@ -4098,5 +4098,29 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-15 21:51:43",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10700,
+      "総再生数": 895346,
+      "動画数": 164,
+      "取得日時": "2026-02-15 21:51:20"
+    },
+    "total_videos": 154,
+    "movie_count": 9,
+    "short_count": 35,
+    "archive_count": 110,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【#vsinger 】今まで無いくらいの叫び声が出たVtuber 【LEWNE / #RKMusic 】  #新人vtuber #vtuber #shorts #切り抜き #ウミガリ #チラズアート",
+        "キリ番": 100,
+        "現在の値": 100,
+        "動画ID": "4PYDrtVtc74",
+        "type": "Short"
+      }
+    ]
   }
 ]
