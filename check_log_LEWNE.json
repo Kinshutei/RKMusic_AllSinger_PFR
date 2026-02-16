@@ -4193,5 +4193,29 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-16 17:26:07",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10700,
+      "総再生数": 905947,
+      "動画数": 165,
+      "取得日時": "2026-02-16 17:25:48"
+    },
+    "total_videos": 155,
+    "movie_count": 9,
+    "short_count": 36,
+    "archive_count": 110,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "『 more than words / 羊文学 』歌わせていただきました #shorts #cover 【LEWNE/ #RKMusic 】 #歌ってみた #vsinger #vtuber #切り抜き",
+        "キリ番": 100,
+        "現在の値": 104,
+        "動画ID": "8cDGTvzpeBc",
+        "type": "Short"
+      }
+    ]
   }
 ]
