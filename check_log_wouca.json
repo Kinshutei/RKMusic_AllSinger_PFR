@@ -4540,5 +4540,37 @@
     "short_count": 20,
     "archive_count": 29,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-16 14:31:07",
+    "channel_stats": {
+      "チャンネル名": "wouca",
+      "登録者数": 10700,
+      "総再生数": 1327133,
+      "動画数": 59,
+      "取得日時": "2026-02-16 14:30:59"
+    },
+    "total_videos": 53,
+    "movie_count": 4,
+    "short_count": 20,
+    "archive_count": 29,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "旅路 / 藤井風 を歌わせていただきました #shorts #vsinger #歌ってみた #切り抜き",
+        "キリ番": 3000,
+        "現在の値": 3009,
+        "動画ID": "KTF5OQqSjSc",
+        "type": "Short"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "旅路 / 藤井風 を歌わせていただきました #shorts #vsinger #歌ってみた #切り抜き",
+        "キリ番": 400,
+        "現在の値": 401,
+        "動画ID": "KTF5OQqSjSc",
+        "type": "Short"
+      }
+    ]
   }
 ]
