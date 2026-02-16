@@ -9052,5 +9052,29 @@
     "short_count": 24,
     "archive_count": 129,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-16 06:44:55",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 22500,
+      "総再生数": 1787487,
+      "動画数": 177,
+      "取得日時": "2026-02-16 06:44:34"
+    },
+    "total_videos": 166,
+    "movie_count": 13,
+    "short_count": 24,
+    "archive_count": 129,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "【縦型歌枠 /#karaoke 】愚か：チャンネル登録+100名様まで魂のルフラン縛り【深影 / RK Music】#ghostreaming #歌枠",
+        "キリ番": 6000,
+        "現在の値": 6000,
+        "動画ID": "SW1MPXKndmM",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]
