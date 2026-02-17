@@ -33,6 +33,27 @@ if 'show_views_graph' not in st.session_state:
 if 'show_likes_graph' not in st.session_state:
     st.session_state.show_likes_graph = True
 
+# タレントのバナー画像URL（固定）
+TALENT_BANNERS = {
+    "焔魔るり":   "https://yt3.googleusercontent.com/Sjt4hfgnhyLYngZTGuYb3cGKfqMdVL79wrto3PcjvxaZiirEoa-Cn_0q9UgZOMarKWGwd_hLn_o=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "HACHI":     "https://yt3.googleusercontent.com/gOqLGXVHj4l1-548h0H_GsH6ZRuDFTuzJye5MawZm0GohZ_1edqU4_Sd-Px7tw4fMsXSbz4tKA=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "瀬戸乃とと": "https://yt3.googleusercontent.com/8mHCpdJXkzkfGTz7N_Z5O_4xmkMnb8td3zYe1AIxOdKtO8WTpP44DHuchzpUubitCxHE1SyU=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "水瀬凪":    "https://yt3.googleusercontent.com/CpGbPRFm_tT618nWpvh0_U3sIctl4-3hNycqAV70ydq0kUIBUtPnUCe_LdtWlAM2r_QRsEhdgg=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "KMNZ":      "https://yt3.googleusercontent.com/4Z4kNGIXFCU1vgZpOh1LcNv4vKoQyHMgpmsgVMY6I3fy-d9oNoRMeqfALcSZVJKcTLd_5ktK2Q=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "VESPERBELL":"https://yt3.googleusercontent.com/MUU0223P2Ck50rNH0geqrg3SsJrLTrQmlG5on9JdoSzVFCtiIBwFuHQtyJRCdOP9YWSehcUY=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "CULUA":     "https://yt3.googleusercontent.com/YE8Y6f6yB_YsmNvPiJmQIrX01vB6_JigcocQH4c2tDMKw4g1_InZ_xU6V4ip0GTo_koNuVtttA=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "NEUN":      "https://yt3.googleusercontent.com/92FhDNKbUc5YMZPDE1FpTI7TzWWap9vEyVCDAW0DbKDfGifCxrrYKb7e0eqGxDoCzJs4VnYS=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "MEDA":      "https://yt3.googleusercontent.com/BjhJaO8s00ICRRos5sMhN-uLvU_OLUQ0GaNc6UKBSuEHFrK0qiUxY4UjmuNtUlKLb_dLwAmXI5s=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "CONA":      "https://yt3.googleusercontent.com/Q0tNjasT6PWnov1ddaIc57unKiD1-6ecRoNOERV-yiGBVdOaCwE5VA2IzEaGeiK36z4JabqjP5U=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "IMI":       "https://yt3.googleusercontent.com/aZTkCpaTRHpZhvhXOca7LYwJuCD0kh_fk6QKyTvS8ZMjT8dX7Soiv2k3L3HqlWVreZoFc0lb1w=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "XIDEN":     "https://yt3.googleusercontent.com/JIzwr_xsRzmL4vdr63a9IkmzCVlVpamZ3bPvZxiSnS-HUz_VoeqIrzPLlE0Xkh9Oq6B66Cz1nFE=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "ヨノ":      "https://yt3.googleusercontent.com/dx7U88GkoPj5IrNNGoXHNKWWzIqRsYhIuBYSZNp8Xlh9dJ34UzOCc3YafVLs4Mbo1nIsUfjIvg=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "LEWNE":     "https://yt3.googleusercontent.com/TjOjwrUdPkWglNkEgvhXt8dS36kqyKB7XwjMWwnnwWg_VgrN0EMm_XXTTR_WtI18AceNz-uY=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "羽緒":      "https://yt3.googleusercontent.com/IwgIc2L5HabEWLCkJ0tqTfZ5qaME9AM5QWYEgdwzjJM-peacKVl0dzDYB9kG5osRBIpn8unOgOs=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "Cil":       "https://yt3.googleusercontent.com/mmDg12VBINfcBTBCq-wS6tA4fF7UVDZn6HsLhHvXuAgTBZzmAgFOaZeeQQYDjc_Vmv0tpgxZ5Q=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "深影":      "https://yt3.googleusercontent.com/6REyrT4s7DrjAvRL0yJUJJxi3Ahb59XtcnnDNpu7lC7sojUKthxvBIWJDVSyExFi1BOyJPzZWg=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "wouca":     "https://yt3.googleusercontent.com/VIJQxQkEkRO2OqxIYlabQLRbpeyRiGdZxjLad7YzVjT3tbXkE24XKL_ZirI1RDUMHQBsY7hK=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+}
 
 # テーマに応じたCSS
 def get_theme_css(theme):
@@ -775,8 +796,7 @@ with st.sidebar:
             st.session_state.selected_talent = available_talents[0]
         
         for i, talent in enumerate(available_talents):
-            talent_data = load_history(talent)
-            banner_url = talent_data.get("channel_stats", {}).get("banner_url", "") if talent_data else ""
+            banner_url = TALENT_BANNERS.get(talent, "")
             
             is_selected = (talent == st.session_state.selected_talent)
             border_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.3)"
