@@ -434,13 +434,13 @@ def get_theme_css(theme):
         }
         
         .stButton > button {
-            background: #1e2330 !important;
+            background-color: #1e2330 !important;
             color: #ffffff !important;
             border: 1px solid rgba(255, 255, 255, 0.08) !important;
         }
         
         .stButton > button:hover {
-            background: #262730 !important;
+            background-color: #262730 !important;
             border: 1px solid #4a9eff !important;
             box-shadow: 0 4px 8px rgba(74, 158, 255, 0.2) !important;
         }
@@ -579,13 +579,13 @@ def get_theme_css(theme):
         }
         
         .stButton > button {
-            background: #ffffff !important;
+            background-color: #ffffff !important;
             color: #212529 !important;
             border: 1px solid #dee2e6 !important;
         }
         
         .stButton > button:hover {
-            background: #f8f9fa !important;
+            background-color: #f8f9fa !important;
             border: 1px solid #0d6efd !important;
             box-shadow: 0 4px 8px rgba(13, 110, 253, 0.15) !important;
         }
@@ -806,17 +806,20 @@ with st.sidebar:
             border = "3px solid #0d6efd" if is_selected else "1px solid rgba(128,128,128,0.3)"
 
             if banner_url:
+                # ~ (一般兄弟) + :has() で DOM ラッパーを透過して対象ボタンを特定
                 css_rules.append(f"""
-                div[data-testid="stMarkdown"]:has(#marker_{key}) + div[data-testid="stButton"] > button {{
+                section[data-testid="stSidebar"] div:has(> #marker_{key}) ~ div div[data-testid="stButton"] button,
+                section[data-testid="stSidebar"] div:has(#marker_{key}) + div div[data-testid="stButton"] button {{
                     background-image: url('{banner_url}') !important;
+                    background-color: transparent !important;
                     border: {border} !important;
                 }}
                 """)
             else:
                 css_rules.append(f"""
-                div[data-testid="stMarkdown"]:has(#marker_{key}) + div[data-testid="stButton"] > button {{
+                section[data-testid="stSidebar"] div:has(> #marker_{key}) ~ div div[data-testid="stButton"] button,
+                section[data-testid="stSidebar"] div:has(#marker_{key}) + div div[data-testid="stButton"] button {{
                     background-image: none !important;
-                    background-color: #1e2330 !important;
                     border: {border} !important;
                 }}
                 """)
