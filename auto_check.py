@@ -181,15 +181,21 @@ def get_channel_stats(youtube, channel_id):
     """チャンネル統計を取得"""
     try:
         resp = youtube.channels().list(
-            part='statistics,snippet', id=channel_id
+            part='statistics,snippet,brandingSettings', id=channel_id
         ).execute()
         if resp['items']:
             item = resp['items'][0]
+            banner_url = (
+                item.get('brandingSettings', {})
+                    .get('image', {})
+                    .get('bannerExternalUrl', '')
+            )
             return {
                 'チャンネル名': item['snippet']['title'],
                 '登録者数': int(item['statistics'].get('subscriberCount', 0)),
                 '総再生数': int(item['statistics'].get('viewCount', 0)),
                 '動画数': int(item['statistics'].get('videoCount', 0)),
+                'banner_url': banner_url,
                 '取得日時': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
     except Exception as e:
