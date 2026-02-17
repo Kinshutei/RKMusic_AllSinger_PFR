@@ -349,14 +349,17 @@ def update_history(channel_name, videos, today_str, year):
 # チャンネル処理
 # ----------------------------------------------------------------
 
-def process_channel(youtube, channel_config, overrides, today_str, year):
-    """1チャンネルの処理"""
+def process_channel(channel_config, overrides, today_str, year):
+    """1チャンネルの処理（スレッドセーフ：APIクライアントを個別生成）"""
     channel_name = channel_config['name']
     channel_url = channel_config['url']
 
     print(f'\n{"=" * 50}')
     print(f'処理中: {channel_name}')
     print(f'{"=" * 50}')
+
+    # スレッドごとに独自のAPIクライアントを生成
+    youtube = build('youtube', 'v3', developerKey=API_KEY)
 
     # チャンネルIDをキャッシュから取得、なければAPIで取得
     snapshots = load_json(SNAPSHOTS_FILE, {})
@@ -422,14 +425,13 @@ def main():
         print(f'  - {ch["name"]}')
 
     overrides = load_overrides()
-    youtube = build('youtube', 'v3', developerKey=API_KEY)
 
     # チャンネル処理を並列実行（3チャンネル同時）
     success = 0
     with ThreadPoolExecutor(max_workers=CHANNEL_WORKERS) as executor:
         futures = {
             executor.submit(
-                process_channel, youtube, ch, overrides, today_str, year
+                process_channel, ch, overrides, today_str, year
             ): ch['name']
             for ch in CHANNELS
         }
