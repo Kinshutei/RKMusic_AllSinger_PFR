@@ -163,16 +163,20 @@ def get_channel_id(youtube, channel_url):
     try:
         if '@' in channel_url:
             handle = channel_url.split('@')[-1]
-            resp = youtube.search().list(
-                part='snippet', q=handle, type='channel', maxResults=1
+            # forHandle を使うと @ハンドルで本人チャンネルを直接取得（Topic誤認なし）
+            resp = youtube.channels().list(
+                part='id', forHandle=handle
             ).execute()
-            if resp['items']:
-                return resp['items'][0]['snippet']['channelId']
-        resp = youtube.search().list(
-            part='snippet', q=channel_url, type='channel', maxResults=1
-        ).execute()
-        if resp['items']:
-            return resp['items'][0]['snippet']['channelId']
+            if resp.get('items'):
+                return resp['items'][0]['id']
+        # /channel/UC... 形式の直接ID指定
+        if '/channel/' in channel_url:
+            channel_id = channel_url.split('/channel/')[-1].strip('/')
+            resp = youtube.channels().list(
+                part='id', id=channel_id
+            ).execute()
+            if resp.get('items'):
+                return resp['items'][0]['id']
     except Exception as e:
         print(f'  ⚠️  チャンネルID取得エラー: {e}')
     return None
