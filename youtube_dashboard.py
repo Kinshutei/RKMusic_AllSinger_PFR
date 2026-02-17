@@ -110,40 +110,40 @@ def get_theme_css(theme):
         transform: translateY(-2px);
     }
     
-    /* サイドバー内のタレント選択ボタン（透明オーバーレイ用） */
+    /* サイドバー内のタレント選択ボタン（バナー画像ボタン） */
     section[data-testid="stSidebar"] .stButton > button {
-        padding: 0 !important;
-        font-size: 0 !important;
+        height: 72px !important;
+        min-height: 72px !important;
         border-radius: 8px !important;
-        margin-top: -78px !important;
-        margin-bottom: 0 !important;
-        background: transparent !important;
-        border: none !important;
-        text-align: center !important;
-        font-weight: 500 !important;
+        margin-bottom: 4px !important;
+        width: 100% !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        color: white !important;
+        text-shadow: 0 1px 6px rgba(0,0,0,1), 0 0 10px rgba(0,0,0,0.9) !important;
+        background-size: cover !important;
+        background-position: center top !important;
+        display: flex !important;
+        align-items: flex-end !important;
+        justify-content: center !important;
+        padding-bottom: 6px !important;
+        transition: filter 0.2s ease !important;
         box-shadow: none !important;
-        height: 80px !important;
-        min-height: 80px !important;
-        color: transparent !important;
-        cursor: pointer !important;
     }
     
     section[data-testid="stSidebar"] .stButton > button:hover {
-        transform: none;
-        background: rgba(255, 255, 255, 0.1) !important;
-        border: none !important;
+        transform: none !important;
+        filter: brightness(1.15) !important;
     }
     
     section[data-testid="stSidebar"] .stButton > button:active {
-        background: rgba(255, 255, 255, 0.2) !important;
+        filter: brightness(0.9) !important;
     }
     
     /* サイドバーのボタンコンテナ */
     section[data-testid="stSidebar"] .stButton {
         margin: 0 !important;
         padding: 0 !important;
-        height: 0 !important;
-        overflow: visible !important;
     }
     
     /* ラジオボタンをテキストリンク風にカスタマイズ */
@@ -782,14 +782,6 @@ def get_sorted_records_list(records):
         return []
     return [{'date': d, **v} for d, v in sorted(records.items())]
 
-# URLクエリパラメータからタレント選択を取得
-query_params = st.query_params
-if "talent" in query_params:
-    talent_from_url = query_params["talent"]
-    if talent_from_url != st.session_state.selected_talent:
-        st.session_state.selected_talent = talent_from_url
-        st.session_state.selected_videos = []
-
 # サイドバー
 with st.sidebar:
     st.header("+++ RK Music All Singer+++")
@@ -805,37 +797,44 @@ with st.sidebar:
 
         selected_talent = st.session_state.selected_talent
 
-        # タレントリストのHTMLを構築
-        items_html = ""
+        # 全タレントのバナーボタン用CSSを一括注入（markerセレクタ方式）
+        css_rules = []
         for talent in available_talents:
             banner_url = TALENT_BANNERS.get(talent, "")
             is_selected = (talent == selected_talent)
+            key = f"talent_btn_{talent}"
             border = "3px solid #0d6efd" if is_selected else "1px solid rgba(128,128,128,0.3)"
 
             if banner_url:
-                items_html += f"""
-                <a href="?talent={talent}" target="_top" style="text-decoration:none; display:block;
-                    border:{border}; border-radius:8px; overflow:hidden; margin-bottom:6px;">
-                    <img src="{banner_url}" style="width:100%; display:block; margin:0;">
-                </a>
-                """
+                css_rules.append(f"""
+                div[data-testid="stMarkdown"]:has(#marker_{key}) + div[data-testid="stButton"] > button {{
+                    background-image: url('{banner_url}') !important;
+                    border: {border} !important;
+                }}
+                """)
             else:
-                color = "#0d6efd" if is_selected else "#495057"
-                items_html += f"""
-                <a href="?talent={talent}" target="_top" style="text-decoration:none; display:block;
-                    border:{border}; border-radius:8px; padding:10px; margin-bottom:6px;
-                    text-align:center; font-size:14px; color:{color};">
-                    {talent}
-                </a>
-                """
+                css_rules.append(f"""
+                div[data-testid="stMarkdown"]:has(#marker_{key}) + div[data-testid="stButton"] > button {{
+                    background-image: none !important;
+                    background-color: #1e2330 !important;
+                    border: {border} !important;
+                }}
+                """)
 
-        # 全タレント分の高さを確保（1アーティスト約70px想定）
-        height = len(available_talents) * 74
-        st.components.v1.html(f"""
-        <div style="font-family: 'Noto Sans JP', sans-serif;">
-            {items_html}
-        </div>
-        """, height=height, scrolling=True)
+        if css_rules:
+            st.markdown(f"<style>{''.join(css_rules)}</style>", unsafe_allow_html=True)
+
+        # 各タレントのマーカー + ボタンを描画
+        for talent in available_talents:
+            key = f"talent_btn_{talent}"
+            st.markdown(
+                f'<div id="marker_{key}" style="display:none;height:0;margin:0;padding:0;"></div>',
+                unsafe_allow_html=True
+            )
+            if st.button(talent, key=key, use_container_width=True):
+                st.session_state.selected_talent = talent
+                st.session_state.selected_videos = []
+                st.rerun()
 
 if not selected_talent:
     st.info("📡 タレントを選択してください")
