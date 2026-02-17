@@ -802,20 +802,42 @@ with st.sidebar:
     else:
         if st.session_state.selected_talent is None:
             st.session_state.selected_talent = available_talents[0]
-        
+
+        selected_talent = st.session_state.selected_talent
+
+        # タレントリストのHTMLをJavaScriptで構築
+        items_html = ""
         for talent in available_talents:
             banner_url = TALENT_BANNERS.get(talent, "")
-            is_selected = (talent == st.session_state.selected_talent)
-            border_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.3)"
-            border_width = "3px" if is_selected else "1px"
+            is_selected = (talent == selected_talent)
+            border = "3px solid #0d6efd" if is_selected else "1px solid rgba(128,128,128,0.3)"
 
             if banner_url:
-                border_style = "outline: 3px solid #0d6efd; border-radius: 8px; display:block;" if is_selected else "outline: 1px solid rgba(128,128,128,0.3); border-radius: 8px; display:block;"
-                st.markdown(f'[![{talent}]({banner_url})](?talent={talent})', unsafe_allow_html=True)
+                items_html += f"""
+                <div onclick="window.parent.location.href='?talent={talent}'"
+                     style="cursor:pointer; border:{border}; border-radius:8px;
+                            overflow:hidden; margin-bottom:6px;">
+                    <img src="{banner_url}" style="width:100%; display:block; margin:0;">
+                </div>
+                """
             else:
-                st.markdown(f'[{talent}](?talent={talent})', unsafe_allow_html=True)
-        
-        selected_talent = st.session_state.selected_talent
+                color = "#0d6efd" if is_selected else "#495057"
+                items_html += f"""
+                <div onclick="window.parent.location.href='?talent={talent}'"
+                     style="cursor:pointer; border:{border}; border-radius:8px;
+                            padding:10px; margin-bottom:6px; text-align:center;
+                            font-size:14px; color:{color};">
+                    {talent}
+                </div>
+                """
+
+        # 全タレント分の高さを確保（1アーティスト約70px想定）
+        height = len(available_talents) * 74
+        st.components.v1.html(f"""
+        <div style="font-family: 'Noto Sans JP', sans-serif;">
+            {items_html}
+        </div>
+        """, height=height, scrolling=True)
 
 if not selected_talent:
     st.info("📡 タレントを選択してください")
