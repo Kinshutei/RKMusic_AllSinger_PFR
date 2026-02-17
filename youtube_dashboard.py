@@ -814,7 +814,7 @@ with st.sidebar:
 
             if banner_url:
                 items_html += f"""
-                <a href="?talent={talent}" style="text-decoration:none; display:block;
+                <a href="?talent={talent}" target="_top" style="text-decoration:none; display:block;
                     border:{border}; border-radius:8px; overflow:hidden; margin-bottom:6px;">
                     <img src="{banner_url}" style="width:100%; display:block; margin:0;">
                 </a>
@@ -822,7 +822,7 @@ with st.sidebar:
             else:
                 color = "#0d6efd" if is_selected else "#495057"
                 items_html += f"""
-                <a href="?talent={talent}" style="text-decoration:none; display:block;
+                <a href="?talent={talent}" target="_top" style="text-decoration:none; display:block;
                     border:{border}; border-radius:8px; padding:10px; margin-bottom:6px;
                     text-align:center; font-size:14px; color:{color};">
                     {talent}
