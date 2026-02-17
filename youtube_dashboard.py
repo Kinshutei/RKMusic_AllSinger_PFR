@@ -810,33 +810,10 @@ with st.sidebar:
             border_width = "3px" if is_selected else "1px"
 
             if banner_url:
-                st.markdown(f'''
-                <a href="?talent={talent}" style="text-decoration: none;">
-                    <div style="
-                        border: {border_width} solid {border_color};
-                        border-radius: 8px;
-                        overflow: hidden;
-                        margin-bottom: 6px;
-                        transition: border-color 0.2s ease;
-                    ">
-                        <img src="{banner_url}" style="width:100%; display:block; margin:0;">
-                    </div>
-                </a>
-                ''', unsafe_allow_html=True)
+                border_style = "outline: 3px solid #0d6efd; border-radius: 8px; display:block;" if is_selected else "outline: 1px solid rgba(128,128,128,0.3); border-radius: 8px; display:block;"
+                st.markdown(f'[![{talent}]({banner_url})](?talent={talent})', unsafe_allow_html=True)
             else:
-                st.markdown(f'''
-                <a href="?talent={talent}" style="text-decoration: none;">
-                    <div style="
-                        border: {border_width} solid {border_color};
-                        border-radius: 8px;
-                        padding: 10px;
-                        margin-bottom: 6px;
-                        text-align: center;
-                        font-size: 14px;
-                        color: {'#0d6efd' if is_selected else '#495057'};
-                    ">{talent}</div>
-                </a>
-                ''', unsafe_allow_html=True)
+                st.markdown(f'[{talent}](?talent={talent})', unsafe_allow_html=True)
         
         selected_talent = st.session_state.selected_talent
 
