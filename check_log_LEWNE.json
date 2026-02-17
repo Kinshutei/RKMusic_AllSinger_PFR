@@ -4287,5 +4287,37 @@
     "short_count": 37,
     "archive_count": 110,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-17 13:46:06",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10700,
+      "総再生数": 906898,
+      "動画数": 166,
+      "取得日時": "2026-02-17 13:45:46"
+    },
+    "total_videos": 157,
+    "movie_count": 10,
+    "short_count": 37,
+    "archive_count": 110,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "『 from Y to Y / ジミーサムP 』歌わせていただきました #shorts #cover 【LEWNE/ #RKMusic 】 #歌ってみた #vsinger #vtuber #切り抜き",
+        "キリ番": 500,
+        "現在の値": 525,
+        "動画ID": "mROu5htteXk",
+        "type": "Short"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "『 more than words / 羊文学 』歌わせていただきました #shorts #cover 【LEWNE/ #RKMusic 】 #歌ってみた #vsinger #vtuber #切り抜き",
+        "キリ番": 2000,
+        "現在の値": 2008,
+        "動画ID": "8cDGTvzpeBc",
+        "type": "Short"
+      }
+    ]
   }
 ]
