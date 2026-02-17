@@ -33,12 +33,6 @@ if 'show_views_graph' not in st.session_state:
 if 'show_likes_graph' not in st.session_state:
     st.session_state.show_likes_graph = True
 
-# タレントのバナー画像URL
-TALENT_BANNERS = {
-    "LEWNE": "https://yt3.googleusercontent.com/TjOjwrUdPkWglNkEgvhXt8dS36kqyKB7XwjMWwnnwWg_VgrN0EMm_XXTTR_WtI18AceNz-uY=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "wouca": "https://yt3.googleusercontent.com/VIJQxQkEkRO2OqxIYlabQLRbpeyRiGdZxjLad7YzVjT3tbXkE24XKL_ZirI1RDUMHQBsY7hK=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "深影": "https://yt3.googleusercontent.com/6REyrT4s7DrjAvRL0yJUJJxi3Ahb59XtcnnDNpu7lC7sojUKthxvBIWJDVSyExFi1BOyJPzZWg=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj"
-}
 
 # テーマに応じたCSS
 def get_theme_css(theme):
@@ -780,59 +774,20 @@ with st.sidebar:
         if st.session_state.selected_talent is None:
             st.session_state.selected_talent = available_talents[0]
         
-        # 各タレントのバナー画像付きボタンを表示
         for i, talent in enumerate(available_talents):
-            # バナー画像URLを辞書から取得
-            banner_url = TALENT_BANNERS.get(talent)
+            talent_data = load_history(talent)
+            banner_url = talent_data.get("channel_stats", {}).get("banner_url", "") if talent_data else ""
             
-            # 選択中かどうか
             is_selected = (talent == st.session_state.selected_talent)
             border_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.3)"
-            text_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.8)"
-            font_weight = "600" if is_selected else "400"
-            bg_opacity = "0.95" if is_selected else "1"
-            
+
             if banner_url:
-                # 画像とボタンを重ねたコンテナ
-                st.markdown(f'''
-                <div style="
-                    position: relative;
-                    border: 2px solid {border_color};
-                    border-radius: 8px;
-                    overflow: hidden;
-                    margin-bottom: 1px;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                ">
-                    <img src="{banner_url}" style="
-                        width: 100%;
-                        display: block;
-                        margin: 0;
-                        opacity: {bg_opacity};
-                    ">
-                    <div style="
-                        padding: 6px 8px;
-                        text-align: center;
-                        font-size: 13px;
-                        font-weight: {font_weight};
-                        color: {text_color};
-                        background: rgba(255, 255, 255, 0.95);
-                        border-top: 1px solid rgba(128, 128, 128, 0.2);
-                    ">{talent}</div>
-                </div>
-                ''', unsafe_allow_html=True)
-                
-                # 透明なクリック可能ボタンを画像の上に配置
-                if st.button("　", key=f"talent_btn_{i}", use_container_width=True):
-                    st.session_state.selected_talent = talent
-                    st.session_state.selected_videos = []  # タレント変更時に選択をクリア
-                    st.rerun()
-            else:
-                # バナー画像がない場合は普通のボタン
-                if st.button(talent, key=f"talent_btn_{i}", use_container_width=True):
-                    st.session_state.selected_talent = talent
-                    st.session_state.selected_videos = []  # タレント変更時に選択をクリア
-                    st.rerun()
+                st.markdown(f'<div style="border: 2px solid {border_color}; border-radius: 8px 8px 0 0; overflow: hidden; margin-bottom: 0;"><img src="{banner_url}" style="width:100%; display:block; margin:0;"></div>', unsafe_allow_html=True)
+            
+            if st.button(talent, key=f"talent_btn_{i}", use_container_width=True):
+                st.session_state.selected_talent = talent
+                st.session_state.selected_videos = []
+                st.rerun()
         
         selected_talent = st.session_state.selected_talent
 
