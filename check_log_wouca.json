@@ -4641,5 +4641,29 @@
         "type": "Short"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-17 13:47:26",
+    "channel_stats": {
+      "チャンネル名": "wouca",
+      "登録者数": 10700,
+      "総再生数": 1328307,
+      "動画数": 60,
+      "取得日時": "2026-02-17 13:47:17"
+    },
+    "total_videos": 53,
+    "movie_count": 4,
+    "short_count": 20,
+    "archive_count": 29,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "【歌枠】睡眠導入に✽しっとり癒しソングを歌ヲウカ【wouca : RK Music】#utawouca 18",
+        "キリ番": 700,
+        "現在の値": 700,
+        "動画ID": "EWfCckI4wtI",
+        "type": "LiveArchive"
+      }
+    ]
   }
 ]
