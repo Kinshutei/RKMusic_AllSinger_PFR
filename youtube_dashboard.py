@@ -172,6 +172,21 @@ def get_theme_css(theme):
         padding: 0 !important;
     }
     
+    /* Streamlitラッパーdivのgap/marginを除去 */
+    section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        gap: 0 !important;
+    }
+    
+    section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    section[data-testid="stSidebar"] div[data-testid="element-container"] {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
     /* ラジオボタンをテキストリンク風にカスタマイズ */
     div[role="radiogroup"] {
         gap: 0 !important;
