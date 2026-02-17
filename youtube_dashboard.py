@@ -119,8 +119,16 @@ def get_theme_css(theme):
         width: 100% !important;
         font-size: 13px !important;
         font-weight: 700 !important;
-        color: white !important;
-        text-shadow: 0 1px 6px rgba(0,0,0,1), 0 0 10px rgba(0,0,0,0.9) !important;
+        color: #000000 !important;
+        text-shadow:
+            -1px -1px 0 #fff,
+             1px -1px 0 #fff,
+            -1px  1px 0 #fff,
+             1px  1px 0 #fff,
+            -2px  0   0 #fff,
+             2px  0   0 #fff,
+             0   -2px 0 #fff,
+             0    2px 0 #fff !important;
         background-size: cover !important;
         background-position: center top !important;
         display: flex !important;
