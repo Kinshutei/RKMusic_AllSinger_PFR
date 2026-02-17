@@ -117,7 +117,7 @@ def get_theme_css(theme):
         border-radius: 8px !important;
         margin-bottom: 4px !important;
         width: 100% !important;
-        font-size: 15px !important;
+        font-size: 24px !important;
         font-weight: 700 !important;
         color: #000000 !important;
         text-shadow:
@@ -135,6 +135,24 @@ def get_theme_css(theme):
         align-items: flex-start !important;
         justify-content: flex-start !important;
         padding: 6px 8px 0 8px !important;
+    }
+    
+    section[data-testid="stSidebar"] .stButton > button p {
+        font-size: 24px !important;
+        font-weight: 700 !important;
+        color: #000000 !important;
+        text-align: left !important;
+        width: 100% !important;
+        margin: 0 !important;
+        text-shadow:
+            -1px -1px 0 #fff,
+             1px -1px 0 #fff,
+            -1px  1px 0 #fff,
+             1px  1px 0 #fff,
+            -2px  0   0 #fff,
+             2px  0   0 #fff,
+             0   -2px 0 #fff,
+             0    2px 0 #fff !important;
         transition: filter 0.2s ease !important;
         box-shadow: none !important;
     }
