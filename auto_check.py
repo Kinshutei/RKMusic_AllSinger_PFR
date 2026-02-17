@@ -33,7 +33,8 @@ try:
 except Exception:
     CHANNELS = []
 
-MAX_WORKERS = 10  # Short判定の同時並列数
+MAX_WORKERS = 10       # Short判定の同時並列数
+CHANNEL_WORKERS = 3   # チャンネル処理の同時並列数
 
 SNAPSHOTS_FILE = 'all_snapshots.json'
 
@@ -196,8 +197,13 @@ def get_channel_stats(youtube, channel_id):
     return None
 
 def get_all_videos(youtube, channel_id, channel_name, overrides):
-    """チャンネルの全動画を取得してタイプ判定"""
+    """チャンネルの全動画を取得してタイプ判定（Short判定はキャッシュ活用）"""
     videos = []
+
+    # 既存のtypeキャッシュをall_snapshots.jsonから取得
+    snapshots = load_json(SNAPSHOTS_FILE, {})
+    cached_videos = snapshots.get(channel_name, {}).get('videos', {})
+
     try:
         resp = youtube.channels().list(
             part='contentDetails', id=channel_id
@@ -228,12 +234,34 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
 
             print(f'  取得中... {len(videos) + len(videos_resp["items"])}本')
 
-            short_cache = check_shorts_batch(video_ids)
+            # 新規動画（キャッシュにないもの）のみShort判定
+            new_video_ids = [
+                vid for vid in video_ids
+                if vid not in cached_videos
+            ]
+            if new_video_ids:
+                print(f'  新規動画 {len(new_video_ids)}本のShort判定を実行')
+                short_cache = check_shorts_batch(new_video_ids)
+            else:
+                short_cache = {}
 
             for video in videos_resp['items']:
-                vtype = determine_video_type(video, short_cache, overrides, channel_name)
+                vid = video['id']
+
+                # キャッシュにtypeがある場合は例外設定のみチェックして再利用
+                if vid in cached_videos and vid not in new_video_ids:
+                    cached_type = cached_videos[vid].get('type', 'Movie')
+                    # 例外設定は常に最優先
+                    if overrides and channel_name in overrides and vid in overrides[channel_name]:
+                        vtype = overrides[channel_name][vid]
+                        print(f'  ⚙️  例外設定: [{video["snippet"]["title"][:40]}] → {vtype}')
+                    else:
+                        vtype = cached_type
+                else:
+                    vtype = determine_video_type(video, short_cache, overrides, channel_name)
+
                 videos.append({
-                    '動画ID': video['id'],
+                    '動画ID': vid,
                     'タイトル': video['snippet']['title'],
                     '公開日': video['snippet']['publishedAt'][:10],
                     '再生数': int(video['statistics'].get('viewCount', 0)),
@@ -396,10 +424,22 @@ def main():
     overrides = load_overrides()
     youtube = build('youtube', 'v3', developerKey=API_KEY)
 
+    # チャンネル処理を並列実行（3チャンネル同時）
     success = 0
-    for channel_config in CHANNELS:
-        if process_channel(youtube, channel_config, overrides, today_str, year):
-            success += 1
+    with ThreadPoolExecutor(max_workers=CHANNEL_WORKERS) as executor:
+        futures = {
+            executor.submit(
+                process_channel, youtube, ch, overrides, today_str, year
+            ): ch['name']
+            for ch in CHANNELS
+        }
+        for future in as_completed(futures):
+            name = futures[future]
+            try:
+                if future.result():
+                    success += 1
+            except Exception as e:
+                print(f'  ❌ {name} で予期しないエラー: {e}')
 
     print(f'\n{"=" * 50}')
     print(f'✓ 全処理完了: {success}/{len(CHANNELS)} チャンネル成功')
