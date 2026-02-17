@@ -117,7 +117,7 @@ def get_theme_css(theme):
         border-radius: 8px !important;
         margin-bottom: 4px !important;
         width: 100% !important;
-        font-size: 13px !important;
+        font-size: 15px !important;
         font-weight: 700 !important;
         color: #000000 !important;
         text-shadow:
@@ -132,9 +132,9 @@ def get_theme_css(theme):
         background-size: cover !important;
         background-position: center top !important;
         display: flex !important;
-        align-items: flex-end !important;
-        justify-content: center !important;
-        padding-bottom: 6px !important;
+        align-items: flex-start !important;
+        justify-content: flex-start !important;
+        padding: 6px 8px 0 8px !important;
         transition: filter 0.2s ease !important;
         box-shadow: none !important;
     }
