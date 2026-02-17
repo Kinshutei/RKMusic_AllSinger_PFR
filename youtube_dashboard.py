@@ -805,7 +805,7 @@ with st.sidebar:
 
         selected_talent = st.session_state.selected_talent
 
-        # タレントリストのHTMLをJavaScriptで構築
+        # タレントリストのHTMLを構築
         items_html = ""
         for talent in available_talents:
             banner_url = TALENT_BANNERS.get(talent, "")
@@ -814,21 +814,19 @@ with st.sidebar:
 
             if banner_url:
                 items_html += f"""
-                <div onclick="window.top.location.href='?talent={talent}'"
-                     style="cursor:pointer; border:{border}; border-radius:8px;
-                            overflow:hidden; margin-bottom:6px;">
+                <a href="?talent={talent}" style="text-decoration:none; display:block;
+                    border:{border}; border-radius:8px; overflow:hidden; margin-bottom:6px;">
                     <img src="{banner_url}" style="width:100%; display:block; margin:0;">
-                </div>
+                </a>
                 """
             else:
                 color = "#0d6efd" if is_selected else "#495057"
                 items_html += f"""
-                <div onclick="window.top.location.href='?talent={talent}'"
-                     style="cursor:pointer; border:{border}; border-radius:8px;
-                            padding:10px; margin-bottom:6px; text-align:center;
-                            font-size:14px; color:{color};">
+                <a href="?talent={talent}" style="text-decoration:none; display:block;
+                    border:{border}; border-radius:8px; padding:10px; margin-bottom:6px;
+                    text-align:center; font-size:14px; color:{color};">
                     {talent}
-                </div>
+                </a>
                 """
 
         # 全タレント分の高さを確保（1アーティスト約70px想定）
