@@ -4232,5 +4232,45 @@
     "short_count": 36,
     "archive_count": 110,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-17 06:12:38",
+    "channel_stats": {
+      "チャンネル名": "LEWNE",
+      "登録者数": 10700,
+      "総再生数": 906898,
+      "動画数": 165,
+      "取得日時": "2026-02-17 06:12:21"
+    },
+    "total_videos": 155,
+    "movie_count": 9,
+    "short_count": 36,
+    "archive_count": 110,
+    "achievements": [
+      {
+        "タイプ": "再生数",
+        "タイトル": "『 高嶺の花子さん / backnumber 』歌わせていただきました #shorts #cover 【LEWNE/ #RKMusic 】 #歌ってみた #vsinger #vtuber #切り抜き",
+        "キリ番": 3000,
+        "現在の値": 3001,
+        "動画ID": "ZD97FKozkn0",
+        "type": "Short"
+      },
+      {
+        "タイプ": "再生数",
+        "タイトル": "【#歌枠 / #karaoke 】泣きたい夜に、感情むき出しで弾き語り│聴くだけで大丈夫 #新人vtuber #shorts #縦型配信 #vsinger 【LEWNE / RK Music】",
+        "キリ番": 4000,
+        "現在の値": 4000,
+        "動画ID": "IUlqQ60Klcc",
+        "type": "LiveArchive"
+      },
+      {
+        "タイプ": "高評価数",
+        "タイトル": "空想線/LEWNE 【 #shorts #LEWNE #vsinger #vtuber #バーチャルyoutuber 】",
+        "キリ番": 100,
+        "現在の値": 141,
+        "動画ID": "Z_LGB44VhD8",
+        "type": "Short"
+      }
+    ]
   }
 ]

@@ -9154,5 +9154,29 @@
     "short_count": 24,
     "archive_count": 129,
     "achievements": []
+  },
+  {
+    "timestamp": "2026-02-17 06:12:13",
+    "channel_stats": {
+      "チャンネル名": "深影",
+      "登録者数": 22500,
+      "総再生数": 1792770,
+      "動画数": 177,
+      "取得日時": "2026-02-17 06:11:57"
+    },
+    "total_videos": 166,
+    "movie_count": 13,
+    "short_count": 24,
+    "archive_count": 129,
+    "achievements": [
+      {
+        "タイプ": "高評価数",
+        "タイトル": "おやすみ泣き声、さよなら歌姫 / 深影【Cover】",
+        "キリ番": 1600,
+        "現在の値": 1600,
+        "動画ID": "huxfOAjOIsU",
+        "type": "Movie"
+      }
+    ]
   }
 ]
