@@ -115,7 +115,7 @@ def get_theme_css(theme):
         height: 72px !important;
         min-height: 72px !important;
         border-radius: 8px !important;
-        margin-bottom: 4px !important;
+
         width: 100% !important;
         font-size: 24px !important;
         font-weight: 700 !important;
