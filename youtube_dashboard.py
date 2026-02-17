@@ -782,6 +782,14 @@ def get_sorted_records_list(records):
         return []
     return [{'date': d, **v} for d, v in sorted(records.items())]
 
+# URLクエリパラメータからタレント選択を取得
+query_params = st.query_params
+if "talent" in query_params:
+    talent_from_url = query_params["talent"]
+    if talent_from_url != st.session_state.selected_talent:
+        st.session_state.selected_talent = talent_from_url
+        st.session_state.selected_videos = []
+
 # サイドバー
 with st.sidebar:
     st.header("+++ RK Music All Singer+++")
@@ -795,17 +803,40 @@ with st.sidebar:
         if st.session_state.selected_talent is None:
             st.session_state.selected_talent = available_talents[0]
         
-        for i, talent in enumerate(available_talents):
+        for talent in available_talents:
             banner_url = TALENT_BANNERS.get(talent, "")
             is_selected = (talent == st.session_state.selected_talent)
+            border_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.3)"
+            border_width = "3px" if is_selected else "1px"
 
             if banner_url:
-                st.image(banner_url, use_container_width=True)
-            
-            if st.button(talent, key=f"talent_btn_{i}", use_container_width=True):
-                st.session_state.selected_talent = talent
-                st.session_state.selected_videos = []
-                st.rerun()
+                st.markdown(f'''
+                <a href="?talent={talent}" style="text-decoration: none;">
+                    <div style="
+                        border: {border_width} solid {border_color};
+                        border-radius: 8px;
+                        overflow: hidden;
+                        margin-bottom: 6px;
+                        transition: border-color 0.2s ease;
+                    ">
+                        <img src="{banner_url}" style="width:100%; display:block; margin:0;">
+                    </div>
+                </a>
+                ''', unsafe_allow_html=True)
+            else:
+                st.markdown(f'''
+                <a href="?talent={talent}" style="text-decoration: none;">
+                    <div style="
+                        border: {border_width} solid {border_color};
+                        border-radius: 8px;
+                        padding: 10px;
+                        margin-bottom: 6px;
+                        text-align: center;
+                        font-size: 14px;
+                        color: {'#0d6efd' if is_selected else '#495057'};
+                    ">{talent}</div>
+                </a>
+                ''', unsafe_allow_html=True)
         
         selected_talent = st.session_state.selected_talent
 
