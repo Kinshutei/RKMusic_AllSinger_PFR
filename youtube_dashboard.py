@@ -51,6 +51,14 @@ def get_theme_css(theme):
         font-family: 'Noto Sans JP', sans-serif !important;
     }
     
+    /* 英字はCentury Gothic系 */
+    h1, h2, h3,
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        font-family: 'Century Gothic', 'Futura', 'Trebuchet MS', 'Noto Sans JP', sans-serif !important;
+    }
+    
     /* 全体的なスペーシングを圧縮 */
     .block-container {
         padding-top: 2rem !important;
@@ -653,60 +661,66 @@ def get_theme_css(theme):
 # CSSを適用
 st.markdown(get_theme_css(st.session_state.theme), unsafe_allow_html=True)
 
-# キリ番のリスト
-MILESTONES = [5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000]
+# タレント表示順（固定）
+TALENT_ORDER = [
+    "焔魔るり", "HACHI", "瀬戸乃とと", "水瀬凪",
+    "KMNZ", "VESPERBELL", "CULUA", "NEUN", "MEDA", "CONA",
+    "IMI", "XIDEN", "ヨノ", "LEWNE", "羽緒", "Cil", "深影", "wouca"
+]
 
 # タレント一覧を取得
 def get_available_talents():
-    """利用可能なタレント（チャンネル）のリストを取得"""
-    talents = []
-    history_files = glob.glob('video_history_*.json')
-    for file in history_files:
-        name = file.replace('video_history_', '').replace('.json', '')
-        talents.append(name)
-    return sorted(talents)
+    """all_snapshots.jsonに存在するタレントを固定順で返す"""
+    if not os.path.exists('all_snapshots.json'):
+        return []
+    try:
+        with open('all_snapshots.json', 'r', encoding='utf-8') as f:
+            snapshots = json.load(f)
+        existing = set(snapshots.keys())
+        # 固定順でフィルタ
+        ordered = [t for t in TALENT_ORDER if t in existing]
+        # 固定順にないタレントは末尾に追加
+        extras = [t for t in existing if t not in TALENT_ORDER]
+        return ordered + sorted(extras)
+    except:
+        return []
 
 def load_history(talent_name):
-    """履歴データを読み込む"""
-    history_file = f'video_history_{talent_name}.json'
-    if os.path.exists(history_file):
-        try:
-            with open(history_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            return None
+    """all_snapshots.jsonから指定タレントのデータを読み込む"""
+    if not os.path.exists('all_snapshots.json'):
+        return None
+    try:
+        with open('all_snapshots.json', 'r', encoding='utf-8') as f:
+            snapshots = json.load(f)
+        data = snapshots.get(talent_name)
+        if data:
+            # 旧形式と互換性を持たせるため channel_stats と videos を返す
+            return {
+                'channel_stats': data.get('channel_stats', {}),
+                'videos': data.get('videos', {})
+            }
+    except:
+        pass
     return None
 
 def load_logs(talent_name):
-    """ログデータを読み込む"""
-    log_file = f'check_log_{talent_name}.json'
-    if os.path.exists(log_file):
-        try:
-            with open(log_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            return []
+    """新構造ではログは別管理しないため空を返す（前日比は履歴から計算）"""
     return []
 
 def load_video_daily_history(talent_name):
-    """動画別履歴データを読み込む（集約データを優先）"""
-    # 集約データを優先的に読み込む
-    aggregated_file = f'video_daily_aggregated_{talent_name}.json'
-    if os.path.exists(aggregated_file):
-        try:
-            with open(aggregated_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            pass
-    
-    # 集約データがない場合は生データを読み込む
-    history_file = f'video_daily_history_{talent_name}.json'
-    if os.path.exists(history_file):
-        try:
-            with open(history_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            return {}
+    """all_history_{year}.jsonから指定タレントの動画履歴を読み込む"""
+    # 今年と去年のファイルを確認
+    years = [datetime.now().strftime('%Y'), str(int(datetime.now().strftime('%Y')) - 1)]
+    for year in years:
+        path = f'all_history_{year}.json'
+        if os.path.exists(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    history = json.load(f)
+                if talent_name in history:
+                    return history[talent_name]
+            except:
+                pass
     return {}
 
 def filter_videos_by_type(video_history, video_type):
@@ -720,8 +734,8 @@ def filter_videos_by_type(video_history, video_type):
     return filtered
 
 def calculate_growth(records, period='1DAY'):
-    """指定期間の増加数を計算"""
-    if len(records) < 2:
+    """指定期間の増加数を計算（recordsはdateキーのdict）"""
+    if not records or len(records) < 2:
         return 0
     now = datetime.now()
     if period == '1DAY':
@@ -732,45 +746,30 @@ def calculate_growth(records, period='1DAY'):
         cutoff = now - timedelta(days=30)
     else:
         return 0
-    old_record = None
-    for record in records:
-        try:
-            record_date = datetime.strptime(record['timestamp'], '%Y-%m-%d %H:%M:%S')
-            if record_date >= cutoff:
-                if old_record is None or record_date < datetime.strptime(old_record['timestamp'], '%Y-%m-%d %H:%M:%S'):
-                    old_record = record
-        except:
-            continue
-    if old_record:
-        return records[-1]['再生数'] - old_record['再生数']
+
+    sorted_dates = sorted(records.keys())
+    latest_views = records[sorted_dates[-1]].get('再生数', 0)
+
+    cutoff_str = cutoff.strftime('%Y-%m-%d')
+    old_views = None
+    for date in sorted_dates:
+        if date >= cutoff_str:
+            old_views = records[date].get('再生数', 0)
+            break
+
+    if old_views is not None:
+        return latest_views - old_views
     return 0
 
-def aggregate_records_by_date(records):
-    """同じ日付のレコードは最新のみを使用"""
-    date_records = {}
-    
-    for record in records:
-        try:
-            timestamp = datetime.strptime(record['timestamp'], '%Y-%m-%d %H:%M:%S')
-            date_key = timestamp.strftime('%Y-%m-%d')  # 日付のみ
-            
-            # 既存データがないか、より新しいタイムスタンプなら更新
-            if date_key not in date_records:
-                date_records[date_key] = record
-            else:
-                existing_time = datetime.strptime(date_records[date_key]['timestamp'], '%Y-%m-%d %H:%M:%S')
-                if timestamp > existing_time:
-                    date_records[date_key] = record  # より新しい方を採用
-        except:
-            continue
-    
-    # タイムスタンプでソートして返す
-    return sorted(date_records.values(), key=lambda x: x['timestamp'])
+def get_sorted_records_list(records):
+    """recordsのdictを日付順のリストに変換"""
+    if not records:
+        return []
+    return [{'date': d, **v} for d, v in sorted(records.items())]
 
 # サイドバー
 with st.sidebar:
-    st.header("🎵 RK Music")
-    st.subheader("タレント")
+    st.header("+++ RK Music All Singer+++")
     
     available_talents = get_available_talents()
     
@@ -936,28 +935,22 @@ if st.session_state.selected_videos and video_history:
             
             video_data = video_history[video_id]
             video_title = video_data.get('タイトル', '')
-            records = video_data.get('records', [])
+            records = video_data.get('records', {})
             
             if not records:
                 continue
             
             # データを日付順にソート
-            sorted_records = sorted(records, key=lambda x: x.get('timestamp', ''))
+            sorted_records = get_sorted_records_list(records)
             
             dates = []
             views = []
             likes = []
             
             for record in sorted_records:
-                timestamp_str = record.get('timestamp', '')
-                try:
-                    timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
-                    dates.append(timestamp.strftime('%Y-%m-%d'))
-                    views.append(record.get('再生数', 0))
-                    # 'いいね数'と'高評価数'の両方に対応
-                    likes.append(record.get('高評価数', record.get('いいね数', 0)))
-                except:
-                    continue
+                dates.append(record.get('date', ''))
+                views.append(record.get('再生数', 0))
+                likes.append(record.get('高評価数', 0))
             
             # 短いタイトルを作成（最初の30文字）
             short_title = video_title[:30] + '...' if len(video_title) > 30 else video_title
@@ -1013,30 +1006,32 @@ else:
     # 全動画をリストアップ
     video_list = []
     for video_id, video_data in video_history.items():
-        records = video_data.get('records', [])
-        if len(records) >= 1:
-            current_record = records[-1]
-            current_views = current_record.get('再生数', 0)
-            current_likes = current_record.get('高評価数', 0)  # 新しく追加
-            
-            # 前日比を計算
-            views_change = 0
-            views_change_rate = 0.0
-            likes_change = 0
-            likes_change_rate = 0.0
-            
-            if len(records) >= 2:
-                previous_record = records[-2]
-                previous_views = previous_record.get('再生数', 0)
-                previous_likes = previous_record.get('高評価数', 0)
-                
-                views_change = current_views - previous_views
-                if previous_views > 0:
-                    views_change_rate = (views_change / previous_views) * 100
-                
-                likes_change = current_likes - previous_likes
-                if previous_likes > 0:
-                    likes_change_rate = (likes_change / previous_likes) * 100
+        records = video_data.get('records', {})
+        if not records:
+            continue
+
+        sorted_dates = sorted(records.keys())
+        current_record = records[sorted_dates[-1]]
+        current_views = current_record.get('再生数', 0)
+        current_likes = current_record.get('高評価数', 0)
+
+        views_change = 0
+        views_change_rate = 0.0
+        likes_change = 0
+        likes_change_rate = 0.0
+
+        if len(sorted_dates) >= 2:
+            previous_record = records[sorted_dates[-2]]
+            previous_views = previous_record.get('再生数', 0)
+            previous_likes = previous_record.get('高評価数', 0)
+
+            views_change = current_views - previous_views
+            if previous_views > 0:
+                views_change_rate = (views_change / previous_views) * 100
+
+            likes_change = current_likes - previous_likes
+            if previous_likes > 0:
+                likes_change_rate = (likes_change / previous_likes) * 100
             
             video_list.append({
                 'id': video_id,
