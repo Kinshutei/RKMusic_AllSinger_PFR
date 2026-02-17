@@ -782,7 +782,7 @@ with st.sidebar:
             border_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.3)"
 
             if banner_url:
-                st.markdown(f'<div style="border: 2px solid {border_color}; border-radius: 8px 8px 0 0; overflow: hidden; margin-bottom: 0;"><img src="{banner_url}" style="width:100%; display:block; margin:0;"></div>', unsafe_allow_html=True)
+                st.image(banner_url, use_container_width=True)
             
             if st.button(talent, key=f"talent_btn_{i}", use_container_width=True):
                 st.session_state.selected_talent = talent
