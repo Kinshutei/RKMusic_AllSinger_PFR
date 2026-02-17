@@ -798,28 +798,10 @@ with st.sidebar:
         for i, talent in enumerate(available_talents):
             banner_url = TALENT_BANNERS.get(talent, "")
             is_selected = (talent == st.session_state.selected_talent)
-            border_color = "#0d6efd" if is_selected else "rgba(128, 128, 128, 0.3)"
-            box_shadow = "0 0 0 3px #0d6efd" if is_selected else "none"
 
             if banner_url:
-                st.markdown(f"""
-                <style>
-                section[data-testid="stSidebar"] .stButton:nth-of-type({i+1}) button {{
-                    background-image: url("{banner_url}") !important;
-                    background-size: cover !important;
-                    background-position: center !important;
-                    background-color: transparent !important;
-                    color: transparent !important;
-                    height: 80px !important;
-                    border: 2px solid {border_color} !important;
-                    border-radius: 8px !important;
-                    box-shadow: {box_shadow} !important;
-                    padding: 0 !important;
-                    margin-bottom: 4px !important;
-                }}
-                </style>
-                """, unsafe_allow_html=True)
-
+                st.image(banner_url, use_container_width=True)
+            
             if st.button(talent, key=f"talent_btn_{i}", use_container_width=True):
                 st.session_state.selected_talent = talent
                 st.session_state.selected_videos = []
