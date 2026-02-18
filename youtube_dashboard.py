@@ -76,7 +76,7 @@ def get_theme_css(theme):
     
     /* 全体的なスペーシングを圧縮 */
     .block-container {
-        padding-top: 2rem !important;
+        padding-top: 4.5rem !important;
         padding-bottom: 1rem !important;
     }
     
