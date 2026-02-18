@@ -80,6 +80,16 @@ def get_theme_css(theme):
         padding-bottom: 1rem !important;
     }
     
+    /* メインエリアの要素間ギャップを最小化 */
+    .main [data-testid="stVerticalBlock"] {
+        gap: 0 !important;
+    }
+    
+    /* stMarkdownのマージンを除去 */
+    .main [data-testid="stMarkdownContainer"] > div {
+        margin-bottom: 0 !important;
+    }
+    
     /* タブ */
     button[data-baseweb="tab"] {
         background: transparent !important;
@@ -903,7 +913,7 @@ vids  = channel_stats.get('動画数',   0)
 if banner_url:
     st.markdown(f"""
     <div style="position:relative; width:100%; height:200px; border-radius:12px;
-                overflow:hidden; margin-bottom:10px;">
+                overflow:hidden; margin-bottom:0;">
         <img src="{banner_url}" style="width:100%; height:100%;
                    object-fit:cover; object-position:center top;">
         <div style="position:absolute; inset:0;
@@ -922,6 +932,7 @@ if banner_url:
             </div>
         </div>
     </div>
+    <hr style="margin:8px 0; border:none; border-top:1px solid rgba(128,128,128,0.25);">
     """, unsafe_allow_html=True)
 else:
     # バナーなしのフォールバック
@@ -929,8 +940,7 @@ else:
     st.markdown(
         f"登録者数：**{subs:,}**　　総再生数：**{views:,}**　　動画数：**{vids:,}**"
     )
-
-st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
 # グラフエリア（選択された動画がある場合のみ表示）
 if st.session_state.selected_videos and video_history:
