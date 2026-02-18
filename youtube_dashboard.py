@@ -894,65 +894,40 @@ if not history:
 
 channel_stats = history.get('channel_stats', {})
 
-# ページヘッダー
-st.markdown('<div class="page-header">', unsafe_allow_html=True)
-st.title(f"📺 {channel_stats.get('チャンネル名', selected_talent)}")
-st.markdown('</div>', unsafe_allow_html=True)
-st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+# バナーヘッダー
+banner_url = TALENT_BANNERS.get(selected_talent, "")
+subs  = channel_stats.get('登録者数', 0)
+views = channel_stats.get('総再生数', 0)
+vids  = channel_stats.get('動画数',   0)
 
-# チャンネル統計
-col1, col2, col3 = st.columns(3)
-
-# 前日比計算（logsから取得）
-subscribers_change = 0
-subscribers_change_rate = 0.0
-total_views_change = 0
-total_views_change_rate = 0.0
-video_count_change = 0
-video_count_change_rate = 0.0
-
-if len(logs) >= 2:
-    current_log = logs[-1]
-    previous_log = logs[-2]
-    
-    # 登録者数の変化
-    current_subs = current_log.get('登録者数', 0)
-    previous_subs = previous_log.get('登録者数', 0)
-    subscribers_change = current_subs - previous_subs
-    if previous_subs > 0:
-        subscribers_change_rate = (subscribers_change / previous_subs) * 100
-    
-    # 総再生数の変化
-    current_views = current_log.get('総再生数', 0)
-    previous_views = previous_log.get('総再生数', 0)
-    total_views_change = current_views - previous_views
-    if previous_views > 0:
-        total_views_change_rate = (total_views_change / previous_views) * 100
-    
-    # 動画数の変化
-    current_videos = current_log.get('動画数', 0)
-    previous_videos = previous_log.get('動画数', 0)
-    video_count_change = current_videos - previous_videos
-    if previous_videos > 0:
-        video_count_change_rate = (video_count_change / previous_videos) * 100
-
-with col1:
-    st.metric(
-        "登録者数", 
-        f"{channel_stats['登録者数']:,}人",
-        f"{subscribers_change:+,} ({subscribers_change_rate:+.1f}%)" if subscribers_change != 0 else None
-    )
-with col2:
-    st.metric(
-        "総再生数", 
-        f"{channel_stats['総再生数']:,}回",
-        f"{total_views_change:+,} ({total_views_change_rate:+.1f}%)" if total_views_change != 0 else None
-    )
-with col3:
-    st.metric(
-        "動画数", 
-        f"{channel_stats['動画数']:,}本",
-        f"{video_count_change:+,}" if video_count_change != 0 else None
+if banner_url:
+    st.markdown(f"""
+    <div style="position:relative; width:100%; height:200px; border-radius:12px;
+                overflow:hidden; margin-bottom:10px;">
+        <img src="{banner_url}" style="width:100%; height:100%;
+                   object-fit:cover; object-position:center top;">
+        <div style="position:absolute; inset:0;
+                    background:linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.72) 100%);">
+        </div>
+        <div style="position:absolute; bottom:10px; left:14px; right:14px;">
+            <div style="font-size:10px; color:rgba(255,255,255,0.6);
+                        letter-spacing:4px; font-weight:600; margin-bottom:4px;">
+                DASHBOARD
+            </div>
+            <div style="font-size:13px; color:rgba(255,255,255,0.9); font-weight:500;
+                        display:flex; gap:24px;">
+                <span>登録者数：<strong>{subs:,}</strong></span>
+                <span>総再生数：<strong>{views:,}</strong></span>
+                <span>動画数：<strong>{vids:,}</strong></span>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    # バナーなしのフォールバック
+    st.subheader(channel_stats.get('チャンネル名', selected_talent))
+    st.markdown(
+        f"登録者数：**{subs:,}**　　総再生数：**{views:,}**　　動画数：**{vids:,}**"
     )
 
 st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -1094,10 +1069,15 @@ else:
     
     # ソート選択
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    sort_option = st.selectbox(
-        "🔽 並び替え",
-        ["📊 再生数TOP", "👍 高評価TOP", "📊📈 [再]増加率TOP", "👍💹 [高]増加率TOP"]
-    )
+    col_label, col_select = st.columns([1, 5], vertical_alignment="center")
+    with col_label:
+        st.markdown("**🔽 並び替え**")
+    with col_select:
+        sort_option = st.selectbox(
+            "並び替え",
+            ["📊 再生数TOP", "👍 高評価TOP", "📊📈 [再]増加率TOP", "👍💹 [高]増加率TOP"],
+            label_visibility="collapsed"
+        )
     
     # ソート適用
     if sort_option == "📊 再生数TOP":
