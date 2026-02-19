@@ -763,10 +763,17 @@ def load_history(talent_name):
             snapshots = json.load(f)
         data = snapshots.get(talent_name)
         if data:
-            # 旧形式と互換性を持たせるため channel_stats と videos を返す
+            # _channel_stats は {"YYYY-MM-DD": {...}} 形式 → 最新日付の値を返す
+            raw_ch = data.get('_channel_stats', {})
+            if raw_ch:
+                latest_date = sorted(raw_ch.keys())[-1]
+                channel_stats = raw_ch[latest_date]
+            else:
+                channel_stats = {}
             return {
-                'channel_stats': data.get('channel_stats', {}),
-                'videos': data.get('videos', {})
+                'channel_stats': channel_stats,
+                # アンダースコア始まりでないキーを動画データとして返す（後方互換用）
+                'videos': {k: v for k, v in data.items() if not k.startswith('_')}
             }
     except:
         pass
@@ -777,45 +784,41 @@ def load_logs(talent_name):
     return []
 
 def load_video_daily_history(talent_name):
-    """all_history_{year}.jsonから指定タレントの動画履歴を読み込む"""
-    # 今年と去年のファイルを確認
-    years = [datetime.now().strftime('%Y'), str(int(datetime.now().strftime('%Y')) - 1)]
-    for year in years:
-        path = f'all_history_{year}.json'
-        if os.path.exists(path):
-            try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    history = json.load(f)
-                if talent_name in history:
-                    return history[talent_name]
-            except:
-                pass
+    """all_snapshots.jsonから指定タレントの動画履歴を読み込む"""
+    if not os.path.exists('all_snapshots.json'):
+        return {}
+    try:
+        with open('all_snapshots.json', 'r', encoding='utf-8') as f:
+            snapshots = json.load(f)
+        data = snapshots.get(talent_name, {})
+        # アンダースコア始まりでないキーが動画データ
+        return {k: v for k, v in data.items() if not k.startswith('_')}
+    except:
+        pass
     return {}
 
 def get_channel_stats_diff(talent_name):
     """前日比を返す。データがなければ None を返す"""
-    years = [datetime.now().strftime('%Y'), str(int(datetime.now().strftime('%Y')) - 1)]
-    for year in years:
-        path = f'all_history_{year}.json'
-        if os.path.exists(path):
-            try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    history = json.load(f)
-                ch_stats = history.get(talent_name, {}).get('_channel_stats', {})
-                if not ch_stats:
-                    return None
-                sorted_dates = sorted(ch_stats.keys())
-                if len(sorted_dates) < 2:
-                    return None
-                today = ch_stats[sorted_dates[-1]]
-                yesterday = ch_stats[sorted_dates[-2]]
-                return {
-                    '登録者数': today['登録者数'] - yesterday['登録者数'],
-                    '総再生数': today['総再生数'] - yesterday['総再生数'],
-                    '動画数':   today['動画数']   - yesterday['動画数'],
-                }
-            except:
-                pass
+    if not os.path.exists('all_snapshots.json'):
+        return None
+    try:
+        with open('all_snapshots.json', 'r', encoding='utf-8') as f:
+            snapshots = json.load(f)
+        ch_stats = snapshots.get(talent_name, {}).get('_channel_stats', {})
+        if not ch_stats:
+            return None
+        sorted_dates = sorted(ch_stats.keys())
+        if len(sorted_dates) < 2:
+            return None
+        today = ch_stats[sorted_dates[-1]]
+        yesterday = ch_stats[sorted_dates[-2]]
+        return {
+            '登録者数': today['登録者数'] - yesterday['登録者数'],
+            '総再生数': today['総再生数'] - yesterday['総再生数'],
+            '動画数':   today['動画数']   - yesterday['動画数'],
+        }
+    except:
+        pass
     return None
 
 def filter_videos_by_type(video_history, video_type):
