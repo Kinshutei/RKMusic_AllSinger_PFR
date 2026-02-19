@@ -344,28 +344,28 @@ def update_history(channel_name, videos, today_str, year, channel_stats=None):
             }
 
         for video in videos:
-        video_id = video['動画ID']
+            video_id = video['動画ID']
 
-        if video_id not in channel_history:
-            channel_history[video_id] = {
-                'タイトル': video['タイトル'],
-                '公開日': video['公開日'],
-                'type': video['type'],
-                'records': {}
+            if video_id not in channel_history:
+                channel_history[video_id] = {
+                    'タイトル': video['タイトル'],
+                    '公開日': video['公開日'],
+                    'type': video['type'],
+                    'records': {}
+                }
+            else:
+                old_type = channel_history[video_id].get('type')
+                if old_type != video['type']:
+                    print(f'  🔄 タイプ更新: [{video["タイトル"][:40]}] {old_type} → {video["type"]}')
+                channel_history[video_id]['type'] = video['type']
+                channel_history[video_id]['タイトル'] = video['タイトル']
+
+            # 日次集約: 同日のレコードは上書き（最新値で更新）
+            channel_history[video_id]['records'][today_str] = {
+                '再生数': video['再生数'],
+                '高評価数': video['高評価数'],
+                'コメント数': video['コメント数']
             }
-        else:
-            old_type = channel_history[video_id].get('type')
-            if old_type != video['type']:
-                print(f'  🔄 タイプ更新: [{video["タイトル"][:40]}] {old_type} → {video["type"]}')
-            channel_history[video_id]['type'] = video['type']
-            channel_history[video_id]['タイトル'] = video['タイトル']
-
-        # 日次集約: 同日のレコードは上書き（最新値で更新）
-        channel_history[video_id]['records'][today_str] = {
-            '再生数': video['再生数'],
-            '高評価数': video['高評価数'],
-            'コメント数': video['コメント数']
-        }
 
     history[channel_name] = channel_history
     save_json(path, history)
