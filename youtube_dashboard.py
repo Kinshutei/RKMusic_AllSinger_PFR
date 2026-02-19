@@ -526,7 +526,7 @@ if selected_talent == "Dashboard":
 
     st.markdown('<hr style="margin:10px 0 16px 0; border:none; border-top:1px solid rgba(128,128,128,0.2);">', unsafe_allow_html=True)
     st.subheader("📥 CSVエクスポート")
-    st.caption("全タレントのデータを2ファイル（チャンネル統計・動画統計）のZIPでダウンロードします。Shift-JIS形式。")
+    st.caption("2ファイル（チャンネル統計・動画統計）をZIP（Shift-JIS形式）にてDL。")
 
     if st.button("CSVを生成してダウンロード", type="primary"):
         with st.spinner("データを集計中..."):
