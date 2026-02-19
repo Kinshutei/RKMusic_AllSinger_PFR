@@ -392,7 +392,119 @@ def build_csv_data():
     return rows_to_sjis(ch_rows), rows_to_sjis(vid_rows), None
 
 
-def get_available_talents():
+def build_dashboard_data():
+    """
+    Dashboardページ用のデータを組み立てる。
+    all_history_{year}.json から最新日(N)と前日(N-1)を取得して前日比を計算。
+    戻り値:
+        singer_data  : [{talent, subs_n, subs_diff, views_n, views_diff}, ...]
+        video_data   : {
+            'Movie':       [{talent, vid_id, title, views_n, views_diff, views_rate,
+                             likes_n, likes_diff, comments_n, comments_diff}, ...],
+            'Short':       [...],
+            'LiveArchive': [...]
+        }
+        n_date       : str  基準日 (YYYY-MM-DD)
+        error        : str or None
+    """
+    history   = _load_history_year() or {}
+    snapshots = _load_snapshots()    or {}
+
+    talents = [t for t in TALENT_ORDER if t != "Dashboard" and t in snapshots]
+    if not talents:
+        return None, None, None, "スナップショットデータが見つかりません"
+
+    # N日を確定
+    all_dates = set()
+    for talent in talents:
+        all_dates.update(history.get(talent, {}).get('_channel_stats', {}).keys())
+    if not all_dates:
+        return None, None, None, "履歴データが見つかりません（all_history_{year}.json）"
+
+    sorted_dates = sorted(all_dates)
+    n_date = sorted_dates[-1]
+    p_date = sorted_dates[-2] if len(sorted_dates) >= 2 else None
+
+    # ── Singer部門 ──────────────────────────────
+    singer_data = []
+    for talent in talents:
+        ch = history.get(talent, {}).get('_channel_stats', {})
+        n  = ch.get(n_date, {})
+        p  = ch.get(p_date, {}) if p_date else {}
+
+        subs_n  = n.get('登録者数', 0)
+        views_n = n.get('総再生数', 0)
+        subs_diff  = (subs_n  - p.get('登録者数', 0)) if p else None
+        views_diff = (views_n - p.get('総再生数', 0)) if p else None
+
+        def rate(val, diff):
+            if diff is None or val is None:
+                return None
+            base = val - diff
+            return round(diff / base * 100, 1) if base > 0 else None
+
+        singer_data.append({
+            'talent':      talent,
+            'subs_n':      subs_n,
+            'subs_diff':   subs_diff,
+            'subs_rate':   rate(subs_n, subs_diff),
+            'views_n':     views_n,
+            'views_diff':  views_diff,
+            'views_rate':  rate(views_n, views_diff),
+        })
+
+    # ── 動画部門 ────────────────────────────────
+    video_data = {'Movie': [], 'Short': [], 'LiveArchive': []}
+
+    for talent in talents:
+        talent_hist = history.get(talent, {})
+        snap_videos = snapshots.get(talent, {}).get('videos', {})
+
+        for vid_id, snap in snap_videos.items():
+            if not isinstance(snap, dict):
+                continue
+            vtype = snap.get('type', 'Movie')
+            if vtype not in video_data:
+                continue
+
+            title    = snap.get('タイトル', vid_id)
+            hist_vid = talent_hist.get(vid_id, {})
+            records  = hist_vid.get('records', {}) if isinstance(hist_vid, dict) else {}
+
+            n_rec = records.get(n_date, {})
+            p_rec = records.get(p_date, {}) if p_date else {}
+
+            views_n    = n_rec.get('再生数', 0)
+            likes_n    = n_rec.get('高評価数', 0)
+            comments_n = n_rec.get('コメント数', 0)
+
+            views_diff    = (views_n    - p_rec.get('再生数', 0))    if p_rec else None
+            likes_diff    = (likes_n    - p_rec.get('高評価数', 0))  if p_rec else None
+            comments_diff = (comments_n - p_rec.get('コメント数', 0)) if p_rec else None
+
+            def vrate(val, diff):
+                if diff is None or val is None:
+                    return None
+                base = val - diff
+                return round(diff / base * 100, 1) if base > 0 else None
+
+            video_data[vtype].append({
+                'talent':        talent,
+                'vid_id':        vid_id,
+                'title':         title,
+                'views_n':       views_n,
+                'views_diff':    views_diff,
+                'views_rate':    vrate(views_n, views_diff),
+                'likes_n':       likes_n,
+                'likes_diff':    likes_diff,
+                'comments_n':    comments_n,
+                'comments_diff': comments_diff,
+            })
+
+    return singer_data, video_data, n_date, None
+
+
+
     """all_snapshots.json に存在するタレントを固定順で返す。総合ダッシュボードは常に先頭"""
     snapshots = _load_snapshots()
     existing = set(snapshots.keys()) if snapshots else set()
@@ -538,14 +650,11 @@ if selected_talent == "Dashboard":
             st.error(f"❌ {err}")
         else:
             today_str = datetime.now().strftime('%Y%m%d')
-
-            # ZIPにまとめる
             zip_buf = io.BytesIO()
             with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
                 zf.writestr(f'channel_stats_{today_str}.csv', ch_bytes)
                 zf.writestr(f'video_stats_{today_str}.csv',   vid_bytes)
             zip_buf.seek(0)
-
             st.download_button(
                 label="⬇️ ZIPをダウンロード",
                 data=zip_buf,
@@ -553,6 +662,116 @@ if selected_talent == "Dashboard":
                 mime='application/zip'
             )
             st.success("✅ 生成完了！ボタンをクリックしてダウンロードしてください。")
+
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+
+    # ── データ取得 ──────────────────────────────────
+    singer_data, video_data, n_date, err = build_dashboard_data()
+    if err:
+        st.error(f"❌ {err}")
+        st.stop()
+
+    st.markdown(f'<div style="font-size:12px; color:#888; margin-bottom:8px;">集計基準日: {n_date}（前日比）</div>', unsafe_allow_html=True)
+
+    # ── ヘルパー ────────────────────────────────────
+    def diff_html(diff, show_rate=False, rate=None):
+        if diff is None:
+            return '<span style="color:#aaa;">—</span>'
+        color = '#28a745' if diff > 0 else ('#dc3545' if diff < 0 else '#888')
+        sign  = '+' if diff >= 0 else ''
+        rate_str = ''
+        if show_rate and rate is not None:
+            rate_str = f' <span style="font-size:11px; opacity:0.8;">({rate:+.1f}%)</span>'
+        return f'<span style="color:{color};">{sign}{diff:,}{rate_str}</span>'
+
+    def rank_table(rows, value_key, diff_key, rate_key=None, top_n=None):
+        """ランキングテーブルHTMLを生成"""
+        if top_n:
+            rows = sorted(rows, key=lambda x: (x[diff_key] or -999999), reverse=True)[:top_n]
+        html = '<table style="width:100%; border-collapse:collapse; font-size:12px;">'
+        for i, r in enumerate(rows):
+            bg = 'rgba(13,110,253,0.04)' if i % 2 == 0 else 'transparent'
+            val  = r.get(value_key, 0)
+            diff = r.get(diff_key)
+            rate = r.get(rate_key) if rate_key else None
+            show_rate = rate_key is not None
+            html += f'''
+            <tr style="background:{bg};">
+                <td style="padding:4px 6px; font-weight:600; white-space:nowrap;">{i+1}.</td>
+                <td style="padding:4px 6px; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+                    title="{r.get("talent","")}">{r.get("talent","")}</td>
+                <td style="padding:4px 6px; text-align:right; white-space:nowrap;">{val:,}</td>
+                <td style="padding:4px 6px; text-align:right; white-space:nowrap;">{diff_html(diff, show_rate, rate)}</td>
+            </tr>'''
+        html += '</table>'
+        return html
+
+    def video_rank_table(rows, value_key, diff_key, rate_key=None, top_n=10):
+        """動画ランキングテーブルHTML"""
+        rows = sorted(rows, key=lambda x: (x[diff_key] or -999999), reverse=True)[:top_n]
+        html = '<table style="width:100%; border-collapse:collapse; font-size:12px;">'
+        for i, r in enumerate(rows):
+            bg = 'rgba(13,110,253,0.04)' if i % 2 == 0 else 'transparent'
+            val  = r.get(value_key, 0)
+            diff = r.get(diff_key)
+            rate = r.get(rate_key) if rate_key else None
+            show_rate = rate_key is not None
+            vid_url = f"https://www.youtube.com/watch?v={r['vid_id']}"
+            title   = r.get('title', r['vid_id'])
+            short_title = title[:22] + '…' if len(title) > 22 else title
+            html += f'''
+            <tr style="background:{bg};">
+                <td style="padding:4px 4px; font-weight:600; white-space:nowrap;">{i+1}.</td>
+                <td style="padding:4px 4px; max-width:160px;">
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        <span style="font-size:10px; color:#888;">{r.get("talent","")}</span><br>
+                        <a href="{vid_url}" target="_blank" style="font-size:12px;" title="{title}">{short_title}</a>
+                    </div>
+                </td>
+                <td style="padding:4px 4px; text-align:right; white-space:nowrap; font-size:12px;">{val:,}</td>
+                <td style="padding:4px 4px; text-align:right; white-space:nowrap;">{diff_html(diff, show_rate, rate)}</td>
+            </tr>'''
+        html += '</table>'
+        return html
+
+    # ── Singer部門 ──────────────────────────────────
+    st.markdown('### 🎤 Singer部門')
+    col_subs, col_views = st.columns(2)
+
+    subs_sorted  = sorted(singer_data, key=lambda x: (x['subs_diff']  or -999999), reverse=True)
+    views_sorted = sorted(singer_data, key=lambda x: (x['views_diff'] or -999999), reverse=True)
+
+    with col_subs:
+        st.markdown('**登録者数**')
+        st.markdown(rank_table(subs_sorted, 'subs_n', 'subs_diff', 'subs_rate'), unsafe_allow_html=True)
+
+    with col_views:
+        st.markdown('**総再生数**')
+        st.markdown(rank_table(views_sorted, 'views_n', 'views_diff', 'views_rate'), unsafe_allow_html=True)
+
+    # ── 動画部門 ────────────────────────────────────
+    section_labels = {
+        'Movie':       '🎬 Movie部門',
+        'Short':       '📱 Short部門',
+        'LiveArchive': '🔴 LiveArchive部門',
+    }
+
+    for vtype, label in section_labels.items():
+        rows = video_data.get(vtype, [])
+        if not rows:
+            continue
+        st.markdown(f'### {label}')
+        col_v, col_l, col_c = st.columns(3)
+
+        with col_v:
+            st.markdown('**再生数**')
+            st.markdown(video_rank_table(rows, 'views_n', 'views_diff', 'views_rate'), unsafe_allow_html=True)
+        with col_l:
+            st.markdown('**高評価数**')
+            st.markdown(video_rank_table(rows, 'likes_n', 'likes_diff'), unsafe_allow_html=True)
+        with col_c:
+            st.markdown('**コメント数**')
+            st.markdown(video_rank_table(rows, 'comments_n', 'comments_diff'), unsafe_allow_html=True)
 
     st.stop()
 
