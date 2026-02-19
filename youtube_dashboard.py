@@ -271,34 +271,23 @@ TALENT_ORDER = [
 # ==============================================================================
 def _load_snapshots():
     """all_snapshots.json を読み込んで返す（失敗時は None）"""
-    path = 'all_snapshots.json'
+    base = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(base, 'all_snapshots.json')
     if not os.path.exists(path):
-        base = os.path.dirname(os.path.abspath(__file__))
-        path = os.path.join(base, 'all_snapshots.json')
-        if not os.path.exists(path):
-            return None
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception:
         return None
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 
 def _load_history_year():
     """all_history_{year}.json を読み込んで返す（失敗時は None）"""
     year = datetime.now(timezone(timedelta(hours=9))).strftime('%Y')
-    path = f'all_history_{year}.json'
+    base = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(base, f'all_history_{year}.json')
     if not os.path.exists(path):
-        # Streamlit Cloud上のパスを試みる
-        base = os.path.dirname(os.path.abspath(__file__))
-        path = os.path.join(base, f'all_history_{year}.json')
-        if not os.path.exists(path):
-            return None
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception:
         return None
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 
 def build_csv_data():
@@ -694,27 +683,6 @@ if selected_talent == "Dashboard":
     # ── データ取得 ──────────────────────────────────
     singer_data, video_data, n_date, err = build_dashboard_data()
     if err:
-        # デバッグ情報を表示
-        import glob
-        base = os.path.dirname(os.path.abspath(__file__))
-        with st.expander("🔍 DEBUG", expanded=True):
-            st.write("__file__:", __file__)
-            st.write("base dir:", base)
-            st.write("cwd:", os.getcwd())
-            st.write("cwd内ファイル:", os.listdir(os.getcwd()))
-            st.write("base内JSONファイル:", glob.glob(os.path.join(base, '*.json')))
-            # historyロード直接テスト
-            year = datetime.now(timezone(timedelta(hours=9))).strftime('%Y')
-            test_path = os.path.join(base, f'all_history_{year}.json')
-            st.write("year:", year)
-            st.write("test_path:", test_path)
-            st.write("exists:", os.path.exists(test_path))
-            try:
-                with open(test_path, 'r', encoding='utf-8') as f:
-                    d = json.load(f)
-                st.write("読み込み成功 タレント数:", len(d))
-            except Exception as e2:
-                st.write("読み込みエラー:", str(e2))
         st.error(f"❌ {err}")
         st.stop()
 
