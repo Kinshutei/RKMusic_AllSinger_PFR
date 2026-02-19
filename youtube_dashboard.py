@@ -1127,38 +1127,78 @@ else:
         video_url = f"https://www.youtube.com/watch?v={video['id']}"
         type_emoji = "📹" if video['type'] == 'Movie' else ("🎬" if video['type'] == 'Short' else "🔴")
 
-        def fmt_daily(vals):
-            parts = []
-            for i, v in enumerate(vals):
-                if v is None:
-                    break
-                sign = '+' if v >= 0 else ''
-                parts.append(f"{i+1}D {sign}{v:,}")
-            return "　".join(parts) if parts else "—"
+        # 前日比（1D）
+        v1d = video['再生数daily'][0]
+        l1d = video['高評価daily'][0]
+        def fmt_diff(v):
+            if v is None: return "—"
+            return f"+{v:,}" if v >= 0 else f"{v:,}"
 
-        views_daily_str = fmt_daily(video['再生数daily'])
-        likes_daily_str = fmt_daily(video['高評価daily'])
+        # 2D〜5D の列（ヘッダーと値）
+        day_headers = []
+        view_vals   = []
+        like_vals   = []
+        for i in range(1, 5):  # 2D〜5D
+            v = video['再生数daily'][i]
+            l = video['高評価daily'][i]
+            if v is None:
+                break
+            day_headers.append(f"{i+1}D")
+            view_vals.append(fmt_diff(v))
+            like_vals.append(fmt_diff(l))
+
+        # ヘッダー行・値行をテーブル風に生成
+        def make_day_row(vals, label):
+            cells = "".join(
+                f'<td style="padding:2px 12px 2px 0; color:#888; font-size:11px;">{label}</td>'
+                + "".join(
+                    f'<td style="padding:2px 16px 2px 0; font-size:12px; font-weight:600;">{v}</td>'
+                    for v in vals
+                )
+            )
+            return cells
+
+        header_cells = '<td style="padding:2px 12px 2px 0; font-size:11px; color:#aaa;"></td>' + "".join(
+            f'<td style="padding:2px 16px 2px 0; font-size:11px; color:#aaa; font-weight:500;">{d}</td>'
+            for d in day_headers
+        )
+
+        view_row_cells = f'<td style="padding:2px 12px 2px 0; font-size:11px; color:#888;">再生</td>' + "".join(
+            f'<td style="padding:2px 16px 2px 0; font-size:12px; font-weight:600;">{v}</td>'
+            for v in view_vals
+        )
+        like_row_cells = f'<td style="padding:2px 12px 2px 0; font-size:11px; color:#888;">高評価</td>' + "".join(
+            f'<td style="padding:2px 16px 2px 0; font-size:12px; font-weight:600;">{v}</td>'
+            for v in like_vals
+        )
+
+        day_table = f"""
+        <table style="border-collapse:collapse; margin-top:6px;">
+            <tr>{header_cells}</tr>
+            <tr>{view_row_cells}</tr>
+            <tr>{like_row_cells}</tr>
+        </table>
+        """ if day_headers else ""
 
         st.markdown(f'''
         <div class="video-card">
             <div class="video-title">
                 {type_emoji} <a href="{video_url}" target="_blank">{video['タイトル']}</a>
             </div>
-            <div class="video-stats">
-                <div class="stat-item">
-                    <div class="stat-label">再生数</div>
-                    <div>
-                        <span class="stat-value">{video['再生数']:,}</span>
-                        <span class="stat-change neutral-change" style="font-size:12px;">　({views_daily_str})</span>
-                    </div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">高評価数</div>
-                    <div>
-                        <span class="stat-value">{video['高評価数']:,}</span>
-                        <span class="stat-change neutral-change" style="font-size:12px;">　({likes_daily_str})</span>
-                    </div>
-                </div>
+            <div style="margin-top:6px; font-size:13px;">
+                <span style="margin-right:24px;">
+                    再生数：<strong>{video['再生数']:,}</strong>
+                    <span class="stat-change {'positive-change' if v1d and v1d > 0 else 'neutral-change'}" style="font-size:12px;">
+                        ({fmt_diff(v1d)})
+                    </span>
+                </span>
+                <span>
+                    高評価：<strong>{video['高評価数']:,}</strong>
+                    <span class="stat-change {'positive-change' if l1d and l1d > 0 else 'neutral-change'}" style="font-size:12px;">
+                        ({fmt_diff(l1d)})
+                    </span>
+                </span>
             </div>
+            {day_table}
         </div>
         ''', unsafe_allow_html=True)
