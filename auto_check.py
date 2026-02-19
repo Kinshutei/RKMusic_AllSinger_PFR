@@ -17,12 +17,7 @@ import os
 import json
 import requests
 import threading
-from datetime import datetime, timezone, timedelta
-
-JST = timezone(timedelta(hours=9))
-
-def now_jst():
-    return datetime.now(JST)
+from datetime import datetime
 from googleapiclient.discovery import build
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
@@ -154,11 +149,11 @@ def determine_video_type(video, short_cache, overrides, channel_name):
     # 3. ライブアーカイブ判定
     live = video['snippet'].get('liveBroadcastContent', 'none')
     if live == 'completed':
-        return 'LiveArchive' if get_duration_minutes(video) >= 5 else 'Movie'
+        return 'LiveArchive' if get_duration_minutes(video) >= 6 else 'Movie'
 
     if 'liveStreamingDetails' in video:
         if 'actualStartTime' in video['liveStreamingDetails']:
-            return 'LiveArchive' if get_duration_minutes(video) >= 5 else 'Movie'
+            return 'LiveArchive' if get_duration_minutes(video) >= 6 else 'Movie'
 
     # 4. デフォルト
     return 'Movie'
@@ -209,7 +204,7 @@ def get_channel_stats(youtube, channel_id):
                 '総再生数': int(item['statistics'].get('viewCount', 0)),
                 '動画数': int(item['statistics'].get('videoCount', 0)),
                 'banner_url': banner_url,
-                '取得日時': now_jst().strftime('%Y-%m-%d %H:%M:%S JST')
+                '取得日時': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
     except Exception as e:
         print(f'  ⚠️  チャンネル統計取得エラー: {e}')
@@ -434,7 +429,7 @@ def process_channel(channel_config, overrides, today_str, year):
 # ----------------------------------------------------------------
 
 def main():
-    now = now_jst()
+    now = datetime.now()
     today_str = now.strftime('%Y-%m-%d')
     year = now.strftime('%Y')
 
