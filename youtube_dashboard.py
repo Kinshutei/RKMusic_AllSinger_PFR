@@ -1,779 +1,478 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-YouTube チャンネル統計ダッシュボード (Streamlit Cloud版)
-ライトモード/ダークモード切り替え対応
+YouTube チャンネル統計 自動チェックスクリプト
+GitHub Actionsで定期実行される（JST 00:00）
+
+- 全アーティストのチャンネル統計・動画データを収集
+- Movie/Short/LiveArchive自動判別（並列処理）
+- video_type_overrides.json による例外設定対応
+- チャンネルIDキャッシュで無駄なAPIコールを削減
+- データ保存先:
+    all_snapshots.json        : 全アーティストの最新スナップショット
+    all_history_{year}.json   : 年ごとの動画履歴（日次集約済み）
 """
 
-import streamlit as st
-from datetime import datetime
-import json
 import os
-
-# ページ設定
-st.set_page_config(
-    page_title="YouTube Stats Dashboard",
-    page_icon="📊",
-    layout="wide"
-)
-
-# セッション状態の初期化
-if 'theme' not in st.session_state:
-    st.session_state.theme = 'light'
-if 'selected_talent' not in st.session_state:
-    st.session_state.selected_talent = None
-
-# タレントのバナー画像URL（固定）
-TALENT_BANNERS = {
-    "焔魔るり":   "https://yt3.googleusercontent.com/Sjt4hfgnhyLYngZTGuYb3cGKfqMdVL79wrto3PcjvxaZiirEoa-Cn_0q9UgZOMarKWGwd_hLn_o=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "HACHI":     "https://yt3.googleusercontent.com/gOqLGXVHj4l1-548h0H_GsH6ZRuDFTuzJye5MawZm0GohZ_1edqU4_Sd-Px7tw4fMsXSbz4tKA=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "瀬戸乃とと": "https://yt3.googleusercontent.com/8mHCpdJXkzkfGTz7N_Z5O_4xmkMnb8td3zYe1AIxOdKtO8WTpP44DHuchzpUubitCxHE1SyU=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "水瀬凪":    "https://yt3.googleusercontent.com/CpGbPRFm_tT618nWpvh0_U3sIctl4-3hNycqAV70ydq0kUIBUtPnUCe_LdtWlAM2r_QRsEhdgg=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "KMNZ":      "https://yt3.googleusercontent.com/4Z4kNGIXFCU1vgZpOh1LcNv4vKoQyHMgpmsgVMY6I3fy-d9oNoRMeqfALcSZVJKcTLd_5ktK2Q=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "VESPERBELL":"https://yt3.googleusercontent.com/MUU0223P2Ck50rNH0geqrg3SsJrLTrQmlG5on9JdoSzVFCtiIBwFuHQtyJRCdOP9YWSehcUY=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "CULUA":     "https://yt3.googleusercontent.com/YE8Y6f6yB_YsmNvPiJmQIrX01vB6_JigcocQH4c2tDMKw4g1_InZ_xU6V4ip0GTo_koNuVtttA=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "NEUN":      "https://yt3.googleusercontent.com/92FhDNKbUc5YMZPDE1FpTI7TzWWap9vEyVCDAW0DbKDfGifCxrrYKb7e0eqGxDoCzJs4VnYS=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "MEDA":      "https://yt3.googleusercontent.com/BjhJaO8s00ICRRos5sMhN-uLvU_OLUQ0GaNc6UKBSuEHFrK0qiUxY4UjmuNtUlKLb_dLwAmXI5s=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "CONA":      "https://yt3.googleusercontent.com/Q0tNjasT6PWnov1ddaIc57unKiD1-6ecRoNOERV-yiGBVdOaCwE5VA2IzEaGeiK36z4JabqjP5U=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "IMI":       "https://yt3.googleusercontent.com/aZTkCpaTRHpZhvhXOca7LYwJuCD0kh_fk6QKyTvS8ZMjT8dX7Soiv2k3L3HqlWVreZoFc0lb1w=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "XIDEN":     "https://yt3.googleusercontent.com/JIzwr_xsRzmL4vdr63a9IkmzCVlVpamZ3bPvZxiSnS-HUz_VoeqIrzPLlE0Xkh9Oq6B66Cz1nFE=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "ヨノ":      "https://yt3.googleusercontent.com/dx7U88GkoPj5IrNNGoXHNKWWzIqRsYhIuBYSZNp8Xlh9dJ34UzOCc3YafVLs4Mbo1nIsUfjIvg=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "LEWNE":     "https://yt3.googleusercontent.com/TjOjwrUdPkWglNkEgvhXt8dS36kqyKB7XwjMWwnnwWg_VgrN0EMm_XXTTR_WtI18AceNz-uY=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "羽緒":      "https://yt3.googleusercontent.com/IwgIc2L5HabEWLCkJ0tqTfZ5qaME9AM5QWYEgdwzjJM-peacKVl0dzDYB9kG5osRBIpn8unOgOs=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "Cil":       "https://yt3.googleusercontent.com/mmDg12VBINfcBTBCq-wS6tA4fF7UVDZn6HsLhHvXuAgTBZzmAgFOaZeeQQYDjc_Vmv0tpgxZ5Q=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "深影":      "https://yt3.googleusercontent.com/6REyrT4s7DrjAvRL0yJUJJxi3Ahb59XtcnnDNpu7lC7sojUKthxvBIWJDVSyExFi1BOyJPzZWg=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "wouca":     "https://yt3.googleusercontent.com/VIJQxQkEkRO2OqxIYlabQLRbpeyRiGdZxjLad7YzVjT3tbXkE24XKL_ZirI1RDUMHQBsY7hK=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "Diα":       "https://yt3.googleusercontent.com/U6LeCOlVJ4m68-o30FpSEjVuwFxmPYYzDD3je0Sy_SuSYesAmoUvIkSyP81M2l73qOIcpNP7=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-    "妃玖":      "https://yt3.googleusercontent.com/u3MLvApeviPLt_-RPfqiPB1ZPeEtaBknWDv-jKyzMGEijRaireQ2zfxK1HmkuDtJpUIW_uVXxEY=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
-}
-
-# ==============================================================================
-# CSS
-# ==============================================================================
-def get_theme_css(theme):
-    base_css = """
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
-
-    html, body, [class*="css"] {
-        font-family: 'Noto Sans JP', sans-serif !important;
-    }
-
-    h1, h2, h3,
-    section[data-testid="stSidebar"] h1,
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3 {
-        font-family: 'Century Gothic', 'Futura', 'Trebuchet MS', 'Noto Sans JP', sans-serif !important;
-    }
-
-    .block-container {
-        padding-top: 4.5rem !important;
-        padding-bottom: 1rem !important;
-    }
-
-    .main [data-testid="stVerticalBlock"] {
-        gap: 0 !important;
-    }
-
-    .main [data-testid="stMarkdownContainer"] > div {
-        margin-bottom: 0 !important;
-    }
-
-    /* ボタン共通 */
-    .stButton > button {
-        width: 100%;
-        border-radius: 8px !important;
-        padding: 4px 16px !important;
-        font-size: 15px !important;
-        font-weight: 500 !important;
-        transition: all 0.3s ease !important;
-        margin: 3px 0 !important;
-    }
-
-    .stButton > button:hover {
-        transform: translateY(-2px);
-    }
-
-    /* サイドバー：バナーボタン */
-    section[data-testid="stSidebar"] .stButton > button {
-        height: 72px !important;
-        min-height: 72px !important;
-        border-radius: 8px !important;
-        width: 100% !important;
-        font-size: 24px !important;
-        font-weight: 700 !important;
-        color: #000000 !important;
-        text-shadow:
-            -1px -1px 0 #fff,  1px -1px 0 #fff,
-            -1px  1px 0 #fff,  1px  1px 0 #fff,
-            -2px  0   0 #fff,  2px  0   0 #fff,
-             0   -2px 0 #fff,  0    2px 0 #fff !important;
-        background-size: cover !important;
-        background-position: center top !important;
-        display: flex !important;
-        align-items: flex-start !important;
-        justify-content: flex-start !important;
-        padding: 6px 8px 0 8px !important;
-    }
-
-    section[data-testid="stSidebar"] .stButton > button p {
-        font-size: 24px !important;
-        font-weight: 700 !important;
-        color: #000000 !important;
-        text-align: left !important;
-        width: 100% !important;
-        margin: 0 !important;
-        text-shadow:
-            -1px -1px 0 #fff,  1px -1px 0 #fff,
-            -1px  1px 0 #fff,  1px  1px 0 #fff,
-            -2px  0   0 #fff,  2px  0   0 #fff,
-             0   -2px 0 #fff,  0    2px 0 #fff !important;
-        transition: filter 0.2s ease !important;
-        box-shadow: none !important;
-    }
-
-    section[data-testid="stSidebar"] .stButton > button:hover {
-        transform: none !important;
-        filter: brightness(1.15) !important;
-    }
-
-    section[data-testid="stSidebar"] .stButton > button:active {
-        filter: brightness(0.9) !important;
-    }
-
-    section[data-testid="stSidebar"] .stButton {
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        gap: 0 !important;
-    }
-
-    section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] {
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    section[data-testid="stSidebar"] div[data-testid="element-container"] {
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    /* ラジオボタン（テキストリンク風） */
-    div[role="radiogroup"] {
-        gap: 0 !important;
-    }
-
-    div[role="radiogroup"] label {
-        display: flex !important;
-        align-items: center !important;
-        padding: 8px 0 !important;
-        margin: 0 !important;
-        border-bottom: 1px solid rgba(128, 128, 128, 0.2) !important;
-        cursor: pointer !important;
-        transition: all 0.2s ease !important;
-    }
-
-    div[role="radiogroup"] label:hover {
-        padding-left: 4px !important;
-    }
-
-    div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
-        margin-left: 0 !important;
-    }
-
-    div[role="radiogroup"] label > div:first-child {
-        display: none !important;
-    }
-
-    div[role="radiogroup"] label p {
-        margin: 0 !important;
-        font-size: 15px !important;
-    }
-
-    /* 見出し */
-    h1 {
-        margin-bottom: 0.5rem !important;
-        padding-bottom: 0 !important;
-    }
-
-    h2, h3 {
-        font-weight: 700 !important;
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-
-    p {
-        margin-bottom: 0.5rem !important;
-    }
-
-    a {
-        text-decoration: none !important;
-        transition: all 0.2s ease !important;
-        font-weight: 500 !important;
-    }
-
-    a:hover {
-        text-decoration: underline !important;
-    }
-
-    div[data-testid="stCaption"] {
-        font-size: 12px !important;
-        margin-top: 0.2rem !important;
-        margin-bottom: 0.2rem !important;
-    }
-
-    hr {
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-thumb { border-radius: 4px; }
-
-    /* メトリクス */
-    div[data-testid="stMetric"] {
-        padding: 10px !important;
-        border-radius: 10px;
-    }
-
-    div[data-testid="stMetricLabel"] {
-        font-size: 13px !important;
-        font-weight: 500 !important;
-    }
-
-    div[data-testid="stMetricValue"] {
-        font-size: 24px !important;
-        font-weight: 700 !important;
-    }
-
-    /* セレクトボックス */
-    div[data-baseweb="select"] {
-        margin-bottom: 0.5rem !important;
-    }
-
-    div[data-testid="stSelectbox"] > div {
-        background: rgba(13, 110, 253, 0.05) !important;
-        border: 2px solid rgba(13, 110, 253, 0.3) !important;
-        border-radius: 8px !important;
-        padding: 4px 8px !important;
-    }
-
-    div[data-testid="stSelectbox"] > div:hover {
-        border-color: rgba(13, 110, 253, 0.6) !important;
-        background: rgba(13, 110, 253, 0.08) !important;
-    }
-
-    div[data-testid="stSelectbox"] label {
-        font-weight: 600 !important;
-        font-size: 14px !important;
-        color: #0d6efd !important;
-    }
-
-    div[data-testid="stSelectbox"] {
-        margin-bottom: 8px !important;
-    }
-
-    /* 動画カード */
-    .video-card {
-        border: 1px solid;
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 12px;
-        transition: all 0.2s ease;
-    }
-
-    .video-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .video-title {
-        font-size: 16px;
-        font-weight: 600;
-        margin-bottom: 8px;
-    }
-
-    .stat-change { font-size: 14px; margin-left: 8px; }
-    .positive-change { color: #28a745; }
-    .neutral-change  { color: #6c757d; }
-
-    /* 区切り線 */
-    .divider {
-        border-top: 1px solid;
-        margin: 20px 0;
-    }
-
-    .page-header { margin-bottom: 8px; }
-    .page-header h1 { margin-bottom: 0 !important; }
-
-    div[data-testid="column"] { padding: 0 4px !important; }
-    div[data-testid="column"]:first-child { padding-left: 0 !important; }
-    div[data-testid="column"]:last-child  { padding-right: 0 !important; }
-    """
-
-    if theme == 'dark':
-        theme_css = """
-        .stApp {
-            background: linear-gradient(135deg, #0E1117 0%, #1a1d29 100%);
-        }
-
-        section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
-        }
-
-        section[data-testid="stSidebar"] > div {
-            background: transparent;
-        }
-
-        div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
-            background: rgba(38, 39, 48, 0.6);
-            border-radius: 12px;
-            padding: 12px !important;
-            margin: 5px 0 !important;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        div[data-testid="stMetric"] {
-            background: linear-gradient(135deg, #1e2330 0%, #262730 100%);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        div[data-testid="stMetricLabel"] { color: #a0a0b0 !important; }
-        div[data-testid="stMetricValue"] { color: #ffffff !important; }
-
-        .stButton > button {
-            background-color: #1e2330 !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        }
-
-        .stButton > button:hover {
-            background-color: #262730 !important;
-            border: 1px solid #4a9eff !important;
-            box-shadow: 0 4px 8px rgba(74, 158, 255, 0.2) !important;
-        }
-
-        .video-card {
-            background: rgba(30, 35, 48, 0.8);
-            border-color: rgba(255, 255, 255, 0.08) !important;
-        }
-
-        .video-card:hover {
-            border-color: rgba(74, 158, 255, 0.4) !important;
-            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.15) !important;
-        }
-
-        .video-title a { color: #e0e0ff !important; }
-        .video-title a:hover { color: #4a9eff !important; }
-
-        .divider { border-color: rgba(255, 255, 255, 0.1) !important; }
-
-        div[role="radiogroup"] label { color: #a0a0b0 !important; }
-        div[role="radiogroup"] label:hover { color: #ffffff !important; }
-        div[role="radiogroup"] label[data-checked="true"] {
-            color: #4a9eff !important;
-            font-weight: 600 !important;
-        }
-
-        section[data-testid="stSidebar"] .stButton > button {
-            color: #e0e0ff !important;
-        }
-        """
-    else:
-        theme_css = """
-        .stApp {
-            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-        }
-
-        section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #f0f2f6 0%, #e8eaf0 100%);
-        }
-
-        section[data-testid="stSidebar"] > div {
-            background: transparent;
-        }
-
-        div[data-testid="stMetric"] {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-            border: 1px solid rgba(0, 0, 0, 0.06);
-        }
-
-        .stButton > button {
-            background-color: #ffffff !important;
-            color: #212529 !important;
-            border: 1px solid rgba(0, 0, 0, 0.15) !important;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-        }
-
-        .stButton > button:hover {
-            background-color: #f0f7ff !important;
-            border: 1px solid #0d6efd !important;
-            box-shadow: 0 4px 8px rgba(13, 110, 253, 0.15) !important;
-        }
-
-        .video-card {
-            background: #ffffff;
-            border-color: rgba(0, 0, 0, 0.1) !important;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-        }
-
-        .video-card:hover {
-            border-color: rgba(13, 110, 253, 0.4) !important;
-            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.12) !important;
-        }
-
-        .video-title a { color: #212529 !important; }
-        .video-title a:hover { color: #0d6efd !important; }
-
-        .divider { border-color: rgba(0, 0, 0, 0.1) !important; }
-
-        div[role="radiogroup"] label { color: #495057 !important; }
-        div[role="radiogroup"] label:hover { color: #212529 !important; }
-        div[role="radiogroup"] label[data-checked="true"] {
-            color: #0d6efd !important;
-            font-weight: 600 !important;
-        }
-
-        section[data-testid="stSidebar"] .stButton > button {
-            color: #6c757d !important;
-        }
-
-        section[data-testid="stSidebar"] .stButton > button:hover {
-            color: #212529 !important;
-        }
-        """
-
-    return f"<style>{base_css}{theme_css}</style>"
-
-
-# CSSを適用
-st.markdown(get_theme_css(st.session_state.theme), unsafe_allow_html=True)
-
-# ==============================================================================
-# 定数
-# ==============================================================================
-TALENT_ORDER = [
-    "焔魔るり", "HACHI", "瀬戸乃とと", "水瀬凪",
-    "KMNZ", "VESPERBELL", "CULUA", "NEUN", "MEDA", "CONA",
-    "IMI", "XIDEN", "ヨノ", "LEWNE", "羽緒", "Cil", "深影", "wouca",
-    "Diα", "妃玖"
-]
-
-# ==============================================================================
-# データ読み込み
-# ==============================================================================
-def _load_snapshots():
-    """all_snapshots.json を読み込んで返す（失敗時は None）"""
-    if not os.path.exists('all_snapshots.json'):
-        return None
+import json
+import requests
+import threading
+from datetime import datetime
+from googleapiclient.discovery import build
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
+import isodate
+
+# ----------------------------------------------------------------
+# 設定
+# ----------------------------------------------------------------
+API_KEY = os.environ.get('YOUTUBE_API_KEY')
+CHANNELS_JSON = os.environ.get('CHANNELS', '[]')
+
+try:
+    CHANNELS = json.loads(CHANNELS_JSON)
+except Exception:
+    CHANNELS = []
+
+MAX_WORKERS = 10       # Short判定の同時並列数
+CHANNEL_WORKERS = 3   # チャンネル処理の同時並列数
+
+SNAPSHOTS_FILE = 'all_snapshots.json'
+
+# ファイル書き込みの排他制御用ロック（並列処理による競合防止）
+_file_lock = threading.Lock()
+
+def history_file(year):
+    return f'all_history_{year}.json'
+
+# ----------------------------------------------------------------
+# ファイル読み書き
+# ----------------------------------------------------------------
+
+def load_json(path, default):
+    if os.path.exists(path):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f'⚠️  {path} 読み込みエラー: {e}')
+    return default
+
+def save_json(path, data):
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+# ----------------------------------------------------------------
+# 例外設定
+# ----------------------------------------------------------------
+
+def load_overrides():
+    overrides = load_json('video_type_overrides.json', {})
+    total = sum(len(v) for v in overrides.values())
+    if total:
+        print(f'✓ 例外設定を読み込みました: {total}件')
+    return overrides
+
+# ----------------------------------------------------------------
+# Short判定
+# ----------------------------------------------------------------
+
+def is_short_video(video_id):
+    """ShortsのURLにアクセスしてリダイレクト先で判定"""
     try:
-        with open('all_snapshots.json', 'r', encoding='utf-8') as f:
-            return json.load(f)
+        url = f'https://www.youtube.com/shorts/{video_id}'
+        response = requests.head(url, allow_redirects=True, timeout=5)
+        return 'shorts' in response.url.lower()
     except Exception:
-        return None
+        return False
 
+def check_shorts_batch(video_ids):
+    """複数動画のShort判定を並列実行"""
+    results = {}
+    if not video_ids:
+        return results
 
-def get_available_talents():
-    """all_snapshots.json に存在するタレントを固定順で返す"""
-    snapshots = _load_snapshots()
-    if not snapshots:
-        return []
-    existing = set(snapshots.keys())
-    ordered = [t for t in TALENT_ORDER if t in existing]
-    extras  = sorted(t for t in existing if t not in TALENT_ORDER)
-    return ordered + extras
+    print(f'  並列Short判定: {len(video_ids)}本 ({MAX_WORKERS}並列)')
+    start = time.time()
 
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        future_to_id = {executor.submit(is_short_video, vid): vid for vid in video_ids}
+        completed = 0
+        for future in as_completed(future_to_id):
+            vid = future_to_id[future]
+            try:
+                results[vid] = future.result()
+            except Exception:
+                results[vid] = False
+            completed += 1
+            if completed % 20 == 0:
+                print(f'    → {completed}/{len(video_ids)}本完了')
 
-def load_channel_stats(talent_name):
-    """チャンネル統計を返す。日付ネスト形式なら最新日付分を、フラットならそのまま返す"""
-    snapshots = _load_snapshots()
-    if not snapshots:
-        return {}
-    raw_ch = snapshots.get(talent_name, {}).get('channel_stats', {})
-    if not raw_ch:
-        return {}
-    # 値がdictなら日付ネスト形式 → 最新日付を返す
-    first_val = next(iter(raw_ch.values()))
-    if isinstance(first_val, dict):
-        latest_date = sorted(raw_ch.keys())[-1]
-        return raw_ch[latest_date]
-    # フラット形式（{"登録者数": X, ...}）ならそのまま返す
-    return raw_ch
+    elapsed = time.time() - start
+    short_count = sum(1 for v in results.values() if v)
+    print(f'  Short判定完了: {elapsed:.1f}秒 ({short_count}本がShort)')
+    return results
 
+# ----------------------------------------------------------------
+# 動画タイプ判定
+# ----------------------------------------------------------------
 
-def load_video_history(talent_name):
-    """動画履歴を返す（videosキー配下）"""
-    snapshots = _load_snapshots()
-    if not snapshots:
-        return {}
-    videos = snapshots.get(talent_name, {}).get('videos', {})
-    return {k: v for k, v in videos.items() if isinstance(v, dict)}
+def get_duration_minutes(video):
+    try:
+        duration_str = video['contentDetails']['duration']
+        duration = isodate.parse_duration(duration_str)
+        return duration.total_seconds() / 60
+    except Exception:
+        return 0
 
+def determine_video_type(video, short_cache, overrides, channel_name):
+    """
+    判定順序:
+    1. video_type_overrides.json（最優先）
+    2. Short（URLリダイレクト判定）
+    3. liveBroadcastContent == completed → duration で Movie/LiveArchive
+    4. その他 → Movie
+    """
+    video_id = video['id']
 
-def get_channel_stats_diff(talent_name):
-    """チャンネル統計の前日比を返す。データ不足時は None"""
-    snapshots = _load_snapshots()
-    if not snapshots:
-        return None
-    ch_stats = snapshots.get(talent_name, {}).get('channel_stats', {})
-    if not ch_stats:
-        return None
-    # フラット形式（日次1レコードのみ）の場合は前日比なし
-    first_val = next(iter(ch_stats.values()))
-    if not isinstance(first_val, dict):
-        return None
-    # 日付ネスト形式
-    sorted_dates = sorted(ch_stats.keys())
-    if len(sorted_dates) < 2:
-        return None
-    today     = ch_stats[sorted_dates[-1]]
-    yesterday = ch_stats[sorted_dates[-2]]
-    return {
-        '登録者数': today['登録者数'] - yesterday['登録者数'],
-        '総再生数': today['総再生数'] - yesterday['総再生数'],
-        '動画数':   today['動画数']   - yesterday['動画数'],
-    }
+    # 1. 例外設定
+    if overrides and channel_name in overrides:
+        if video_id in overrides[channel_name]:
+            override_type = overrides[channel_name][video_id]
+            print(f'  ⚙️  例外設定: [{video["snippet"]["title"][:40]}] → {override_type}')
+            return override_type
 
+    # 2. Short
+    if short_cache.get(video_id, False):
+        return 'Short'
 
-# ==============================================================================
-# サイドバー
-# ==============================================================================
-with st.sidebar:
-    st.header("+++ RK Music All Singer+++")
+    # 3. ライブアーカイブ判定
+    live = video['snippet'].get('liveBroadcastContent', 'none')
+    if live == 'completed':
+        return 'LiveArchive' if get_duration_minutes(video) >= 5 else 'Movie'
 
-    available_talents = get_available_talents()
+    if 'liveStreamingDetails' in video:
+        if 'actualStartTime' in video['liveStreamingDetails']:
+            return 'LiveArchive' if get_duration_minutes(video) >= 5 else 'Movie'
 
-    if not available_talents:
-        st.warning("⚠️ データが見つかりません")
-        selected_talent = None
-    else:
-        if st.session_state.selected_talent is None:
-            st.session_state.selected_talent = available_talents[0]
+    # 4. デフォルト
+    return 'Movie'
 
-        selected_talent = st.session_state.selected_talent
+# ----------------------------------------------------------------
+# YouTube API
+# ----------------------------------------------------------------
 
-        # バナーボタン用CSS（markerセレクタ方式）
-        css_rules = []
-        for talent in available_talents:
-            banner_url = TALENT_BANNERS.get(talent, "")
-            is_selected = (talent == selected_talent)
-            key    = f"talent_btn_{talent}"
-            border = "3px solid #0d6efd" if is_selected else "1px solid rgba(128,128,128,0.3)"
+def get_channel_id(youtube, channel_url):
+    """チャンネルURLからチャンネルIDを取得"""
+    try:
+        if '@' in channel_url:
+            handle = channel_url.split('@')[-1]
+            # forHandle を使うと @ハンドルで本人チャンネルを直接取得（Topic誤認なし）
+            resp = youtube.channels().list(
+                part='id', forHandle=handle
+            ).execute()
+            if resp.get('items'):
+                return resp['items'][0]['id']
+        # /channel/UC... 形式の直接ID指定
+        if '/channel/' in channel_url:
+            channel_id = channel_url.split('/channel/')[-1].strip('/')
+            resp = youtube.channels().list(
+                part='id', id=channel_id
+            ).execute()
+            if resp.get('items'):
+                return resp['items'][0]['id']
+    except Exception as e:
+        print(f'  ⚠️  チャンネルID取得エラー: {e}')
+    return None
 
-            bg_rule = f"background-image: url('{banner_url}') !important;" if banner_url else "background-image: none !important;"
-            css_rules.append(f"""
-            section[data-testid="stSidebar"] div:has(> #marker_{key}) ~ div div[data-testid="stButton"] button,
-            section[data-testid="stSidebar"] div:has(#marker_{key}) + div div[data-testid="stButton"] button {{
-                {bg_rule}
-                background-color: transparent !important;
-                border: {border} !important;
-            }}
-            """)
-
-        if css_rules:
-            st.markdown(f"<style>{''.join(css_rules)}</style>", unsafe_allow_html=True)
-
-        # マーカー + ボタンを描画
-        for talent in available_talents:
-            key = f"talent_btn_{talent}"
-            st.markdown(
-                f'<div id="marker_{key}" style="display:none;height:0;margin:0;padding:0;"></div>',
-                unsafe_allow_html=True
+def get_channel_stats(youtube, channel_id):
+    """チャンネル統計を取得"""
+    try:
+        resp = youtube.channels().list(
+            part='statistics,snippet,brandingSettings', id=channel_id
+        ).execute()
+        if resp['items']:
+            item = resp['items'][0]
+            banner_url = (
+                item.get('brandingSettings', {})
+                    .get('image', {})
+                    .get('bannerExternalUrl', '')
             )
-            if st.button(talent, key=key, use_container_width=True):
-                st.session_state.selected_talent = talent
-                st.rerun()
+            return {
+                'チャンネル名': item['snippet']['title'],
+                '登録者数': int(item['statistics'].get('subscriberCount', 0)),
+                '総再生数': int(item['statistics'].get('viewCount', 0)),
+                '動画数': int(item['statistics'].get('videoCount', 0)),
+                'banner_url': banner_url,
+                '取得日時': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+    except Exception as e:
+        print(f'  ⚠️  チャンネル統計取得エラー: {e}')
+    return None
 
-# ==============================================================================
-# メインエリア
-# ==============================================================================
-if not selected_talent:
-    st.info("📡 タレントを選択してください")
-    st.stop()
+def get_all_videos(youtube, channel_id, channel_name, overrides):
+    """チャンネルの全動画を取得してタイプ判定（Short判定はキャッシュ活用）"""
+    videos = []
 
-channel_stats = load_channel_stats(selected_talent)
-video_history = load_video_history(selected_talent)
-diff          = get_channel_stats_diff(selected_talent)
+    # 既存のtypeキャッシュをall_snapshots.jsonから取得
+    snapshots = load_json(SNAPSHOTS_FILE, {})
+    cached_videos = snapshots.get(channel_name, {}).get('videos', {})
 
-if not channel_stats and not video_history:
-    st.error(f"❌ {selected_talent} のデータが見つかりません")
-    st.stop()
+    try:
+        resp = youtube.channels().list(
+            part='contentDetails', id=channel_id
+        ).execute()
+        if not resp['items']:
+            return videos
 
-# デバッグ削除済み
+        playlist_id = resp['items'][0]['contentDetails']['relatedPlaylists']['uploads']
+        next_page_token = None
 
-# --- バナー＋チャンネル統計 ---
-banner_url = TALENT_BANNERS.get(selected_talent, "")
-subs  = channel_stats.get('登録者数', 0)
-views = channel_stats.get('総再生数', 0)
-vids  = channel_stats.get('動画数',   0)
+        while True:
+            playlist_resp = youtube.playlistItems().list(
+                part='snippet',
+                playlistId=playlist_id,
+                maxResults=50,
+                pageToken=next_page_token
+            ).execute()
 
-if banner_url:
-    st.markdown(f"""
-    <div style="width:100%; height:200px; border-radius:12px; overflow:hidden; margin-bottom:0;">
-        <img src="{banner_url}" style="width:100%; height:100%; object-fit:cover; object-position:center top;">
-    </div>
-    """, unsafe_allow_html=True)
-else:
-    st.subheader(selected_talent)
+            video_ids = [
+                item['snippet']['resourceId']['videoId']
+                for item in playlist_resp['items']
+            ]
 
+            videos_resp = youtube.videos().list(
+                part='snippet,statistics,liveStreamingDetails,contentDetails',
+                id=','.join(video_ids)
+            ).execute()
 
-def _fmt_diff(val):
-    """前日比を (+123) / (-45) / (±0) 形式のHTMLで返す"""
-    if val is None:
-        return ""
-    if val > 0:
-        return f'<span style="font-size:14px; color:#28a745;"> (+{val:,})</span>'
-    elif val < 0:
-        return f'<span style="font-size:14px; color:#dc3545;"> ({val:,})</span>'
-    else:
-        return f'<span style="font-size:14px; opacity:0.5;"> (±0)</span>'
+            print(f'  取得中... {len(videos) + len(videos_resp["items"])}本')
 
-
-_d = diff or {}
-st.markdown(f"""
-<div style="display:flex; gap:32px; align-items:baseline; margin:10px 0 6px 4px;">
-    <span style="font-size:16px;">登録者数：<strong style="font-size:20px;">{subs:,}</strong>{_fmt_diff(_d.get('登録者数'))}</span>
-    <span style="font-size:16px;">総再生数：<strong style="font-size:20px;">{views:,}</strong>{_fmt_diff(_d.get('総再生数'))}</span>
-    <span style="font-size:16px;">動画数：<strong style="font-size:20px;">{vids:,}</strong>{_fmt_diff(_d.get('動画数'))}</span>
-</div>
-<hr style="margin:6px 0 8px 0; border:none; border-top:1px solid rgba(128,128,128,0.2);">
-""", unsafe_allow_html=True)
-
-# --- 動画リスト ---
-if not video_history:
-    st.info("📡 動画データを蓄積中です。")
-    st.stop()
-
-# 動画データを整形
-video_list = []
-for video_id, video_data in video_history.items():
-    records = video_data.get('records', {})
-
-    if records:
-        # 日付別履歴あり → 最新レコードを使用
-        sorted_dates   = sorted(records.keys())
-        current_record = records[sorted_dates[-1]]
-        current_views  = current_record.get('再生数', 0)
-        current_likes  = current_record.get('高評価数', 0)
-
-        # 1D〜5D の前日比
-        daily_views, daily_likes = [], []
-        for i in range(1, 6):
-            if len(sorted_dates) > i:
-                dv = records[sorted_dates[-i]].get('再生数', 0)   - records[sorted_dates[-(i+1)]].get('再生数', 0)
-                dl = records[sorted_dates[-i]].get('高評価数', 0) - records[sorted_dates[-(i+1)]].get('高評価数', 0)
+            # 新規動画（キャッシュにないもの）のみShort判定
+            new_video_ids = [
+                vid for vid in video_ids
+                if vid not in cached_videos
+            ]
+            if new_video_ids:
+                print(f'  新規動画 {len(new_video_ids)}本のShort判定を実行')
+                short_cache = check_shorts_batch(new_video_ids)
             else:
-                dv, dl = None, None
-            daily_views.append(dv)
-            daily_likes.append(dl)
+                short_cache = {}
+
+            for video in videos_resp['items']:
+                vid = video['id']
+
+                # キャッシュにtypeがある場合は例外設定のみチェックして再利用
+                if vid in cached_videos and vid not in new_video_ids:
+                    cached_type = cached_videos[vid].get('type', 'Movie')
+                    # 例外設定は常に最優先
+                    if overrides and channel_name in overrides and vid in overrides[channel_name]:
+                        vtype = overrides[channel_name][vid]
+                        print(f'  ⚙️  例外設定: [{video["snippet"]["title"][:40]}] → {vtype}')
+                    else:
+                        vtype = cached_type
+                else:
+                    vtype = determine_video_type(video, short_cache, overrides, channel_name)
+
+                videos.append({
+                    '動画ID': vid,
+                    'タイトル': video['snippet']['title'],
+                    '公開日': video['snippet']['publishedAt'][:10],
+                    '再生数': int(video['statistics'].get('viewCount', 0)),
+                    '高評価数': int(video['statistics'].get('likeCount', 0)),
+                    'コメント数': int(video['statistics'].get('commentCount', 0)),
+                    'type': vtype
+                })
+
+            next_page_token = playlist_resp.get('nextPageToken')
+            if not next_page_token:
+                break
+
+        print(f'  ✓ 完了: {len(videos)}本')
+        print(f'    Movie: {sum(1 for v in videos if v["type"] == "Movie")}本 / '
+              f'Short: {sum(1 for v in videos if v["type"] == "Short")}本 / '
+              f'LiveArchive: {sum(1 for v in videos if v["type"] == "LiveArchive")}本')
+
+    except Exception as e:
+        print(f'  ⚠️  動画取得エラー: {e}')
+
+    return videos
+
+# ----------------------------------------------------------------
+# データ保存
+# ----------------------------------------------------------------
+
+def update_snapshots(channel_name, channel_id, channel_stats, videos):
+    """all_snapshots.json を更新"""
+    with _file_lock:
+        snapshots = load_json(SNAPSHOTS_FILE, {})
+
+        snapshots[channel_name] = {
+            'channel_id': channel_id,
+            'channel_stats': channel_stats,
+            'videos': {
+                v['動画ID']: {
+                    'タイトル': v['タイトル'],
+                    '再生数': v['再生数'],
+                    '高評価数': v['高評価数'],
+                    'type': v['type']
+                } for v in videos
+            }
+        }
+
+        save_json(SNAPSHOTS_FILE, snapshots)
+        print(f'  スナップショット保存: {SNAPSHOTS_FILE}')
+
+def update_history(channel_name, videos, today_str, year, channel_stats=None):
+    """all_history_{year}.json を更新（日次集約: 1日1レコード）"""
+    path = history_file(year)
+    with _file_lock:
+        history = load_json(path, {})
+
+        if channel_name not in history:
+            history[channel_name] = {}
+
+        channel_history = history[channel_name]
+
+        # チャンネル統計の日次履歴を保存（_channel_stats キーに蓄積）
+        if channel_stats:
+            if '_channel_stats' not in channel_history:
+                channel_history['_channel_stats'] = {}
+            channel_history['_channel_stats'][today_str] = {
+                '登録者数': channel_stats.get('登録者数', 0),
+                '総再生数': channel_stats.get('総再生数', 0),
+                '動画数':   channel_stats.get('動画数', 0),
+            }
+
+        for video in videos:
+            video_id = video['動画ID']
+
+            if video_id not in channel_history:
+                channel_history[video_id] = {
+                    'タイトル': video['タイトル'],
+                    '公開日': video['公開日'],
+                    'type': video['type'],
+                    'records': {}
+                }
+            else:
+                old_type = channel_history[video_id].get('type')
+                if old_type != video['type']:
+                    print(f'  🔄 タイプ更新: [{video["タイトル"][:40]}] {old_type} → {video["type"]}')
+                channel_history[video_id]['type'] = video['type']
+                channel_history[video_id]['タイトル'] = video['タイトル']
+
+            # 日次集約: 同日のレコードは上書き（最新値で更新）
+            channel_history[video_id]['records'][today_str] = {
+                '再生数': video['再生数'],
+                '高評価数': video['高評価数'],
+                'コメント数': video['コメント数']
+            }
+
+    history[channel_name] = channel_history
+    save_json(path, history)
+    print(f'  履歴保存: {path}')
+
+# ----------------------------------------------------------------
+# チャンネル処理
+# ----------------------------------------------------------------
+
+def process_channel(channel_config, overrides, today_str, year):
+    """1チャンネルの処理（スレッドセーフ：APIクライアントを個別生成）"""
+    channel_name = channel_config['name']
+    channel_url = channel_config['url']
+
+    print(f'\n{"=" * 50}')
+    print(f'処理中: {channel_name}')
+    print(f'{"=" * 50}')
+
+    # スレッドごとに独自のAPIクライアントを生成
+    youtube = build('youtube', 'v3', developerKey=API_KEY)
+
+    # チャンネルIDをキャッシュから取得、なければAPIで取得
+    snapshots = load_json(SNAPSHOTS_FILE, {})
+    channel_id = snapshots.get(channel_name, {}).get('channel_id')
+
+    if not channel_id:
+        print(f'  チャンネルIDを取得中...')
+        channel_id = get_channel_id(youtube, channel_url)
+        if not channel_id:
+            print(f'  ❌ チャンネルが見つかりませんでした: {channel_name}')
+            return False
+        print(f'  チャンネルID: {channel_id}')
     else:
-        # フラット形式（スナップショット）
-        current_views = video_data.get('再生数', 0)
-        current_likes = video_data.get('高評価数', 0)
-        daily_views   = [None] * 5
-        daily_likes   = [None] * 5
+        print(f'  チャンネルID（キャッシュ）: {channel_id}')
 
-    video_list.append({
-        'id':           video_id,
-        'タイトル':     video_data.get('タイトル', video_id),
-        'type':         video_data.get('type', 'Movie'),
-        '再生数':       current_views,
-        '再生数5d増加': sum(v for v in daily_views if v is not None),
-        '高評価数':     current_likes,
-        '高評価5d増加': sum(v for v in daily_likes if v is not None),
-        '再生数daily':  daily_views,
-        '高評価daily':  daily_likes,
-    })
+    # チャンネル統計
+    channel_stats = get_channel_stats(youtube, channel_id)
+    if not channel_stats:
+        print(f'  ❌ チャンネル統計を取得できませんでした')
+        return False
 
-# ソート選択
-st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-col_label, col_select = st.columns([1, 5], vertical_alignment="center")
-with col_label:
-    st.markdown("**🔽 並び替え**")
-with col_select:
-    sort_option = st.selectbox(
-        "並び替え",
-        ["📊 再生数TOP", "👍 高評価TOP", "📊📈 [再]5日増加TOP", "👍💹 [高]5日増加TOP"],
-        label_visibility="collapsed"
-    )
+    print(f'  登録者数: {channel_stats["登録者数"]:,}人 / '
+          f'総再生数: {channel_stats["総再生数"]:,}回 / '
+          f'動画数: {channel_stats["動画数"]:,}本')
 
-sort_key_map = {
-    "📊 再生数TOP":      '再生数',
-    "👍 高評価TOP":      '高評価数',
-    "📊📈 [再]5日増加TOP": '再生数5d増加',
-    "👍💹 [高]5日増加TOP": '高評価5d増加',
-}
-video_list.sort(key=lambda x: x[sort_key_map[sort_option]], reverse=True)
+    # 全動画取得
+    videos = get_all_videos(youtube, channel_id, channel_name, overrides)
+    if not videos:
+        print(f'  ❌ 動画を取得できませんでした')
+        return False
 
-# 動画カードを表示
-def fmt_diff(v):
-    if v is None:
-        return "—"
-    return f"+{v:,}" if v >= 0 else f"{v:,}"
+    # 保存
+    update_snapshots(channel_name, channel_id, channel_stats, videos)
+    update_history(channel_name, videos, today_str, year, channel_stats=channel_stats)
 
-for video in video_list:
-    video_url  = f"https://www.youtube.com/watch?v={video['id']}"
-    type_emoji = "📹" if video['type'] == 'Movie' else ("🎬" if video['type'] == 'Short' else "🔴")
+    print(f'  ✓ {channel_name} 完了')
+    return True
 
-    v1d = video['再生数daily'][0]
-    l1d = video['高評価daily'][0]
+# ----------------------------------------------------------------
+# メイン
+# ----------------------------------------------------------------
 
-    # 2D〜5D テーブル
-    day_headers, view_vals, like_vals = [], [], []
-    for i in range(1, 5):
-        v = video['再生数daily'][i]
-        l = video['高評価daily'][i]
-        if v is None:
-            break
-        day_headers.append(f"{i+1}D")
-        view_vals.append(fmt_diff(v))
-        like_vals.append(fmt_diff(l))
+def main():
+    now = datetime.now()
+    today_str = now.strftime('%Y-%m-%d')
+    year = now.strftime('%Y')
 
-    header_cells = '<td style="padding:2px 12px 2px 0; font-size:11px; color:#aaa;"></td>' + "".join(
-        f'<td style="padding:2px 16px 2px 0; font-size:11px; color:#aaa; font-weight:500;">{d}</td>'
-        for d in day_headers
-    )
-    view_row_cells = '<td style="padding:2px 12px 2px 0; font-size:11px; color:#888;">再生</td>' + "".join(
-        f'<td style="padding:2px 16px 2px 0; font-size:12px; font-weight:600;">{v}</td>'
-        for v in view_vals
-    )
-    like_row_cells = '<td style="padding:2px 12px 2px 0; font-size:11px; color:#888;">高評価</td>' + "".join(
-        f'<td style="padding:2px 16px 2px 0; font-size:12px; font-weight:600;">{v}</td>'
-        for v in like_vals
-    )
+    print('=' * 50)
+    print('YouTube統計 自動チェック開始')
+    print(f'実行日時: {now.strftime("%Y-%m-%d %H:%M:%S")}')
+    print('=' * 50)
 
-    day_table = f"""
-    <table style="border-collapse:collapse; margin-top:6px;">
-        <tr>{header_cells}</tr>
-        <tr>{view_row_cells}</tr>
-        <tr>{like_row_cells}</tr>
-    </table>
-    """ if day_headers else ""
+    if not API_KEY:
+        print('❌ エラー: YOUTUBE_API_KEY が設定されていません')
+        return
 
-    st.markdown(f'''
-    <div class="video-card">
-        <div class="video-title">
-            {type_emoji} <a href="{video_url}" target="_blank">{video['タイトル']}</a>
-        </div>
-        <div style="margin-top:6px; font-size:13px;">
-            <span style="margin-right:24px;">
-                再生数：<strong>{video['再生数']:,}</strong>
-                <span class="stat-change {'positive-change' if v1d and v1d > 0 else 'neutral-change'}" style="font-size:12px;">
-                    ({fmt_diff(v1d)})
-                </span>
-            </span>
-            <span>
-                高評価：<strong>{video['高評価数']:,}</strong>
-                <span class="stat-change {'positive-change' if l1d and l1d > 0 else 'neutral-change'}" style="font-size:12px;">
-                    ({fmt_diff(l1d)})
-                </span>
-            </span>
-        </div>
-        {day_table}
-    </div>
-    ''', unsafe_allow_html=True)
+    if not CHANNELS:
+        print('❌ エラー: CHANNELS が設定されていません')
+        return
+
+    print(f'\n処理対象: {len(CHANNELS)}チャンネル')
+    for ch in CHANNELS:
+        print(f'  - {ch["name"]}')
+
+    overrides = load_overrides()
+
+    # チャンネル処理を並列実行（3チャンネル同時）
+    success = 0
+    with ThreadPoolExecutor(max_workers=CHANNEL_WORKERS) as executor:
+        futures = {
+            executor.submit(
+                process_channel, ch, overrides, today_str, year
+            ): ch['name']
+            for ch in CHANNELS
+        }
+        for future in as_completed(futures):
+            name = futures[future]
+            try:
+                if future.result():
+                    success += 1
+            except Exception as e:
+                print(f'  ❌ {name} で予期しないエラー: {e}')
+
+    print(f'\n{"=" * 50}')
+    print(f'✓ 全処理完了: {success}/{len(CHANNELS)} チャンネル成功')
+    print('=' * 50)
+
+if __name__ == '__main__':
+    main()
