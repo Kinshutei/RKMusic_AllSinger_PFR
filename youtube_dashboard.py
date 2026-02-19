@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 YouTube チャンネル統計ダッシュボード (Streamlit Cloud版)
-ライトモード/ダークモード切り替え対応
 """
 
 import streamlit as st
@@ -18,13 +17,12 @@ st.set_page_config(
 )
 
 # セッション状態の初期化
-if 'theme' not in st.session_state:
-    st.session_state.theme = 'light'
 if 'selected_talent' not in st.session_state:
     st.session_state.selected_talent = None
 
 # タレントのバナー画像URL（固定）
 TALENT_BANNERS = {
+    "総合ダッシュボード": "https://yt3.googleusercontent.com/2v9rGWzb4RyFeGYm6DMYT--YVfSNvzZ8bSDKz6bGQDJfO-BQ1_9vr-Fex3M7kxs3ytyTqId7=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
     "焔魔るり":   "https://yt3.googleusercontent.com/Sjt4hfgnhyLYngZTGuYb3cGKfqMdVL79wrto3PcjvxaZiirEoa-Cn_0q9UgZOMarKWGwd_hLn_o=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
     "HACHI":     "https://yt3.googleusercontent.com/gOqLGXVHj4l1-548h0H_GsH6ZRuDFTuzJye5MawZm0GohZ_1edqU4_Sd-Px7tw4fMsXSbz4tKA=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
     "瀬戸乃とと": "https://yt3.googleusercontent.com/8mHCpdJXkzkfGTz7N_Z5O_4xmkMnb8td3zYe1AIxOdKtO8WTpP44DHuchzpUubitCxHE1SyU=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
@@ -50,418 +48,211 @@ TALENT_BANNERS = {
 # ==============================================================================
 # CSS
 # ==============================================================================
-def get_theme_css(theme):
-    base_css = """
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
-
-    html, body, [class*="css"] {
-        font-family: 'Noto Sans JP', sans-serif !important;
-    }
-
-    h1, h2, h3,
-    section[data-testid="stSidebar"] h1,
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3 {
-        font-family: 'Century Gothic', 'Futura', 'Trebuchet MS', 'Noto Sans JP', sans-serif !important;
-    }
-
-    section[data-testid="stSidebar"] h2:first-of-type {
-        margin-top: -2.2em !important;
-    }
-
-    .block-container {
-        padding-top: 4.5rem !important;
-        padding-bottom: 1rem !important;
-    }
-
-    .main [data-testid="stVerticalBlock"] {
-        gap: 0 !important;
-    }
-
-    .main [data-testid="stMarkdownContainer"] > div {
-        margin-bottom: 0 !important;
-    }
-
-    /* ボタン共通 */
-    .stButton > button {
-        width: 100%;
-        border-radius: 8px !important;
-        padding: 4px 16px !important;
-        font-size: 15px !important;
-        font-weight: 500 !important;
-        transition: all 0.3s ease !important;
-        margin: 3px 0 !important;
-    }
-
-    .stButton > button:hover {
-        transform: translateY(-2px);
-    }
-
-    /* サイドバー：バナーボタン */
-    section[data-testid="stSidebar"] .stButton > button {
-        height: 48px !important;
-        min-height: 48px !important;
-        border-radius: 8px !important;
-        width: 100% !important;
-        font-size: 18px !important;
-        font-weight: 700 !important;
-        color: #000000 !important;
-        text-shadow:
-            -1px -1px 0 #fff,  1px -1px 0 #fff,
-            -1px  1px 0 #fff,  1px  1px 0 #fff,
-            -2px  0   0 #fff,  2px  0   0 #fff,
-             0   -2px 0 #fff,  0    2px 0 #fff !important;
-        background-size: cover !important;
-        background-position: center top !important;
-        display: flex !important;
-        align-items: flex-start !important;
-        justify-content: flex-start !important;
-        padding: 6px 8px 0 8px !important;
-    }
-
-    section[data-testid="stSidebar"] .stButton > button p {
-        font-size: 18px !important;
-        font-weight: 700 !important;
-        color: #000000 !important;
-        text-align: left !important;
-        width: 100% !important;
-        margin: 0 !important;
-        text-shadow:
-            -1px -1px 0 #fff,  1px -1px 0 #fff,
-            -1px  1px 0 #fff,  1px  1px 0 #fff,
-            -2px  0   0 #fff,  2px  0   0 #fff,
-             0   -2px 0 #fff,  0    2px 0 #fff !important;
-        transition: filter 0.2s ease !important;
-        box-shadow: none !important;
-    }
-
-    section[data-testid="stSidebar"] .stButton > button:hover {
-        transform: none !important;
-        filter: brightness(1.15) !important;
-    }
-
-    section[data-testid="stSidebar"] .stButton > button:active {
-        filter: brightness(0.9) !important;
-    }
-
-    section[data-testid="stSidebar"] .stButton {
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        gap: 0 !important;
-    }
-
-    section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] {
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    section[data-testid="stSidebar"] div[data-testid="element-container"] {
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    /* ラジオボタン（テキストリンク風） */
-    div[role="radiogroup"] {
-        gap: 0 !important;
-    }
-
-    div[role="radiogroup"] label {
-        display: flex !important;
-        align-items: center !important;
-        padding: 8px 0 !important;
-        margin: 0 !important;
-        border-bottom: 1px solid rgba(128, 128, 128, 0.2) !important;
-        cursor: pointer !important;
-        transition: all 0.2s ease !important;
-    }
-
-    div[role="radiogroup"] label:hover {
-        padding-left: 4px !important;
-    }
-
-    div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
-        margin-left: 0 !important;
-    }
-
-    div[role="radiogroup"] label > div:first-child {
-        display: none !important;
-    }
-
-    div[role="radiogroup"] label p {
-        margin: 0 !important;
-        font-size: 15px !important;
-    }
-
-    /* 見出し */
-    h1 {
-        margin-bottom: 0.5rem !important;
-        padding-bottom: 0 !important;
-    }
-
-    h2, h3 {
-        font-weight: 700 !important;
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-
-    p {
-        margin-bottom: 0.5rem !important;
-    }
-
-    a {
-        text-decoration: none !important;
-        transition: all 0.2s ease !important;
-        font-weight: 500 !important;
-    }
-
-    a:hover {
-        text-decoration: underline !important;
-    }
-
-    div[data-testid="stCaption"] {
-        font-size: 12px !important;
-        margin-top: 0.2rem !important;
-        margin-bottom: 0.2rem !important;
-    }
-
-    hr {
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-thumb { border-radius: 4px; }
-
-    /* メトリクス */
-    div[data-testid="stMetric"] {
-        padding: 10px !important;
-        border-radius: 10px;
-    }
-
-    div[data-testid="stMetricLabel"] {
-        font-size: 13px !important;
-        font-weight: 500 !important;
-    }
-
-    div[data-testid="stMetricValue"] {
-        font-size: 24px !important;
-        font-weight: 700 !important;
-    }
-
-    /* セレクトボックス */
-    div[data-baseweb="select"] {
-        margin-bottom: 0.5rem !important;
-    }
-
-    div[data-testid="stSelectbox"] > div {
-        background: rgba(13, 110, 253, 0.05) !important;
-        border: 2px solid rgba(13, 110, 253, 0.3) !important;
-        border-radius: 8px !important;
-        padding: 4px 8px !important;
-    }
-
-    div[data-testid="stSelectbox"] > div:hover {
-        border-color: rgba(13, 110, 253, 0.6) !important;
-        background: rgba(13, 110, 253, 0.08) !important;
-    }
-
-    div[data-testid="stSelectbox"] label {
-        font-weight: 600 !important;
-        font-size: 14px !important;
-        color: #0d6efd !important;
-    }
-
-    div[data-testid="stSelectbox"] {
-        margin-bottom: 8px !important;
-    }
-
-    /* 動画カード */
-    .video-card {
-        border: 1px solid;
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 12px;
-        transition: all 0.2s ease;
-    }
-
-    .video-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .video-title {
-        font-size: 16px;
-        font-weight: 600;
-        margin-bottom: 8px;
-    }
-
-    .stat-change { font-size: 14px; margin-left: 8px; }
-    .positive-change { color: #28a745; }
-    .neutral-change  { color: #6c757d; }
-
-    /* 区切り線 */
-    .divider {
-        border-top: 1px solid;
-        margin: 20px 0;
-    }
-
-    .page-header { margin-bottom: 8px; }
-    .page-header h1 { margin-bottom: 0 !important; }
-
-    div[data-testid="column"] { padding: 0 4px !important; }
-    div[data-testid="column"]:first-child { padding-left: 0 !important; }
-    div[data-testid="column"]:last-child  { padding-right: 0 !important; }
-    """
-
-    if theme == 'dark':
-        theme_css = """
-        .stApp {
-            background: linear-gradient(135deg, #0E1117 0%, #1a1d29 100%);
-        }
-
-        section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
-        }
-
-        section[data-testid="stSidebar"] > div {
-            background: transparent;
-        }
-
-        div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
-            background: rgba(38, 39, 48, 0.6);
-            border-radius: 12px;
-            padding: 12px !important;
-            margin: 5px 0 !important;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        div[data-testid="stMetric"] {
-            background: linear-gradient(135deg, #1e2330 0%, #262730 100%);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        div[data-testid="stMetricLabel"] { color: #a0a0b0 !important; }
-        div[data-testid="stMetricValue"] { color: #ffffff !important; }
-
-        .stButton > button {
-            background-color: #1e2330 !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        }
-
-        .stButton > button:hover {
-            background-color: #262730 !important;
-            border: 1px solid #4a9eff !important;
-            box-shadow: 0 4px 8px rgba(74, 158, 255, 0.2) !important;
-        }
-
-        .video-card {
-            background: rgba(30, 35, 48, 0.8);
-            border-color: rgba(255, 255, 255, 0.08) !important;
-        }
-
-        .video-card:hover {
-            border-color: rgba(74, 158, 255, 0.4) !important;
-            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.15) !important;
-        }
-
-        .video-title a { color: #e0e0ff !important; }
-        .video-title a:hover { color: #4a9eff !important; }
-
-        .divider { border-color: rgba(255, 255, 255, 0.1) !important; }
-
-        div[role="radiogroup"] label { color: #a0a0b0 !important; }
-        div[role="radiogroup"] label:hover { color: #ffffff !important; }
-        div[role="radiogroup"] label[data-checked="true"] {
-            color: #4a9eff !important;
-            font-weight: 600 !important;
-        }
-
-        section[data-testid="stSidebar"] .stButton > button {
-            color: #e0e0ff !important;
-        }
-        """
-    else:
-        theme_css = """
-        .stApp {
-            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-        }
-
-        section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #f0f2f6 0%, #e8eaf0 100%);
-        }
-
-        section[data-testid="stSidebar"] > div {
-            background: transparent;
-        }
-
-        div[data-testid="stMetric"] {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-            border: 1px solid rgba(0, 0, 0, 0.06);
-        }
-
-        .stButton > button {
-            background-color: #ffffff !important;
-            color: #212529 !important;
-            border: 1px solid rgba(0, 0, 0, 0.15) !important;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-        }
-
-        .stButton > button:hover {
-            background-color: #f0f7ff !important;
-            border: 1px solid #0d6efd !important;
-            box-shadow: 0 4px 8px rgba(13, 110, 253, 0.15) !important;
-        }
-
-        .video-card {
-            background: #ffffff;
-            border-color: rgba(0, 0, 0, 0.1) !important;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-        }
-
-        .video-card:hover {
-            border-color: rgba(13, 110, 253, 0.4) !important;
-            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.12) !important;
-        }
-
-        .video-title a { color: #212529 !important; }
-        .video-title a:hover { color: #0d6efd !important; }
-
-        .divider { border-color: rgba(0, 0, 0, 0.1) !important; }
-
-        div[role="radiogroup"] label { color: #495057 !important; }
-        div[role="radiogroup"] label:hover { color: #212529 !important; }
-        div[role="radiogroup"] label[data-checked="true"] {
-            color: #0d6efd !important;
-            font-weight: 600 !important;
-        }
-
-        section[data-testid="stSidebar"] .stButton > button {
-            color: #6c757d !important;
-        }
-
-        section[data-testid="stSidebar"] .stButton > button:hover {
-            color: #212529 !important;
-        }
-        """
-
-    return f"<style>{base_css}{theme_css}</style>"
-
+DASHBOARD_CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Noto Sans JP', sans-serif !important;
+}
+
+h1, h2, h3,
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3 {
+    font-family: 'Century Gothic', 'Futura', 'Trebuchet MS', 'Noto Sans JP', sans-serif !important;
+}
+
+section[data-testid="stSidebar"] h2:first-of-type {
+    margin-top: -2.2em !important;
+}
+
+.block-container {
+    padding-top: 4.5rem !important;
+    padding-bottom: 1rem !important;
+}
+
+.main [data-testid="stVerticalBlock"] { gap: 0 !important; }
+.main [data-testid="stMarkdownContainer"] > div { margin-bottom: 0 !important; }
+
+/* ボタン共通 */
+.stButton > button {
+    width: 100%;
+    border-radius: 8px !important;
+    padding: 4px 16px !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+    margin: 3px 0 !important;
+    background-color: #ffffff !important;
+    color: #212529 !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.stButton > button:hover {
+    transform: translateY(-2px);
+    background-color: #f0f7ff !important;
+    border: 1px solid #0d6efd !important;
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.15) !important;
+}
+
+/* サイドバー：バナーボタン */
+section[data-testid="stSidebar"] .stButton > button {
+    height: 48px !important;
+    min-height: 48px !important;
+    border-radius: 8px !important;
+    width: 100% !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: #6c757d !important;
+    text-shadow:
+        -1px -1px 0 #fff,  1px -1px 0 #fff,
+        -1px  1px 0 #fff,  1px  1px 0 #fff,
+        -2px  0   0 #fff,  2px  0   0 #fff,
+         0   -2px 0 #fff,  0    2px 0 #fff !important;
+    background-size: cover !important;
+    background-position: center top !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    padding: 6px 8px 0 8px !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button p {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+    text-align: left !important;
+    width: 100% !important;
+    margin: 0 !important;
+    text-shadow:
+        -1px -1px 0 #fff,  1px -1px 0 #fff,
+        -1px  1px 0 #fff,  1px  1px 0 #fff,
+        -2px  0   0 #fff,  2px  0   0 #fff,
+         0   -2px 0 #fff,  0    2px 0 #fff !important;
+    transition: filter 0.2s ease !important;
+    box-shadow: none !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button:hover {
+    transform: none !important;
+    filter: brightness(1.15) !important;
+    color: #212529 !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button:active {
+    filter: brightness(0.9) !important;
+}
+
+section[data-testid="stSidebar"] .stButton { margin: 0 !important; padding: 0 !important; }
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: 0 !important; }
+section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] { margin: 0 !important; padding: 0 !important; }
+section[data-testid="stSidebar"] div[data-testid="element-container"] { margin: 0 !important; padding: 0 !important; }
+
+/* ラジオボタン */
+div[role="radiogroup"] { gap: 0 !important; }
+div[role="radiogroup"] label {
+    display: flex !important;
+    align-items: center !important;
+    padding: 8px 0 !important;
+    margin: 0 !important;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.2) !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    color: #495057 !important;
+}
+div[role="radiogroup"] label:hover { padding-left: 4px !important; color: #212529 !important; }
+div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] { margin-left: 0 !important; }
+div[role="radiogroup"] label > div:first-child { display: none !important; }
+div[role="radiogroup"] label p { margin: 0 !important; font-size: 15px !important; }
+div[role="radiogroup"] label[data-checked="true"] { color: #0d6efd !important; font-weight: 600 !important; }
+
+/* 見出し */
+h1 { margin-bottom: 0.5rem !important; padding-bottom: 0 !important; }
+h2, h3 { font-weight: 700 !important; margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
+p { margin-bottom: 0.5rem !important; }
+a { text-decoration: none !important; transition: all 0.2s ease !important; font-weight: 500 !important; }
+a:hover { text-decoration: underline !important; }
+
+div[data-testid="stCaption"] { font-size: 12px !important; margin-top: 0.2rem !important; margin-bottom: 0.2rem !important; }
+hr { margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { border-radius: 4px; }
+
+/* メトリクス */
+div[data-testid="stMetric"] {
+    padding: 10px !important;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+div[data-testid="stMetricLabel"] { font-size: 13px !important; font-weight: 500 !important; }
+div[data-testid="stMetricValue"] { font-size: 24px !important; font-weight: 700 !important; }
+
+/* セレクトボックス */
+div[data-baseweb="select"] { margin-bottom: 0.5rem !important; }
+div[data-testid="stSelectbox"] > div {
+    background: rgba(13, 110, 253, 0.05) !important;
+    border: 2px solid rgba(13, 110, 253, 0.3) !important;
+    border-radius: 8px !important;
+    padding: 4px 8px !important;
+}
+div[data-testid="stSelectbox"] > div:hover {
+    border-color: rgba(13, 110, 253, 0.6) !important;
+    background: rgba(13, 110, 253, 0.08) !important;
+}
+div[data-testid="stSelectbox"] label { font-weight: 600 !important; font-size: 14px !important; color: #0d6efd !important; }
+div[data-testid="stSelectbox"] { margin-bottom: 8px !important; }
+
+/* 背景 */
+.stApp { background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); }
+section[data-testid="stSidebar"] { background: linear-gradient(180deg, #f0f2f6 0%, #e8eaf0 100%); }
+section[data-testid="stSidebar"] > div { background: transparent; }
+
+/* 動画カード */
+.video-card {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+.video-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(13, 110, 253, 0.4) !important;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.12) !important;
+}
+.video-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+.video-title a { color: #212529 !important; }
+.video-title a:hover { color: #0d6efd !important; }
+
+.stat-change { font-size: 14px; margin-left: 8px; }
+.positive-change { color: #28a745; }
+.neutral-change  { color: #6c757d; }
+
+.divider { border-top: 1px solid rgba(0, 0, 0, 0.1); margin: 20px 0; }
+.page-header { margin-bottom: 8px; }
+.page-header h1 { margin-bottom: 0 !important; }
+
+div[data-testid="column"] { padding: 0 4px !important; }
+div[data-testid="column"]:first-child { padding-left: 0 !important; }
+div[data-testid="column"]:last-child  { padding-right: 0 !important; }
+</style>
+"""
 
 # CSSを適用
-st.markdown(get_theme_css(st.session_state.theme), unsafe_allow_html=True)
+st.markdown(DASHBOARD_CSS, unsafe_allow_html=True)
+
 
 # ==============================================================================
 # 定数
 # ==============================================================================
 TALENT_ORDER = [
+    "総合ダッシュボード",
     "焔魔るり", "HACHI", "瀬戸乃とと", "水瀬凪",
     "KMNZ", "VESPERBELL", "CULUA", "NEUN", "MEDA", "CONA",
     "IMI", "XIDEN", "ヨノ", "LEWNE", "羽緒", "Cil", "深影", "wouca",
@@ -604,6 +395,18 @@ with st.sidebar:
 # ==============================================================================
 if not selected_talent:
     st.info("📡 タレントを選択してください")
+    st.stop()
+
+# 総合ダッシュボード
+if selected_talent == "総合ダッシュボード":
+    banner_url = TALENT_BANNERS.get("総合ダッシュボード", "")
+    if banner_url:
+        st.markdown(f"""
+        <div style="width:100%; height:200px; border-radius:12px; overflow:hidden; margin-bottom:0;">
+            <img src="{banner_url}" style="width:100%; height:100%; object-fit:cover; object-position:center top;">
+        </div>
+        """, unsafe_allow_html=True)
+    st.info("🚧 総合ダッシュボードは準備中です。")
     st.stop()
 
 try:
