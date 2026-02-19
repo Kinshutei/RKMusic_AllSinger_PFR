@@ -594,6 +594,21 @@ if not channel_stats and not video_history:
     st.error(f"❌ {selected_talent} のデータが見つかりません")
     st.stop()
 
+# ▼▼▼ デバッグ用（確認後に削除） ▼▼▼
+with st.expander("🔍 DEBUG: データ構造確認", expanded=False):
+    snapshots = _load_snapshots()
+    if snapshots and selected_talent in snapshots:
+        raw = snapshots[selected_talent]
+        st.write("**トップレベルキー一覧:**", list(raw.keys()))
+        if '_channel_stats' in raw:
+            st.write("**_channel_stats の中身:**", raw['_channel_stats'])
+        else:
+            st.warning("_channel_stats キーが存在しません")
+        st.write("**load_channel_stats() の戻り値:**", channel_stats)
+    else:
+        st.error("snapshots が None またはタレントが見つかりません")
+# ▲▲▲ デバッグ用ここまで ▲▲▲
+
 # --- バナー＋チャンネル統計 ---
 banner_url = TALENT_BANNERS.get(selected_talent, "")
 subs  = channel_stats.get('登録者数', 0)
