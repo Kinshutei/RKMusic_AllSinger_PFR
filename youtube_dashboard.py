@@ -67,8 +67,7 @@ section[data-testid="stSidebar"] h2:first-of-type {
     margin-top: -2.2em !important;
 }
 
-button[data-testid="collapsedControl"],
-button[kind="header"][data-testid="baseButton-header"] {
+[data-testid="collapsedControl"] {
     display: none !important;
 }
 
