@@ -442,14 +442,18 @@ def build_dashboard_data():
     # ── Singer部門 ──────────────────────────────
     singer_data = []
     for talent in talents:
-        ch = history.get(talent, {}).get('_channel_stats', {})
-        n  = ch.get(n_date, {})
-        p  = ch.get(p_date, {}) if p_date else {}
+        # 現在値はsnapshotsから取得（確実に存在する）
+        snap_ch = snapshots.get(talent, {}).get('channel_stats', {})
+        subs_n  = snap_ch.get('登録者数', 0)
+        views_n = snap_ch.get('総再生数', 0)
 
-        subs_n  = n.get('登録者数', 0)
-        views_n = n.get('総再生数', 0)
-        subs_diff  = (subs_n  - p.get('登録者数', 0)) if p else None
-        views_diff = (views_n - p.get('総再生数', 0)) if p else None
+        # 前日比はhistoryから計算
+        ch     = history.get(talent, {}).get('_channel_stats', {})
+        n_rec  = ch.get(n_date, {})
+        p_rec  = ch.get(p_date, {}) if p_date else {}
+
+        subs_diff  = (n_rec.get('登録者数', 0) - p_rec.get('登録者数', 0)) if n_rec and p_rec else None
+        views_diff = (n_rec.get('総再生数', 0) - p_rec.get('総再生数', 0)) if n_rec and p_rec else None
 
         def rate(val, diff):
             if diff is None or val is None:
