@@ -16,6 +16,7 @@ GitHub Actionsで定期実行される（JST 00:00）
 import os
 import json
 import requests
+import threading
 from datetime import datetime
 from googleapiclient.discovery import build
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -37,6 +38,9 @@ MAX_WORKERS = 10       # Short判定の同時並列数
 CHANNEL_WORKERS = 3   # チャンネル処理の同時並列数
 
 SNAPSHOTS_FILE = 'all_snapshots.json'
+
+# ファイル書き込みの排他制御用ロック（並列処理による競合防止）
+_file_lock = threading.Lock()
 
 def history_file(year):
     return f'all_history_{year}.json'
@@ -300,60 +304,62 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
 
 def update_snapshots(channel_name, channel_id, channel_stats, videos):
     """all_snapshots.json を更新"""
-    snapshots = load_json(SNAPSHOTS_FILE, {})
+    with _file_lock:
+        snapshots = load_json(SNAPSHOTS_FILE, {})
 
-    snapshots[channel_name] = {
-        'channel_id': channel_id,
-        'channel_stats': channel_stats,
-        'videos': {
-            v['動画ID']: {
-                '再生数': v['再生数'],
-                '高評価数': v['高評価数'],
-                'type': v['type']
-            } for v in videos
+        snapshots[channel_name] = {
+            'channel_id': channel_id,
+            'channel_stats': channel_stats,
+            'videos': {
+                v['動画ID']: {
+                    '再生数': v['再生数'],
+                    '高評価数': v['高評価数'],
+                    'type': v['type']
+                } for v in videos
+            }
         }
-    }
 
-    save_json(SNAPSHOTS_FILE, snapshots)
-    print(f'  スナップショット保存: {SNAPSHOTS_FILE}')
+        save_json(SNAPSHOTS_FILE, snapshots)
+        print(f'  スナップショット保存: {SNAPSHOTS_FILE}')
 
 def update_history(channel_name, videos, today_str, year):
     """all_history_{year}.json を更新（日次集約: 1日1レコード）"""
     path = history_file(year)
-    history = load_json(path, {})
+    with _file_lock:
+        history = load_json(path, {})
 
-    if channel_name not in history:
-        history[channel_name] = {}
+        if channel_name not in history:
+            history[channel_name] = {}
 
-    channel_history = history[channel_name]
+        channel_history = history[channel_name]
 
-    for video in videos:
-        video_id = video['動画ID']
+        for video in videos:
+            video_id = video['動画ID']
 
-        if video_id not in channel_history:
-            channel_history[video_id] = {
-                'タイトル': video['タイトル'],
-                '公開日': video['公開日'],
-                'type': video['type'],
-                'records': {}
+            if video_id not in channel_history:
+                channel_history[video_id] = {
+                    'タイトル': video['タイトル'],
+                    '公開日': video['公開日'],
+                    'type': video['type'],
+                    'records': {}
+                }
+            else:
+                old_type = channel_history[video_id].get('type')
+                if old_type != video['type']:
+                    print(f'  🔄 タイプ更新: [{video["タイトル"][:40]}] {old_type} → {video["type"]}')
+                channel_history[video_id]['type'] = video['type']
+                channel_history[video_id]['タイトル'] = video['タイトル']
+
+            # 日次集約: 同日のレコードは上書き（最新値で更新）
+            channel_history[video_id]['records'][today_str] = {
+                '再生数': video['再生数'],
+                '高評価数': video['高評価数'],
+                'コメント数': video['コメント数']
             }
-        else:
-            old_type = channel_history[video_id].get('type')
-            if old_type != video['type']:
-                print(f'  🔄 タイプ更新: [{video["タイトル"][:40]}] {old_type} → {video["type"]}')
-            channel_history[video_id]['type'] = video['type']
-            channel_history[video_id]['タイトル'] = video['タイトル']
 
-        # 日次集約: 同日のレコードは上書き（最新値で更新）
-        channel_history[video_id]['records'][today_str] = {
-            '再生数': video['再生数'],
-            '高評価数': video['高評価数'],
-            'コメント数': video['コメント数']
-        }
-
-    history[channel_name] = channel_history
-    save_json(path, history)
-    print(f'  履歴保存: {path}')
+        history[channel_name] = channel_history
+        save_json(path, history)
+        print(f'  履歴保存: {path}')
 
 # ----------------------------------------------------------------
 # チャンネル処理
