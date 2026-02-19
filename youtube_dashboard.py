@@ -392,6 +392,15 @@ def build_csv_data():
     return rows_to_sjis(ch_rows), rows_to_sjis(vid_rows), None
 
 
+def get_available_talents():
+    """all_snapshots.json に存在するタレントを固定順で返す。Dashboardは常に先頭"""
+    snapshots = _load_snapshots()
+    existing = set(snapshots.keys()) if snapshots else set()
+    ordered = [t for t in TALENT_ORDER if t in existing or t == "Dashboard"]
+    extras  = sorted(t for t in existing if t not in TALENT_ORDER)
+    return ordered + extras
+
+
 def build_dashboard_data():
     """
     Dashboardページ用のデータを組み立てる。
