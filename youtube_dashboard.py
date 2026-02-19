@@ -274,12 +274,10 @@ def _load_snapshots():
 
 
 def get_available_talents():
-    """all_snapshots.json に存在するタレントを固定順で返す"""
+    """all_snapshots.json に存在するタレントを固定順で返す。総合ダッシュボードは常に先頭"""
     snapshots = _load_snapshots()
-    if not snapshots:
-        return []
-    existing = set(snapshots.keys())
-    ordered = [t for t in TALENT_ORDER if t in existing]
+    existing = set(snapshots.keys()) if snapshots else set()
+    ordered = [t for t in TALENT_ORDER if t in existing or t == "総合ダッシュボード"]
     extras  = sorted(t for t in existing if t not in TALENT_ORDER)
     return ordered + extras
 
