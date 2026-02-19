@@ -64,7 +64,7 @@ section[data-testid="stSidebar"] h3,
 }
 
 section[data-testid="stSidebar"] h2:first-of-type {
-    margin-top: -2.2em !important;
+    margin-top: 0 !important;
 }
 
 [data-testid="stSidebarCollapseButton"],
