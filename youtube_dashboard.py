@@ -694,6 +694,15 @@ if selected_talent == "Dashboard":
     # ── データ取得 ──────────────────────────────────
     singer_data, video_data, n_date, err = build_dashboard_data()
     if err:
+        # デバッグ情報を表示
+        import glob
+        base = os.path.dirname(os.path.abspath(__file__))
+        with st.expander("🔍 DEBUG", expanded=True):
+            st.write("__file__:", __file__)
+            st.write("base dir:", base)
+            st.write("cwd:", os.getcwd())
+            st.write("cwd内ファイル:", os.listdir(os.getcwd()))
+            st.write("base内JSONファイル:", glob.glob(os.path.join(base, '*.json')))
         st.error(f"❌ {err}")
         st.stop()
 
