@@ -485,9 +485,9 @@ def build_dashboard_data():
             if vtype not in video_data:
                 continue
 
-            title    = snap.get('タイトル', vid_id)
             hist_vid = talent_hist.get(vid_id, {})
             records  = hist_vid.get('records', {}) if isinstance(hist_vid, dict) else {}
+            title    = snap.get('タイトル') or (hist_vid.get('タイトル') if isinstance(hist_vid, dict) else None) or vid_id
 
             n_rec = records.get(n_date, {})
             p_rec = records.get(p_date, {}) if p_date else {}
