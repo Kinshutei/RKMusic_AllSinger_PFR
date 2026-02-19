@@ -54,15 +54,13 @@ DASHBOARD_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
 
-html, body, [class*="css"] {
-    font-family: 'Noto Sans JP', sans-serif !important;
-}
-
-h1, h2, h3,
+html, body, [class*="css"],
+h1, h2, h3, h4, h5, h6, p, span, div, button, input, select, textarea,
 section[data-testid="stSidebar"] h1,
 section[data-testid="stSidebar"] h2,
-section[data-testid="stSidebar"] h3 {
-    font-family: 'Century Gothic', 'Futura', 'Trebuchet MS', 'Noto Sans JP', sans-serif !important;
+section[data-testid="stSidebar"] h3,
+.stButton > button, .stTextInput, .stSelectbox {
+    font-family: 'Noto Sans JP', sans-serif !important;
 }
 
 section[data-testid="stSidebar"] h2:first-of-type {
