@@ -67,10 +67,10 @@ section[data-testid="stSidebar"] h2:first-of-type {
     margin-top: -2.2em !important;
 }
 
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarHeader"],
 [data-testid="collapsedControl"],
-[data-testid="stSidebarCollapsedControl"],
-button[aria-label="Close sidebar"],
-button[aria-label="Open sidebar"] {
+[data-testid="stSidebarCollapsedControl"] {
     display: none !important;
 }
 
