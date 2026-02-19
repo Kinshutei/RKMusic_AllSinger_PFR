@@ -22,7 +22,7 @@ if 'selected_talent' not in st.session_state:
 
 # タレントのバナー画像URL（固定）
 TALENT_BANNERS = {
-    "総合ダッシュボード": "https://yt3.googleusercontent.com/2v9rGWzb4RyFeGYm6DMYT--YVfSNvzZ8bSDKz6bGQDJfO-BQ1_9vr-Fex3M7kxs3ytyTqId7=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
+    "Dashboard": "https://yt3.googleusercontent.com/2v9rGWzb4RyFeGYm6DMYT--YVfSNvzZ8bSDKz6bGQDJfO-BQ1_9vr-Fex3M7kxs3ytyTqId7=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
     "焔魔るり":   "https://yt3.googleusercontent.com/Sjt4hfgnhyLYngZTGuYb3cGKfqMdVL79wrto3PcjvxaZiirEoa-Cn_0q9UgZOMarKWGwd_hLn_o=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
     "HACHI":     "https://yt3.googleusercontent.com/gOqLGXVHj4l1-548h0H_GsH6ZRuDFTuzJye5MawZm0GohZ_1edqU4_Sd-Px7tw4fMsXSbz4tKA=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
     "瀬戸乃とと": "https://yt3.googleusercontent.com/8mHCpdJXkzkfGTz7N_Z5O_4xmkMnb8td3zYe1AIxOdKtO8WTpP44DHuchzpUubitCxHE1SyU=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
@@ -252,7 +252,7 @@ st.markdown(DASHBOARD_CSS, unsafe_allow_html=True)
 # 定数
 # ==============================================================================
 TALENT_ORDER = [
-    "総合ダッシュボード",
+    "Dashboard",
     "焔魔るり", "HACHI", "瀬戸乃とと", "水瀬凪",
     "KMNZ", "VESPERBELL", "CULUA", "NEUN", "MEDA", "CONA",
     "IMI", "XIDEN", "ヨノ", "LEWNE", "羽緒", "Cil", "深影", "wouca",
@@ -277,7 +277,7 @@ def get_available_talents():
     """all_snapshots.json に存在するタレントを固定順で返す。総合ダッシュボードは常に先頭"""
     snapshots = _load_snapshots()
     existing = set(snapshots.keys()) if snapshots else set()
-    ordered = [t for t in TALENT_ORDER if t in existing or t == "総合ダッシュボード"]
+    ordered = [t for t in TALENT_ORDER if t in existing or t == "Dashboard"]
     extras  = sorted(t for t in existing if t not in TALENT_ORDER)
     return ordered + extras
 
@@ -396,8 +396,8 @@ if not selected_talent:
     st.stop()
 
 # 総合ダッシュボード
-if selected_talent == "総合ダッシュボード":
-    banner_url = TALENT_BANNERS.get("総合ダッシュボード", "")
+if selected_talent == "Dashboard":
+    banner_url = TALENT_BANNERS.get("Dashboard", "")
     if banner_url:
         st.markdown(f"""
         <div style="width:100%; height:200px; border-radius:12px; overflow:hidden; margin-bottom:0;">
