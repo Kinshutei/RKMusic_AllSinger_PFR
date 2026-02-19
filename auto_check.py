@@ -17,7 +17,12 @@ import os
 import json
 import requests
 import threading
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+JST = timezone(timedelta(hours=9))
+
+def now_jst():
+    return datetime.now(JST)
 from googleapiclient.discovery import build
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
@@ -204,7 +209,7 @@ def get_channel_stats(youtube, channel_id):
                 '総再生数': int(item['statistics'].get('viewCount', 0)),
                 '動画数': int(item['statistics'].get('videoCount', 0)),
                 'banner_url': banner_url,
-                '取得日時': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                '取得日時': now_jst().strftime('%Y-%m-%d %H:%M:%S JST')
             }
     except Exception as e:
         print(f'  ⚠️  チャンネル統計取得エラー: {e}')
@@ -312,7 +317,6 @@ def update_snapshots(channel_name, channel_id, channel_stats, videos):
             'channel_stats': channel_stats,
             'videos': {
                 v['動画ID']: {
-                    'タイトル': v['タイトル'],
                     '再生数': v['再生数'],
                     '高評価数': v['高評価数'],
                     'type': v['type']
@@ -430,7 +434,7 @@ def process_channel(channel_config, overrides, today_str, year):
 # ----------------------------------------------------------------
 
 def main():
-    now = datetime.now()
+    now = now_jst()
     today_str = now.strftime('%Y-%m-%d')
     year = now.strftime('%Y')
 
