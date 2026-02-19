@@ -67,6 +67,11 @@ section[data-testid="stSidebar"] h2:first-of-type {
     margin-top: -2.2em !important;
 }
 
+button[data-testid="collapsedControl"],
+button[kind="header"][data-testid="baseButton-header"] {
+    display: none !important;
+}
+
 .block-container {
     padding-top: 4.5rem !important;
     padding-bottom: 1rem !important;
