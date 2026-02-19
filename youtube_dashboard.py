@@ -1073,23 +1073,28 @@ else:
         current_views = current_record.get('再生数', 0)
         current_likes = current_record.get('高評価数', 0)
 
-        # 過去5日間の増加数（最新 - 5日前以前の最古レコード）
-        views_5d = 0
-        likes_5d = 0
-        if len(sorted_dates) >= 2:
-            base_idx = max(0, len(sorted_dates) - 6)  # 最大5日前
-            base_record = records[sorted_dates[base_idx]]
-            views_5d = current_views - base_record.get('再生数', 0)
-            likes_5d = current_likes - base_record.get('高評価数', 0)
+        # 1D〜5D: 各日の前日比（1D=最新-1日前、2D=1日前-2日前、…）
+        daily_views = []
+        daily_likes = []
+        for i in range(1, 6):
+            if len(sorted_dates) > i:
+                dv = records[sorted_dates[-i]].get('再生数', 0) - records[sorted_dates[-(i+1)]].get('再生数', 0)
+                dl = records[sorted_dates[-i]].get('高評価数', 0) - records[sorted_dates[-(i+1)]].get('高評価数', 0)
+            else:
+                dv, dl = None, None
+            daily_views.append(dv)
+            daily_likes.append(dl)
 
         video_list.append({
             'id': video_id,
             'タイトル': video_data['タイトル'],
             'type': video_data.get('type', 'Movie'),
             '再生数': current_views,
-            '再生数5d増加': views_5d,
+            '再生数5d増加': sum(v for v in daily_views if v is not None),
             '高評価数': current_likes,
-            '高評価5d増加': likes_5d,
+            '高評価5d増加': sum(v for v in daily_likes if v is not None),
+            '再生数daily': daily_views,
+            '高評価daily': daily_likes,
         })
 
     # 再生数でソート
@@ -1122,10 +1127,17 @@ else:
         video_url = f"https://www.youtube.com/watch?v={video['id']}"
         type_emoji = "📹" if video['type'] == 'Movie' else ("🎬" if video['type'] == 'Short' else "🔴")
 
-        views_5d = video['再生数5d増加']
-        likes_5d = video['高評価5d増加']
-        views_cls  = 'positive-change' if views_5d > 0 else 'neutral-change'
-        likes_cls  = 'positive-change' if likes_5d > 0 else 'neutral-change'
+        def fmt_daily(vals):
+            parts = []
+            for i, v in enumerate(vals):
+                if v is None:
+                    break
+                sign = '+' if v >= 0 else ''
+                parts.append(f"{i+1}D {sign}{v:,}")
+            return "　".join(parts) if parts else "—"
+
+        views_daily_str = fmt_daily(video['再生数daily'])
+        likes_daily_str = fmt_daily(video['高評価daily'])
 
         st.markdown(f'''
         <div class="video-card">
@@ -1137,14 +1149,14 @@ else:
                     <div class="stat-label">再生数</div>
                     <div>
                         <span class="stat-value">{video['再生数']:,}</span>
-                        <span class="stat-change {views_cls}"> (+{views_5d:,})</span>
+                        <span class="stat-change neutral-change" style="font-size:12px;">　({views_daily_str})</span>
                     </div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">高評価数</div>
                     <div>
                         <span class="stat-value">{video['高評価数']:,}</span>
-                        <span class="stat-change {likes_cls}"> (+{likes_5d:,})</span>
+                        <span class="stat-change neutral-change" style="font-size:12px;">　({likes_daily_str})</span>
                     </div>
                 </div>
             </div>
