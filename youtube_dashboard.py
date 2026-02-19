@@ -912,35 +912,23 @@ vids  = channel_stats.get('動画数',   0)
 
 if banner_url:
     st.markdown(f"""
-    <div style="position:relative; width:100%; height:200px; border-radius:12px;
+    <div style="width:100%; height:200px; border-radius:12px;
                 overflow:hidden; margin-bottom:0;">
         <img src="{banner_url}" style="width:100%; height:100%;
                    object-fit:cover; object-position:center top;">
-        <div style="position:absolute; inset:0;
-                    background:linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.72) 100%);">
-        </div>
-        <div style="position:absolute; bottom:10px; left:14px; right:14px;">
-            <div style="font-size:10px; color:rgba(255,255,255,0.6);
-                        letter-spacing:4px; font-weight:600; margin-bottom:4px;">
-                DASHBOARD
-            </div>
-            <div style="font-size:13px; color:rgba(255,255,255,0.9); font-weight:500;
-                        display:flex; gap:24px;">
-                <span>登録者数：<strong>{subs:,}</strong></span>
-                <span>総再生数：<strong>{views:,}</strong></span>
-                <span>動画数：<strong>{vids:,}</strong></span>
-            </div>
-        </div>
     </div>
-    <hr style="margin:8px 0; border:none; border-top:1px solid rgba(128,128,128,0.25);">
     """, unsafe_allow_html=True)
 else:
-    # バナーなしのフォールバック
     st.subheader(channel_stats.get('チャンネル名', selected_talent))
-    st.markdown(
-        f"登録者数：**{subs:,}**　　総再生数：**{views:,}**　　動画数：**{vids:,}**"
-    )
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+
+st.markdown(f"""
+<div style="display:flex; gap:32px; align-items:baseline; margin:10px 0 6px 4px;">
+    <span style="font-size:16px;">登録者数：<strong style="font-size:20px;">{subs:,}</strong></span>
+    <span style="font-size:16px;">総再生数：<strong style="font-size:20px;">{views:,}</strong></span>
+    <span style="font-size:16px;">動画数：<strong style="font-size:20px;">{vids:,}</strong></span>
+</div>
+<hr style="margin:6px 0 8px 0; border:none; border-top:1px solid rgba(128,128,128,0.2);">
+""", unsafe_allow_html=True)
 
 # グラフエリア（選択された動画がある場合のみ表示）
 if st.session_state.selected_videos and video_history:
