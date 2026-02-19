@@ -5,7 +5,7 @@ YouTube チャンネル統計ダッシュボード (Streamlit Cloud版)
 """
 
 import streamlit as st
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import os
 import io
@@ -271,10 +271,14 @@ TALENT_ORDER = [
 # ==============================================================================
 def _load_snapshots():
     """all_snapshots.json を読み込んで返す（失敗時は None）"""
-    if not os.path.exists('all_snapshots.json'):
-        return None
+    path = 'all_snapshots.json'
+    if not os.path.exists(path):
+        base = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(base, 'all_snapshots.json')
+        if not os.path.exists(path):
+            return None
     try:
-        with open('all_snapshots.json', 'r', encoding='utf-8') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception:
         return None
@@ -282,10 +286,14 @@ def _load_snapshots():
 
 def _load_history_year():
     """all_history_{year}.json を読み込んで返す（失敗時は None）"""
-    year = datetime.now().strftime('%Y')
+    year = datetime.now(timezone(timedelta(hours=9))).strftime('%Y')
     path = f'all_history_{year}.json'
     if not os.path.exists(path):
-        return None
+        # Streamlit Cloud上のパスを試みる
+        base = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(base, f'all_history_{year}.json')
+        if not os.path.exists(path):
+            return None
     try:
         with open(path, 'r', encoding='utf-8') as f:
             return json.load(f)
