@@ -1062,6 +1062,8 @@ else:
     # 全動画をリストアップ
     video_list = []
     for video_id, video_data in video_history.items():
+        if video_id.startswith('_'):
+            continue
         records = video_data.get('records', {})
         if not records:
             continue
@@ -1071,39 +1073,28 @@ else:
         current_views = current_record.get('再生数', 0)
         current_likes = current_record.get('高評価数', 0)
 
-        views_change = 0
-        views_change_rate = 0.0
-        likes_change = 0
-        likes_change_rate = 0.0
-
+        # 過去5日間の増加数（最新 - 5日前以前の最古レコード）
+        views_5d = 0
+        likes_5d = 0
         if len(sorted_dates) >= 2:
-            previous_record = records[sorted_dates[-2]]
-            previous_views = previous_record.get('再生数', 0)
-            previous_likes = previous_record.get('高評価数', 0)
+            base_idx = max(0, len(sorted_dates) - 6)  # 最大5日前
+            base_record = records[sorted_dates[base_idx]]
+            views_5d = current_views - base_record.get('再生数', 0)
+            likes_5d = current_likes - base_record.get('高評価数', 0)
 
-            views_change = current_views - previous_views
-            if previous_views > 0:
-                views_change_rate = (views_change / previous_views) * 100
+        video_list.append({
+            'id': video_id,
+            'タイトル': video_data['タイトル'],
+            'type': video_data.get('type', 'Movie'),
+            '再生数': current_views,
+            '再生数5d増加': views_5d,
+            '高評価数': current_likes,
+            '高評価5d増加': likes_5d,
+        })
 
-            likes_change = current_likes - previous_likes
-            if previous_likes > 0:
-                likes_change_rate = (likes_change / previous_likes) * 100
-            
-            video_list.append({
-                'id': video_id,
-                'タイトル': video_data['タイトル'],
-                'type': video_data.get('type', 'Movie'),
-                '再生数': current_views,
-                '再生数増加': views_change,
-                '再生数増加率': views_change_rate,
-                '高評価数': current_likes,
-                '高評価増加': likes_change,
-                '高評価増加率': likes_change_rate
-            })
-    
     # 再生数でソート
     video_list.sort(key=lambda x: x['再生数'], reverse=True)
-    
+
     # ソート選択
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     col_label, col_select = st.columns([1, 5], vertical_alignment="center")
@@ -1112,62 +1103,50 @@ else:
     with col_select:
         sort_option = st.selectbox(
             "並び替え",
-            ["📊 再生数TOP", "👍 高評価TOP", "📊📈 [再]増加率TOP", "👍💹 [高]増加率TOP"],
+            ["📊 再生数TOP", "👍 高評価TOP", "📊📈 [再]5日増加TOP", "👍💹 [高]5日増加TOP"],
             label_visibility="collapsed"
         )
-    
+
     # ソート適用
     if sort_option == "📊 再生数TOP":
         video_list.sort(key=lambda x: x['再生数'], reverse=True)
     elif sort_option == "👍 高評価TOP":
         video_list.sort(key=lambda x: x['高評価数'], reverse=True)
-    elif sort_option == "📊📈 [再]増加率TOP":
-        video_list.sort(key=lambda x: x['再生数増加率'], reverse=True)
-    elif sort_option == "👍💹 [高]増加率TOP":
-        video_list.sort(key=lambda x: x['高評価増加率'], reverse=True)
-    
+    elif sort_option == "📊📈 [再]5日増加TOP":
+        video_list.sort(key=lambda x: x['再生数5d増加'], reverse=True)
+    elif sort_option == "👍💹 [高]5日増加TOP":
+        video_list.sort(key=lambda x: x['高評価5d増加'], reverse=True)
+
     # 動画カードを表示
     for idx, video in enumerate(video_list):
         video_url = f"https://www.youtube.com/watch?v={video['id']}"
         type_emoji = "📹" if video['type'] == 'Movie' else ("🎬" if video['type'] == 'Short' else "🔴")
-        
-        # チェックボックスとカードを横並び
-        col_check, col_card = st.columns([0.05, 0.95])
-        
-        with col_check:
-            is_selected = video['id'] in st.session_state.selected_videos
-            if st.checkbox("", value=is_selected, key=f"video_check_{idx}_{video['id']}"):
-                if video['id'] not in st.session_state.selected_videos:
-                    st.session_state.selected_videos.append(video['id'])
-            else:
-                if video['id'] in st.session_state.selected_videos:
-                    st.session_state.selected_videos.remove(video['id'])
-        
-        with col_card:
-            st.markdown(f'''
-            <div class="video-card">
-                <div class="video-title">
-                    {type_emoji} <a href="{video_url}" target="_blank">{video['タイトル']}</a>
-                </div>
-                <div class="video-stats">
-                    <div class="stat-item">
-                        <div class="stat-label">再生数</div>
-                        <div>
-                            <span class="stat-value">{video['再生数']:,}</span>
-                            <span class="stat-change {'positive-change' if video['再生数増加'] > 0 else 'neutral-change'}">
-                                ({video['再生数増加']:,} / {video['再生数増加率']:.1f}%)
-                            </span>
-                        </div>
+
+        views_5d = video['再生数5d増加']
+        likes_5d = video['高評価5d増加']
+        views_cls  = 'positive-change' if views_5d > 0 else 'neutral-change'
+        likes_cls  = 'positive-change' if likes_5d > 0 else 'neutral-change'
+
+        st.markdown(f'''
+        <div class="video-card">
+            <div class="video-title">
+                {type_emoji} <a href="{video_url}" target="_blank">{video['タイトル']}</a>
+            </div>
+            <div class="video-stats">
+                <div class="stat-item">
+                    <div class="stat-label">再生数</div>
+                    <div>
+                        <span class="stat-value">{video['再生数']:,}</span>
+                        <span class="stat-change {views_cls}"> (+{views_5d:,})</span>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-label">高評価数</div>
-                        <div>
-                            <span class="stat-value">{video['高評価数']:,}</span>
-                            <span class="stat-change {'positive-change' if video['高評価増加'] > 0 else 'neutral-change'}">
-                                ({video['高評価増加']:,} / {video['高評価増加率']:.1f}%)
-                            </span>
-                        </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">高評価数</div>
+                    <div>
+                        <span class="stat-value">{video['高評価数']:,}</span>
+                        <span class="stat-change {likes_cls}"> (+{likes_5d:,})</span>
                     </div>
                 </div>
             </div>
-            ''', unsafe_allow_html=True)
+        </div>
+        ''', unsafe_allow_html=True)
