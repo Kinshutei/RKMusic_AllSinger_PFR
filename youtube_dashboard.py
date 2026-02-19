@@ -996,6 +996,8 @@ if st.session_state.selected_videos and video_history:
                 continue
             
             video_data = video_history[video_id]
+            if not isinstance(video_data, dict):
+                continue
             video_title = video_data.get('タイトル', '')
             records = video_data.get('records', {})
             
@@ -1069,6 +1071,8 @@ else:
     video_list = []
     for video_id, video_data in video_history.items():
         if video_id.startswith('_'):
+            continue
+        if not isinstance(video_data, dict):
             continue
         records = video_data.get('records', {})
         if not records:
