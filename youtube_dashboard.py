@@ -6,13 +6,9 @@ YouTube チャンネル統計ダッシュボード (Streamlit Cloud版)
 """
 
 import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
-import plotly.express as px
-import plotly.graph_objects as go
+from datetime import datetime
 import json
 import os
-import glob
 
 # ページ設定
 st.set_page_config(
@@ -23,15 +19,9 @@ st.set_page_config(
 
 # セッション状態の初期化
 if 'theme' not in st.session_state:
-    st.session_state.theme = 'light'  # デフォルトはライトモード
+    st.session_state.theme = 'light'
 if 'selected_talent' not in st.session_state:
     st.session_state.selected_talent = None
-if 'selected_videos' not in st.session_state:
-    st.session_state.selected_videos = []
-if 'show_views_graph' not in st.session_state:
-    st.session_state.show_views_graph = True
-if 'show_likes_graph' not in st.session_state:
-    st.session_state.show_likes_graph = True
 
 # タレントのバナー画像URL（固定）
 TALENT_BANNERS = {
@@ -57,57 +47,38 @@ TALENT_BANNERS = {
     "妃玖":      "https://yt3.googleusercontent.com/u3MLvApeviPLt_-RPfqiPB1ZPeEtaBknWDv-jKyzMGEijRaireQ2zfxK1HmkuDtJpUIW_uVXxEY=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj",
 }
 
-# テーマに応じたCSS
+# ==============================================================================
+# CSS
+# ==============================================================================
 def get_theme_css(theme):
-    """テーマに応じたCSSを返す"""
-    
     base_css = """
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
-    
-    html, body, [class*="css"]  {
+
+    html, body, [class*="css"] {
         font-family: 'Noto Sans JP', sans-serif !important;
     }
-    
-    /* 英字はCentury Gothic系 */
+
     h1, h2, h3,
     section[data-testid="stSidebar"] h1,
     section[data-testid="stSidebar"] h2,
     section[data-testid="stSidebar"] h3 {
         font-family: 'Century Gothic', 'Futura', 'Trebuchet MS', 'Noto Sans JP', sans-serif !important;
     }
-    
-    /* 全体的なスペーシングを圧縮 */
+
     .block-container {
         padding-top: 4.5rem !important;
         padding-bottom: 1rem !important;
     }
-    
-    /* メインエリアの要素間ギャップを最小化 */
+
     .main [data-testid="stVerticalBlock"] {
         gap: 0 !important;
     }
-    
-    /* stMarkdownのマージンを除去 */
+
     .main [data-testid="stMarkdownContainer"] > div {
         margin-bottom: 0 !important;
     }
-    
-    /* タブ */
-    button[data-baseweb="tab"] {
-        background: transparent !important;
-        font-weight: 500 !important;
-        padding: 8px 16px !important;
-    }
-    
-    button[data-baseweb="tab"]:hover {
-        font-weight: 600 !important;
-    }
-    
-    button[data-baseweb="tab"][aria-selected="true"] {
-        font-weight: 700 !important;
-    }
-    
-    /* ボタン */
+
+    /* ボタン共通 */
     .stButton > button {
         width: 100%;
         border-radius: 8px !important;
@@ -117,30 +88,25 @@ def get_theme_css(theme):
         transition: all 0.3s ease !important;
         margin: 3px 0 !important;
     }
-    
+
     .stButton > button:hover {
         transform: translateY(-2px);
     }
-    
-    /* サイドバー内のタレント選択ボタン（バナー画像ボタン） */
+
+    /* サイドバー：バナーボタン */
     section[data-testid="stSidebar"] .stButton > button {
         height: 72px !important;
         min-height: 72px !important;
         border-radius: 8px !important;
-
         width: 100% !important;
         font-size: 24px !important;
         font-weight: 700 !important;
         color: #000000 !important;
         text-shadow:
-            -1px -1px 0 #fff,
-             1px -1px 0 #fff,
-            -1px  1px 0 #fff,
-             1px  1px 0 #fff,
-            -2px  0   0 #fff,
-             2px  0   0 #fff,
-             0   -2px 0 #fff,
-             0    2px 0 #fff !important;
+            -1px -1px 0 #fff,  1px -1px 0 #fff,
+            -1px  1px 0 #fff,  1px  1px 0 #fff,
+            -2px  0   0 #fff,  2px  0   0 #fff,
+             0   -2px 0 #fff,  0    2px 0 #fff !important;
         background-size: cover !important;
         background-position: center top !important;
         display: flex !important;
@@ -148,7 +114,7 @@ def get_theme_css(theme):
         justify-content: flex-start !important;
         padding: 6px 8px 0 8px !important;
     }
-    
+
     section[data-testid="stSidebar"] .stButton > button p {
         font-size: 24px !important;
         font-weight: 700 !important;
@@ -157,53 +123,47 @@ def get_theme_css(theme):
         width: 100% !important;
         margin: 0 !important;
         text-shadow:
-            -1px -1px 0 #fff,
-             1px -1px 0 #fff,
-            -1px  1px 0 #fff,
-             1px  1px 0 #fff,
-            -2px  0   0 #fff,
-             2px  0   0 #fff,
-             0   -2px 0 #fff,
-             0    2px 0 #fff !important;
+            -1px -1px 0 #fff,  1px -1px 0 #fff,
+            -1px  1px 0 #fff,  1px  1px 0 #fff,
+            -2px  0   0 #fff,  2px  0   0 #fff,
+             0   -2px 0 #fff,  0    2px 0 #fff !important;
         transition: filter 0.2s ease !important;
         box-shadow: none !important;
     }
-    
+
     section[data-testid="stSidebar"] .stButton > button:hover {
         transform: none !important;
         filter: brightness(1.15) !important;
     }
-    
+
     section[data-testid="stSidebar"] .stButton > button:active {
         filter: brightness(0.9) !important;
     }
-    
-    /* サイドバーのボタンコンテナ */
+
     section[data-testid="stSidebar"] .stButton {
         margin: 0 !important;
         padding: 0 !important;
     }
-    
-    /* Streamlitラッパーdivのgap/marginを除去 */
+
     section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
         gap: 0 !important;
     }
-    
+
     section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] {
         margin: 0 !important;
         padding: 0 !important;
     }
-    
+
     section[data-testid="stSidebar"] div[data-testid="element-container"] {
         margin: 0 !important;
         padding: 0 !important;
     }
-    
-    /* ラジオボタンをテキストリンク風にカスタマイズ */
+
+    /* ラジオボタン（テキストリンク風） */
     div[role="radiogroup"] {
         gap: 0 !important;
     }
-    
+
     div[role="radiogroup"] label {
         display: flex !important;
         align-items: center !important;
@@ -213,135 +173,108 @@ def get_theme_css(theme):
         cursor: pointer !important;
         transition: all 0.2s ease !important;
     }
-    
+
     div[role="radiogroup"] label:hover {
         padding-left: 4px !important;
     }
-    
-    /* ラジオボタンの丸を非表示 */
+
     div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
         margin-left: 0 !important;
     }
-    
+
     div[role="radiogroup"] label > div:first-child {
         display: none !important;
     }
-    
-    /* 選択されていないタレント */
-    div[role="radiogroup"] label[data-baseweb="radio"] {
-        font-weight: 400 !important;
-    }
-    
-    /* テキスト部分 */
+
     div[role="radiogroup"] label p {
         margin: 0 !important;
         font-size: 15px !important;
     }
-    
-    /* サブヘッダー */
+
+    /* 見出し */
     h1 {
         margin-bottom: 0.5rem !important;
         padding-bottom: 0 !important;
     }
-    
+
     h2, h3 {
         font-weight: 700 !important;
         margin-top: 0.5rem !important;
         margin-bottom: 0.5rem !important;
     }
-    
-    /* 段落とテキスト */
+
     p {
         margin-bottom: 0.5rem !important;
     }
-    
-    /* リンク */
+
     a {
         text-decoration: none !important;
         transition: all 0.2s ease !important;
         font-weight: 500 !important;
     }
-    
+
     a:hover {
         text-decoration: underline !important;
     }
-    
-    /* キャプション */
+
     div[data-testid="stCaption"] {
         font-size: 12px !important;
         margin-top: 0.2rem !important;
         margin-bottom: 0.2rem !important;
     }
-    
-    /* 区切り線 */
+
     hr {
         margin-top: 0.5rem !important;
         margin-bottom: 0.5rem !important;
     }
-    
-    /* スクロールバー */
-    ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-        border-radius: 4px;
-    }
-    
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { border-radius: 4px; }
+
     /* メトリクス */
     div[data-testid="stMetric"] {
         padding: 10px !important;
         border-radius: 10px;
     }
-    
+
     div[data-testid="stMetricLabel"] {
         font-size: 13px !important;
         font-weight: 500 !important;
     }
-    
+
     div[data-testid="stMetricValue"] {
         font-size: 24px !important;
         font-weight: 700 !important;
     }
-    
+
     /* セレクトボックス */
     div[data-baseweb="select"] {
         margin-bottom: 0.5rem !important;
     }
-    
-    /* 動画ソート用セレクトボックス */
+
     div[data-testid="stSelectbox"] > div {
         background: rgba(13, 110, 253, 0.05) !important;
         border: 2px solid rgba(13, 110, 253, 0.3) !important;
         border-radius: 8px !important;
         padding: 4px 8px !important;
     }
-    
+
     div[data-testid="stSelectbox"] > div:hover {
         border-color: rgba(13, 110, 253, 0.6) !important;
         background: rgba(13, 110, 253, 0.08) !important;
     }
-    
+
     div[data-testid="stSelectbox"] label {
         font-weight: 600 !important;
         font-size: 14px !important;
         color: #0d6efd !important;
     }
-    
+
     div[data-testid="stSelectbox"] {
         margin-bottom: 8px !important;
     }
-    
-    /* コンテンツブロックの罫線とスペーシング */
-    .content-block {
-        border: 1px solid;
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 12px;
-    }
-    
-    /* 動画カードのスタイル */
+
+    /* 動画カード */
     .video-card {
         border: 1px solid;
         border-radius: 8px;
@@ -349,104 +282,50 @@ def get_theme_css(theme):
         margin-bottom: 12px;
         transition: all 0.2s ease;
     }
-    
+
     .video-card:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
-    
+
     .video-title {
         font-size: 16px;
         font-weight: 600;
         margin-bottom: 8px;
     }
-    
-    .video-stats {
-        display: flex;
-        gap: 24px;
-        flex-wrap: wrap;
-    }
-    
-    .stat-item {
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .stat-label {
-        font-size: 12px;
-        font-weight: 500;
-        margin-bottom: 4px;
-        opacity: 0.7;
-    }
-    
-    .stat-value {
-        font-size: 18px;
-        font-weight: 700;
-    }
-    
-    .stat-change {
-        font-size: 14px;
-        margin-left: 8px;
-    }
-    
-    .positive-change {
-        color: #28a745;
-    }
-    
-    .neutral-change {
-        color: #6c757d;
-    }
-    
+
+    .stat-change { font-size: 14px; margin-left: 8px; }
+    .positive-change { color: #28a745; }
+    .neutral-change  { color: #6c757d; }
+
     /* 区切り線 */
     .divider {
         border-top: 1px solid;
         margin: 20px 0;
     }
-    
-    /* ページヘッダー */
-    .page-header {
-        margin-bottom: 8px;
-    }
-    
-    .page-header h1 {
-        margin-bottom: 0 !important;
-    }
-    
-    /* カラム間の間隔を詰める */
-    div[data-testid="column"] {
-        padding: 0 4px !important;
-    }
-    
-    div[data-testid="column"]:first-child {
-        padding-left: 0 !important;
-    }
-    
-    div[data-testid="column"]:last-child {
-        padding-right: 0 !important;
-    }
-    
-    /* サブヘッダーのマージンを調整 */
-    .content-block h3 {
-        margin-top: 0 !important;
-        margin-bottom: 12px !important;
-    }
+
+    .page-header { margin-bottom: 8px; }
+    .page-header h1 { margin-bottom: 0 !important; }
+
+    div[data-testid="column"] { padding: 0 4px !important; }
+    div[data-testid="column"]:first-child { padding-left: 0 !important; }
+    div[data-testid="column"]:last-child  { padding-right: 0 !important; }
     """
-    
+
     if theme == 'dark':
         theme_css = """
-        /* ダークモード */
         .stApp {
             background: linear-gradient(135deg, #0E1117 0%, #1a1d29 100%);
         }
-        
+
         section[data-testid="stSidebar"] {
             background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
         }
-        
+
         section[data-testid="stSidebar"] > div {
             background: transparent;
         }
-        
+
         div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
             background: rgba(38, 39, 48, 0.6);
             border-radius: 12px;
@@ -456,280 +335,128 @@ def get_theme_css(theme):
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        
+
         div[data-testid="stMetric"] {
             background: linear-gradient(135deg, #1e2330 0%, #262730 100%);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        
-        div[data-testid="stMetricLabel"] {
-            color: #a0a0b0 !important;
-        }
-        
-        div[data-testid="stMetricValue"] {
-            color: #ffffff !important;
-        }
-        
-        button[data-baseweb="tab"] {
-            color: #a0a0b0 !important;
-            border-bottom: 2px solid transparent !important;
-        }
-        
-        button[data-baseweb="tab"]:hover {
-            color: #ffffff !important;
-            border-bottom: 2px solid #4a9eff !important;
-        }
-        
-        button[data-baseweb="tab"][aria-selected="true"] {
-            color: #4a9eff !important;
-            border-bottom: 2px solid #4a9eff !important;
-        }
-        
+
+        div[data-testid="stMetricLabel"] { color: #a0a0b0 !important; }
+        div[data-testid="stMetricValue"] { color: #ffffff !important; }
+
         .stButton > button {
             background-color: #1e2330 !important;
             color: #ffffff !important;
             border: 1px solid rgba(255, 255, 255, 0.08) !important;
         }
-        
+
         .stButton > button:hover {
             background-color: #262730 !important;
             border: 1px solid #4a9eff !important;
             box-shadow: 0 4px 8px rgba(74, 158, 255, 0.2) !important;
         }
-        
-        h2, h3 {
-            color: #ffffff !important;
-        }
-        
-        p, span, div {
-            color: #d0d0d8 !important;
-        }
-        
-        a {
-            color: #4a9eff !important;
-        }
-        
-        a:hover {
-            color: #6eb5ff !important;
-        }
-        
-        div[data-testid="stCaption"] {
-            color: #8a8a9a !important;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #1a1d29;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #4a4a5a;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: #5a5a6a;
-        }
-        
-        .content-block {
-            border-color: rgba(255, 255, 255, 0.1);
-            background: rgba(38, 39, 48, 0.4);
-        }
-        
+
         .video-card {
-            border-color: rgba(255, 255, 255, 0.15);
-            background: rgba(38, 39, 48, 0.5);
+            background: rgba(30, 35, 48, 0.8);
+            border-color: rgba(255, 255, 255, 0.08) !important;
         }
-        
+
         .video-card:hover {
-            border-color: rgba(74, 158, 255, 0.4);
-            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
+            border-color: rgba(74, 158, 255, 0.4) !important;
+            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.15) !important;
         }
-        
-        .divider {
-            border-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        /* タレント選択 - ラジオボタン */
-        div[role="radiogroup"] label {
-            color: #a0a0b0 !important;
-        }
-        
-        div[role="radiogroup"] label:hover {
-            color: #ffffff !important;
-        }
-        
-        /* 選択されたタレント */
+
+        .video-title a { color: #e0e0ff !important; }
+        .video-title a:hover { color: #4a9eff !important; }
+
+        .divider { border-color: rgba(255, 255, 255, 0.1) !important; }
+
+        div[role="radiogroup"] label { color: #a0a0b0 !important; }
+        div[role="radiogroup"] label:hover { color: #ffffff !important; }
         div[role="radiogroup"] label[data-checked="true"] {
             color: #4a9eff !important;
             font-weight: 600 !important;
         }
-        
-        div[role="radiogroup"] label[data-checked="true"]:hover {
-            color: #6eb5ff !important;
-        }
-        
-        /* サイドバーのタレント選択ボタン */
+
         section[data-testid="stSidebar"] .stButton > button {
-            color: #a0a0b0 !important;
-        }
-        
-        section[data-testid="stSidebar"] .stButton > button:hover {
-            color: #ffffff !important;
+            color: #e0e0ff !important;
         }
         """
-    
-    else:  # light mode
+    else:
         theme_css = """
-        /* ライトモード */
         .stApp {
-            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
         }
-        
+
         section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+            background: linear-gradient(180deg, #f0f2f6 0%, #e8eaf0 100%);
         }
-        
+
         section[data-testid="stSidebar"] > div {
             background: transparent;
         }
-        
-        div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 12px;
-            padding: 12px !important;
-            margin: 5px 0 !important;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            border: 1px solid rgba(0, 0, 0, 0.05);
-        }
-        
+
         div[data-testid="stMetric"] {
             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
             border: 1px solid rgba(0, 0, 0, 0.06);
         }
-        
-        div[data-testid="stMetricLabel"] {
-            color: #6c757d !important;
-        }
-        
-        div[data-testid="stMetricValue"] {
-            color: #212529 !important;
-        }
-        
-        button[data-baseweb="tab"] {
-            color: #6c757d !important;
-            border-bottom: 2px solid transparent !important;
-        }
-        
-        button[data-baseweb="tab"]:hover {
-            color: #212529 !important;
-            border-bottom: 2px solid #0d6efd !important;
-        }
-        
-        button[data-baseweb="tab"][aria-selected="true"] {
-            color: #0d6efd !important;
-            border-bottom: 2px solid #0d6efd !important;
-        }
-        
+
         .stButton > button {
             background-color: #ffffff !important;
             color: #212529 !important;
-            border: 1px solid #dee2e6 !important;
+            border: 1px solid rgba(0, 0, 0, 0.15) !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
         }
-        
+
         .stButton > button:hover {
-            background-color: #f8f9fa !important;
+            background-color: #f0f7ff !important;
             border: 1px solid #0d6efd !important;
             box-shadow: 0 4px 8px rgba(13, 110, 253, 0.15) !important;
         }
-        
-        h2, h3 {
-            color: #212529 !important;
-        }
-        
-        p, span, div {
-            color: #495057 !important;
-        }
-        
-        a {
-            color: #0d6efd !important;
-        }
-        
-        a:hover {
-            color: #0a58ca !important;
-        }
-        
-        div[data-testid="stCaption"] {
-            color: #6c757d !important;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #f8f9fa;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #dee2e6;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: #adb5bd;
-        }
-        
-        .content-block {
-            border-color: rgba(0, 0, 0, 0.1);
-            background: rgba(255, 255, 255, 0.8);
-        }
-        
+
         .video-card {
-            border-color: rgba(0, 0, 0, 0.12);
-            background: rgba(255, 255, 255, 0.9);
+            background: #ffffff;
+            border-color: rgba(0, 0, 0, 0.1) !important;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
         }
-        
+
         .video-card:hover {
-            border-color: rgba(13, 110, 253, 0.4);
-            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
+            border-color: rgba(13, 110, 253, 0.4) !important;
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.12) !important;
         }
-        
-        .divider {
-            border-color: rgba(0, 0, 0, 0.1);
-        }
-        
-        /* タレント選択 - ラジオボタン */
-        div[role="radiogroup"] label {
-            color: #6c757d !important;
-        }
-        
-        div[role="radiogroup"] label:hover {
-            color: #212529 !important;
-        }
-        
-        /* 選択されたタレント */
+
+        .video-title a { color: #212529 !important; }
+        .video-title a:hover { color: #0d6efd !important; }
+
+        .divider { border-color: rgba(0, 0, 0, 0.1) !important; }
+
+        div[role="radiogroup"] label { color: #495057 !important; }
+        div[role="radiogroup"] label:hover { color: #212529 !important; }
         div[role="radiogroup"] label[data-checked="true"] {
             color: #0d6efd !important;
             font-weight: 600 !important;
         }
-        
-        div[role="radiogroup"] label[data-checked="true"]:hover {
-            color: #0a58ca !important;
-        }
-        
-        /* サイドバーのタレント選択ボタン */
+
         section[data-testid="stSidebar"] .stButton > button {
             color: #6c757d !important;
         }
-        
+
         section[data-testid="stSidebar"] .stButton > button:hover {
             color: #212529 !important;
         }
         """
-    
-    # 最後に一つの<style>タグで囲んで返す
+
     return f"<style>{base_css}{theme_css}</style>"
+
 
 # CSSを適用
 st.markdown(get_theme_css(st.session_state.theme), unsafe_allow_html=True)
 
-# タレント表示順（固定）
+# ==============================================================================
+# 定数
+# ==============================================================================
 TALENT_ORDER = [
     "焔魔るり", "HACHI", "瀬戸乃とと", "水瀬凪",
     "KMNZ", "VESPERBELL", "CULUA", "NEUN", "MEDA", "CONA",
@@ -737,140 +464,80 @@ TALENT_ORDER = [
     "Diα", "妃玖"
 ]
 
-# タレント一覧を取得
-def get_available_talents():
-    """all_snapshots.jsonに存在するタレントを固定順で返す"""
-    if not os.path.exists('all_snapshots.json'):
-        return []
-    try:
-        with open('all_snapshots.json', 'r', encoding='utf-8') as f:
-            snapshots = json.load(f)
-        existing = set(snapshots.keys())
-        # 固定順でフィルタ
-        ordered = [t for t in TALENT_ORDER if t in existing]
-        # 固定順にないタレントは末尾に追加
-        extras = [t for t in existing if t not in TALENT_ORDER]
-        return ordered + sorted(extras)
-    except:
-        return []
-
-def load_history(talent_name):
-    """all_snapshots.jsonから指定タレントのデータを読み込む"""
+# ==============================================================================
+# データ読み込み
+# ==============================================================================
+def _load_snapshots():
+    """all_snapshots.json を読み込んで返す（失敗時は None）"""
     if not os.path.exists('all_snapshots.json'):
         return None
     try:
         with open('all_snapshots.json', 'r', encoding='utf-8') as f:
-            snapshots = json.load(f)
-        data = snapshots.get(talent_name)
-        if data:
-            # _channel_stats は {"YYYY-MM-DD": {...}} 形式 → 最新日付の値を返す
-            raw_ch = data.get('_channel_stats', {})
-            if raw_ch:
-                latest_date = sorted(raw_ch.keys())[-1]
-                channel_stats = raw_ch[latest_date]
-            else:
-                channel_stats = {}
-            return {
-                'channel_stats': channel_stats,
-                # アンダースコア始まりでないキーを動画データとして返す（後方互換用）
-                'videos': {k: v for k, v in data.items() if not k.startswith('_')}
-            }
-    except:
-        pass
-    return None
+            return json.load(f)
+    except Exception:
+        return None
 
-def load_logs(talent_name):
-    """新構造ではログは別管理しないため空を返す（前日比は履歴から計算）"""
-    return []
 
-def load_video_daily_history(talent_name):
-    """all_snapshots.jsonから指定タレントの動画履歴を読み込む"""
-    if not os.path.exists('all_snapshots.json'):
+def get_available_talents():
+    """all_snapshots.json に存在するタレントを固定順で返す"""
+    snapshots = _load_snapshots()
+    if not snapshots:
+        return []
+    existing = set(snapshots.keys())
+    ordered = [t for t in TALENT_ORDER if t in existing]
+    extras  = sorted(t for t in existing if t not in TALENT_ORDER)
+    return ordered + extras
+
+
+def load_channel_stats(talent_name):
+    """チャンネル統計（最新日付分）を返す"""
+    snapshots = _load_snapshots()
+    if not snapshots:
         return {}
-    try:
-        with open('all_snapshots.json', 'r', encoding='utf-8') as f:
-            snapshots = json.load(f)
-        data = snapshots.get(talent_name, {})
-        # アンダースコア始まりでないキーが動画データ
-        return {k: v for k, v in data.items() if not k.startswith('_')}
-    except:
-        pass
-    return {}
+    raw_ch = snapshots.get(talent_name, {}).get('_channel_stats', {})
+    if not raw_ch:
+        return {}
+    latest_date = sorted(raw_ch.keys())[-1]
+    return raw_ch[latest_date]
+
+
+def load_video_history(talent_name):
+    """動画履歴（アンダースコア始まり以外のキー）を返す"""
+    snapshots = _load_snapshots()
+    if not snapshots:
+        return {}
+    data = snapshots.get(talent_name, {})
+    return {k: v for k, v in data.items() if not k.startswith('_') and isinstance(v, dict)}
+
 
 def get_channel_stats_diff(talent_name):
-    """前日比を返す。データがなければ None を返す"""
-    if not os.path.exists('all_snapshots.json'):
+    """チャンネル統計の前日比を返す。データ不足時は None"""
+    snapshots = _load_snapshots()
+    if not snapshots:
         return None
-    try:
-        with open('all_snapshots.json', 'r', encoding='utf-8') as f:
-            snapshots = json.load(f)
-        ch_stats = snapshots.get(talent_name, {}).get('_channel_stats', {})
-        if not ch_stats:
-            return None
-        sorted_dates = sorted(ch_stats.keys())
-        if len(sorted_dates) < 2:
-            return None
-        today = ch_stats[sorted_dates[-1]]
-        yesterday = ch_stats[sorted_dates[-2]]
-        return {
-            '登録者数': today['登録者数'] - yesterday['登録者数'],
-            '総再生数': today['総再生数'] - yesterday['総再生数'],
-            '動画数':   today['動画数']   - yesterday['動画数'],
-        }
-    except:
-        pass
-    return None
+    ch_stats = snapshots.get(talent_name, {}).get('_channel_stats', {})
+    if not ch_stats:
+        return None
+    sorted_dates = sorted(ch_stats.keys())
+    if len(sorted_dates) < 2:
+        return None
+    today     = ch_stats[sorted_dates[-1]]
+    yesterday = ch_stats[sorted_dates[-2]]
+    return {
+        '登録者数': today['登録者数'] - yesterday['登録者数'],
+        '総再生数': today['総再生数'] - yesterday['総再生数'],
+        '動画数':   today['動画数']   - yesterday['動画数'],
+    }
 
-def filter_videos_by_type(video_history, video_type):
-    """動画を種類でフィルタリング"""
-    if video_type == 'ALL':
-        return video_history
-    filtered = {}
-    for video_id, video_data in video_history.items():
-        if video_data.get('type') == video_type:
-            filtered[video_id] = video_data
-    return filtered
 
-def calculate_growth(records, period='1DAY'):
-    """指定期間の増加数を計算（recordsはdateキーのdict）"""
-    if not records or len(records) < 2:
-        return 0
-    now = datetime.now()
-    if period == '1DAY':
-        cutoff = now - timedelta(days=1)
-    elif period == '1WEEK':
-        cutoff = now - timedelta(days=7)
-    elif period == '1MONTH':
-        cutoff = now - timedelta(days=30)
-    else:
-        return 0
-
-    sorted_dates = sorted(records.keys())
-    latest_views = records[sorted_dates[-1]].get('再生数', 0)
-
-    cutoff_str = cutoff.strftime('%Y-%m-%d')
-    old_views = None
-    for date in sorted_dates:
-        if date >= cutoff_str:
-            old_views = records[date].get('再生数', 0)
-            break
-
-    if old_views is not None:
-        return latest_views - old_views
-    return 0
-
-def get_sorted_records_list(records):
-    """recordsのdictを日付順のリストに変換"""
-    if not records:
-        return []
-    return [{'date': d, **v} for d, v in sorted(records.items())]
-
+# ==============================================================================
 # サイドバー
+# ==============================================================================
 with st.sidebar:
     st.header("+++ RK Music All Singer+++")
-    
+
     available_talents = get_available_talents()
-    
+
     if not available_talents:
         st.warning("⚠️ データが見つかりません")
         selected_talent = None
@@ -880,37 +547,28 @@ with st.sidebar:
 
         selected_talent = st.session_state.selected_talent
 
-        # 全タレントのバナーボタン用CSSを一括注入（markerセレクタ方式）
+        # バナーボタン用CSS（markerセレクタ方式）
         css_rules = []
         for talent in available_talents:
             banner_url = TALENT_BANNERS.get(talent, "")
             is_selected = (talent == selected_talent)
-            key = f"talent_btn_{talent}"
+            key    = f"talent_btn_{talent}"
             border = "3px solid #0d6efd" if is_selected else "1px solid rgba(128,128,128,0.3)"
 
-            if banner_url:
-                # ~ (一般兄弟) + :has() で DOM ラッパーを透過して対象ボタンを特定
-                css_rules.append(f"""
-                section[data-testid="stSidebar"] div:has(> #marker_{key}) ~ div div[data-testid="stButton"] button,
-                section[data-testid="stSidebar"] div:has(#marker_{key}) + div div[data-testid="stButton"] button {{
-                    background-image: url('{banner_url}') !important;
-                    background-color: transparent !important;
-                    border: {border} !important;
-                }}
-                """)
-            else:
-                css_rules.append(f"""
-                section[data-testid="stSidebar"] div:has(> #marker_{key}) ~ div div[data-testid="stButton"] button,
-                section[data-testid="stSidebar"] div:has(#marker_{key}) + div div[data-testid="stButton"] button {{
-                    background-image: none !important;
-                    border: {border} !important;
-                }}
-                """)
+            bg_rule = f"background-image: url('{banner_url}') !important;" if banner_url else "background-image: none !important;"
+            css_rules.append(f"""
+            section[data-testid="stSidebar"] div:has(> #marker_{key}) ~ div div[data-testid="stButton"] button,
+            section[data-testid="stSidebar"] div:has(#marker_{key}) + div div[data-testid="stButton"] button {{
+                {bg_rule}
+                background-color: transparent !important;
+                border: {border} !important;
+            }}
+            """)
 
         if css_rules:
             st.markdown(f"<style>{''.join(css_rules)}</style>", unsafe_allow_html=True)
 
-        # 各タレントのマーカー + ボタンを描画
+        # マーカー + ボタンを描画
         for talent in available_talents:
             key = f"talent_btn_{talent}"
             st.markdown(
@@ -919,25 +577,24 @@ with st.sidebar:
             )
             if st.button(talent, key=key, use_container_width=True):
                 st.session_state.selected_talent = talent
-                st.session_state.selected_videos = []
                 st.rerun()
 
+# ==============================================================================
+# メインエリア
+# ==============================================================================
 if not selected_talent:
     st.info("📡 タレントを選択してください")
     st.stop()
 
-history = load_history(selected_talent)
-logs = load_logs(selected_talent)
-video_history = load_video_daily_history(selected_talent)
-diff = get_channel_stats_diff(selected_talent)
+channel_stats = load_channel_stats(selected_talent)
+video_history = load_video_history(selected_talent)
+diff          = get_channel_stats_diff(selected_talent)
 
-if not history:
+if not channel_stats and not video_history:
     st.error(f"❌ {selected_talent} のデータが見つかりません")
     st.stop()
 
-channel_stats = history.get('channel_stats', {})
-
-# バナーヘッダー
+# --- バナー＋チャンネル統計 ---
 banner_url = TALENT_BANNERS.get(selected_talent, "")
 subs  = channel_stats.get('登録者数', 0)
 views = channel_stats.get('総再生数', 0)
@@ -945,17 +602,16 @@ vids  = channel_stats.get('動画数',   0)
 
 if banner_url:
     st.markdown(f"""
-    <div style="width:100%; height:200px; border-radius:12px;
-                overflow:hidden; margin-bottom:0;">
-        <img src="{banner_url}" style="width:100%; height:100%;
-                   object-fit:cover; object-position:center top;">
+    <div style="width:100%; height:200px; border-radius:12px; overflow:hidden; margin-bottom:0;">
+        <img src="{banner_url}" style="width:100%; height:100%; object-fit:cover; object-position:center top;">
     </div>
     """, unsafe_allow_html=True)
 else:
-    st.subheader(channel_stats.get('チャンネル名', selected_talent))
+    st.subheader(selected_talent)
+
 
 def _fmt_diff(val):
-    """前日比を (+123) / (-45) / (±0) 形式で返す"""
+    """前日比を (+123) / (-45) / (±0) 形式のHTMLで返す"""
     if val is None:
         return ""
     if val > 0:
@@ -964,6 +620,7 @@ def _fmt_diff(val):
         return f'<span style="font-size:14px; color:#dc3545;"> ({val:,})</span>'
     else:
         return f'<span style="font-size:14px; opacity:0.5;"> (±0)</span>'
+
 
 _d = diff or {}
 st.markdown(f"""
@@ -975,240 +632,131 @@ st.markdown(f"""
 <hr style="margin:6px 0 8px 0; border:none; border-top:1px solid rgba(128,128,128,0.2);">
 """, unsafe_allow_html=True)
 
-# グラフエリア（選択された動画がある場合のみ表示）
-if st.session_state.selected_videos and video_history:
-    st.subheader("📈 選択動画の推移")
-    
-    # グラフ表示内容選択
-    col_graph1, col_graph2 = st.columns([1, 4])
-    with col_graph1:
-        show_views = st.checkbox("📊 再生数", value=st.session_state.show_views_graph, key="views_check")
-        show_likes = st.checkbox("👍 高評価数", value=st.session_state.show_likes_graph, key="likes_check")
-        st.session_state.show_views_graph = show_views
-        st.session_state.show_likes_graph = show_likes
-    
-    # グラフ作成
-    if show_views or show_likes:
-        fig = go.Figure()
-        
-        for video_id in st.session_state.selected_videos:
-            if video_id not in video_history:
-                continue
-            
-            video_data = video_history[video_id]
-            if not isinstance(video_data, dict):
-                continue
-            video_title = video_data.get('タイトル', '')
-            records = video_data.get('records', {})
-            
-            if not records:
-                continue
-            
-            # データを日付順にソート
-            sorted_records = get_sorted_records_list(records)
-            
-            dates = []
-            views = []
-            likes = []
-            
-            for record in sorted_records:
-                dates.append(record.get('date', ''))
-                views.append(record.get('再生数', 0))
-                likes.append(record.get('高評価数', 0))
-            
-            # 短いタイトルを作成（最初の30文字）
-            short_title = video_title[:30] + '...' if len(video_title) > 30 else video_title
-            
-            # 再生数のグラフ
-            if show_views and dates:
-                fig.add_trace(go.Scatter(
-                    x=dates,
-                    y=views,
-                    mode='lines+markers',
-                    name=f"{short_title} (再生数)",
-                    line=dict(width=2),
-                    marker=dict(size=6)
-                ))
-            
-            # 高評価数のグラフ
-            if show_likes and dates:
-                fig.add_trace(go.Scatter(
-                    x=dates,
-                    y=likes,
-                    mode='lines+markers',
-                    name=f"{short_title} (高評価)",
-                    line=dict(width=2, dash='dot'),
-                    marker=dict(size=6, symbol='diamond')
-                ))
-        
-        # レイアウト設定
-        fig.update_layout(
-            height=400,
-            xaxis_title="日付",
-            yaxis_title="数値",
-            hovermode='x unified',
-            legend=dict(
-                orientation="v",
-                yanchor="top",
-                y=1,
-                xanchor="left",
-                x=1.02
-            ),
-            margin=dict(l=50, r=150, t=30, b=50)
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("📊 グラフに表示する項目を選択してください")
-    
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-
-# 動画リスト
+# --- 動画リスト ---
 if not video_history:
     st.info("📡 動画データを蓄積中です。")
-else:
-    # 全動画をリストアップ
-    video_list = []
-    for video_id, video_data in video_history.items():
-        if video_id.startswith('_'):
-            continue
-        if not isinstance(video_data, dict):
-            continue
-        records = video_data.get('records', {})
-        if not records:
-            continue
+    st.stop()
 
-        sorted_dates = sorted(records.keys())
-        current_record = records[sorted_dates[-1]]
-        current_views = current_record.get('再生数', 0)
-        current_likes = current_record.get('高評価数', 0)
+# 動画データを整形
+video_list = []
+for video_id, video_data in video_history.items():
+    records = video_data.get('records', {})
+    if not records:
+        continue
 
-        # 1D〜5D: 各日の前日比（1D=最新-1日前、2D=1日前-2日前、…）
-        daily_views = []
-        daily_likes = []
-        for i in range(1, 6):
-            if len(sorted_dates) > i:
-                dv = records[sorted_dates[-i]].get('再生数', 0) - records[sorted_dates[-(i+1)]].get('再生数', 0)
-                dl = records[sorted_dates[-i]].get('高評価数', 0) - records[sorted_dates[-(i+1)]].get('高評価数', 0)
-            else:
-                dv, dl = None, None
-            daily_views.append(dv)
-            daily_likes.append(dl)
+    sorted_dates  = sorted(records.keys())
+    current_record = records[sorted_dates[-1]]
+    current_views  = current_record.get('再生数', 0)
+    current_likes  = current_record.get('高評価数', 0)
 
-        video_list.append({
-            'id': video_id,
-            'タイトル': video_data['タイトル'],
-            'type': video_data.get('type', 'Movie'),
-            '再生数': current_views,
-            '再生数5d増加': sum(v for v in daily_views if v is not None),
-            '高評価数': current_likes,
-            '高評価5d増加': sum(v for v in daily_likes if v is not None),
-            '再生数daily': daily_views,
-            '高評価daily': daily_likes,
-        })
+    # 1D〜5D の前日比（1D=最新-1日前、2D=1日前-2日前、…）
+    daily_views = []
+    daily_likes = []
+    for i in range(1, 6):
+        if len(sorted_dates) > i:
+            dv = records[sorted_dates[-i]].get('再生数', 0)   - records[sorted_dates[-(i+1)]].get('再生数', 0)
+            dl = records[sorted_dates[-i]].get('高評価数', 0) - records[sorted_dates[-(i+1)]].get('高評価数', 0)
+        else:
+            dv, dl = None, None
+        daily_views.append(dv)
+        daily_likes.append(dl)
 
-    # 再生数でソート
-    video_list.sort(key=lambda x: x['再生数'], reverse=True)
+    video_list.append({
+        'id':         video_id,
+        'タイトル':   video_data.get('タイトル', ''),
+        'type':       video_data.get('type', 'Movie'),
+        '再生数':     current_views,
+        '再生数5d増加': sum(v for v in daily_views if v is not None),
+        '高評価数':   current_likes,
+        '高評価5d増加': sum(v for v in daily_likes if v is not None),
+        '再生数daily': daily_views,
+        '高評価daily': daily_likes,
+    })
 
-    # ソート選択
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    col_label, col_select = st.columns([1, 5], vertical_alignment="center")
-    with col_label:
-        st.markdown("**🔽 並び替え**")
-    with col_select:
-        sort_option = st.selectbox(
-            "並び替え",
-            ["📊 再生数TOP", "👍 高評価TOP", "📊📈 [再]5日増加TOP", "👍💹 [高]5日増加TOP"],
-            label_visibility="collapsed"
-        )
+# ソート選択
+st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+col_label, col_select = st.columns([1, 5], vertical_alignment="center")
+with col_label:
+    st.markdown("**🔽 並び替え**")
+with col_select:
+    sort_option = st.selectbox(
+        "並び替え",
+        ["📊 再生数TOP", "👍 高評価TOP", "📊📈 [再]5日増加TOP", "👍💹 [高]5日増加TOP"],
+        label_visibility="collapsed"
+    )
 
-    # ソート適用
-    if sort_option == "📊 再生数TOP":
-        video_list.sort(key=lambda x: x['再生数'], reverse=True)
-    elif sort_option == "👍 高評価TOP":
-        video_list.sort(key=lambda x: x['高評価数'], reverse=True)
-    elif sort_option == "📊📈 [再]5日増加TOP":
-        video_list.sort(key=lambda x: x['再生数5d増加'], reverse=True)
-    elif sort_option == "👍💹 [高]5日増加TOP":
-        video_list.sort(key=lambda x: x['高評価5d増加'], reverse=True)
+sort_key_map = {
+    "📊 再生数TOP":      '再生数',
+    "👍 高評価TOP":      '高評価数',
+    "📊📈 [再]5日増加TOP": '再生数5d増加',
+    "👍💹 [高]5日増加TOP": '高評価5d増加',
+}
+video_list.sort(key=lambda x: x[sort_key_map[sort_option]], reverse=True)
 
-    # 動画カードを表示
-    for idx, video in enumerate(video_list):
-        video_url = f"https://www.youtube.com/watch?v={video['id']}"
-        type_emoji = "📹" if video['type'] == 'Movie' else ("🎬" if video['type'] == 'Short' else "🔴")
+# 動画カードを表示
+def fmt_diff(v):
+    if v is None:
+        return "—"
+    return f"+{v:,}" if v >= 0 else f"{v:,}"
 
-        # 前日比（1D）
-        v1d = video['再生数daily'][0]
-        l1d = video['高評価daily'][0]
-        def fmt_diff(v):
-            if v is None: return "—"
-            return f"+{v:,}" if v >= 0 else f"{v:,}"
+for video in video_list:
+    video_url  = f"https://www.youtube.com/watch?v={video['id']}"
+    type_emoji = "📹" if video['type'] == 'Movie' else ("🎬" if video['type'] == 'Short' else "🔴")
 
-        # 2D〜5D の列（ヘッダーと値）
-        day_headers = []
-        view_vals   = []
-        like_vals   = []
-        for i in range(1, 5):  # 2D〜5D
-            v = video['再生数daily'][i]
-            l = video['高評価daily'][i]
-            if v is None:
-                break
-            day_headers.append(f"{i+1}D")
-            view_vals.append(fmt_diff(v))
-            like_vals.append(fmt_diff(l))
+    v1d = video['再生数daily'][0]
+    l1d = video['高評価daily'][0]
 
-        # ヘッダー行・値行をテーブル風に生成
-        def make_day_row(vals, label):
-            cells = "".join(
-                f'<td style="padding:2px 12px 2px 0; color:#888; font-size:11px;">{label}</td>'
-                + "".join(
-                    f'<td style="padding:2px 16px 2px 0; font-size:12px; font-weight:600;">{v}</td>'
-                    for v in vals
-                )
-            )
-            return cells
+    # 2D〜5D テーブル
+    day_headers, view_vals, like_vals = [], [], []
+    for i in range(1, 5):
+        v = video['再生数daily'][i]
+        l = video['高評価daily'][i]
+        if v is None:
+            break
+        day_headers.append(f"{i+1}D")
+        view_vals.append(fmt_diff(v))
+        like_vals.append(fmt_diff(l))
 
-        header_cells = '<td style="padding:2px 12px 2px 0; font-size:11px; color:#aaa;"></td>' + "".join(
-            f'<td style="padding:2px 16px 2px 0; font-size:11px; color:#aaa; font-weight:500;">{d}</td>'
-            for d in day_headers
-        )
+    header_cells = '<td style="padding:2px 12px 2px 0; font-size:11px; color:#aaa;"></td>' + "".join(
+        f'<td style="padding:2px 16px 2px 0; font-size:11px; color:#aaa; font-weight:500;">{d}</td>'
+        for d in day_headers
+    )
+    view_row_cells = '<td style="padding:2px 12px 2px 0; font-size:11px; color:#888;">再生</td>' + "".join(
+        f'<td style="padding:2px 16px 2px 0; font-size:12px; font-weight:600;">{v}</td>'
+        for v in view_vals
+    )
+    like_row_cells = '<td style="padding:2px 12px 2px 0; font-size:11px; color:#888;">高評価</td>' + "".join(
+        f'<td style="padding:2px 16px 2px 0; font-size:12px; font-weight:600;">{v}</td>'
+        for v in like_vals
+    )
 
-        view_row_cells = f'<td style="padding:2px 12px 2px 0; font-size:11px; color:#888;">再生</td>' + "".join(
-            f'<td style="padding:2px 16px 2px 0; font-size:12px; font-weight:600;">{v}</td>'
-            for v in view_vals
-        )
-        like_row_cells = f'<td style="padding:2px 12px 2px 0; font-size:11px; color:#888;">高評価</td>' + "".join(
-            f'<td style="padding:2px 16px 2px 0; font-size:12px; font-weight:600;">{v}</td>'
-            for v in like_vals
-        )
+    day_table = f"""
+    <table style="border-collapse:collapse; margin-top:6px;">
+        <tr>{header_cells}</tr>
+        <tr>{view_row_cells}</tr>
+        <tr>{like_row_cells}</tr>
+    </table>
+    """ if day_headers else ""
 
-        day_table = f"""
-        <table style="border-collapse:collapse; margin-top:6px;">
-            <tr>{header_cells}</tr>
-            <tr>{view_row_cells}</tr>
-            <tr>{like_row_cells}</tr>
-        </table>
-        """ if day_headers else ""
-
-        st.markdown(f'''
-        <div class="video-card">
-            <div class="video-title">
-                {type_emoji} <a href="{video_url}" target="_blank">{video['タイトル']}</a>
-            </div>
-            <div style="margin-top:6px; font-size:13px;">
-                <span style="margin-right:24px;">
-                    再生数：<strong>{video['再生数']:,}</strong>
-                    <span class="stat-change {'positive-change' if v1d and v1d > 0 else 'neutral-change'}" style="font-size:12px;">
-                        ({fmt_diff(v1d)})
-                    </span>
-                </span>
-                <span>
-                    高評価：<strong>{video['高評価数']:,}</strong>
-                    <span class="stat-change {'positive-change' if l1d and l1d > 0 else 'neutral-change'}" style="font-size:12px;">
-                        ({fmt_diff(l1d)})
-                    </span>
-                </span>
-            </div>
-            {day_table}
+    st.markdown(f'''
+    <div class="video-card">
+        <div class="video-title">
+            {type_emoji} <a href="{video_url}" target="_blank">{video['タイトル']}</a>
         </div>
-        ''', unsafe_allow_html=True)
+        <div style="margin-top:6px; font-size:13px;">
+            <span style="margin-right:24px;">
+                再生数：<strong>{video['再生数']:,}</strong>
+                <span class="stat-change {'positive-change' if v1d and v1d > 0 else 'neutral-change'}" style="font-size:12px;">
+                    ({fmt_diff(v1d)})
+                </span>
+            </span>
+            <span>
+                高評価：<strong>{video['高評価数']:,}</strong>
+                <span class="stat-change {'positive-change' if l1d and l1d > 0 else 'neutral-change'}" style="font-size:12px;">
+                    ({fmt_diff(l1d)})
+                </span>
+            </span>
+        </div>
+        {day_table}
+    </div>
+    ''', unsafe_allow_html=True)
