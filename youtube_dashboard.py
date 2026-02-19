@@ -5,9 +5,11 @@ YouTube チャンネル統計ダッシュボード (Streamlit Cloud版)
 """
 
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import os
+import io
+import zipfile
 
 # ページ設定
 st.set_page_config(
@@ -273,6 +275,123 @@ def _load_snapshots():
         return None
 
 
+def _load_history_year():
+    """all_history_{year}.json を読み込んで返す（失敗時は None）"""
+    year = datetime.now().strftime('%Y')
+    path = f'all_history_{year}.json'
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def build_csv_data():
+    """
+    全タレントのデータからチャンネル統計・動画統計CSVのバイト列を返す。
+    エンコード: Shift-JIS (cp932)
+    戻り値: (ch_bytes, vid_bytes, error_message)
+    """
+    snapshots = _load_snapshots() or {}
+    history   = _load_history_year() or {}
+
+    # 対象タレント（Dashboard除く・snapshotsに存在するもの）
+    talents = [t for t in TALENT_ORDER if t != "Dashboard" and t in snapshots]
+
+    # 全履歴から最新日(N日)を確定
+    all_dates = set()
+    for talent in talents:
+        ch_stats = history.get(talent, {}).get('_channel_stats', {})
+        all_dates.update(ch_stats.keys())
+    if not all_dates:
+        return None, None, "履歴データが見つかりません（all_history_{year}.json）"
+
+    n_date = sorted(all_dates)[-1]
+    n_dates = [
+        (datetime.strptime(n_date, '%Y-%m-%d') - timedelta(days=i)).strftime('%Y-%m-%d')
+        for i in range(1, 6)
+    ]
+
+    # ── チャンネル統計CSV ──────────────────────────
+    ch_header = ['タレント', '登録者数(N)']
+    for i in range(1, 6):
+        ch_header.append(f'登録者増({i}D前)')
+    ch_header += ['総再生数(N)']
+    for i in range(1, 6):
+        ch_header.append(f'総再生増({i}D前)')
+    ch_header.append('動画数(N)')
+
+    ch_rows = [ch_header]
+    for talent in talents:
+        snap_ch = snapshots.get(talent, {}).get('channel_stats', {})
+        hist_ch = history.get(talent, {}).get('_channel_stats', {})
+
+        subs_diffs, views_diffs = [], []
+        prev = n_date
+        for d in n_dates:
+            p, c = hist_ch.get(prev, {}), hist_ch.get(d, {})
+            subs_diffs.append(p.get('登録者数', 0) - c.get('登録者数', 0) if p and c else '')
+            views_diffs.append(p.get('総再生数', 0) - c.get('総再生数', 0) if p and c else '')
+            prev = d
+
+        ch_rows.append(
+            [talent, snap_ch.get('登録者数', 0)]
+            + subs_diffs
+            + [snap_ch.get('総再生数', 0)]
+            + views_diffs
+            + [snap_ch.get('動画数', 0)]
+        )
+
+    # ── 動画統計CSV ────────────────────────────────
+    vid_header = ['タレント', '動画ID', 'タイトル', 'type', '再生数(N)']
+    for i in range(1, 6):
+        vid_header.append(f'再生増({i}D前)')
+    vid_header.append('高評価数(N)')
+    for i in range(1, 6):
+        vid_header.append(f'高評価増({i}D前)')
+
+    vid_rows = [vid_header]
+    for talent in talents:
+        snap_videos = snapshots.get(talent, {}).get('videos', {})
+        hist_talent = history.get(talent, {})
+
+        for vid_id, vid_snap in snap_videos.items():
+            if not isinstance(vid_snap, dict):
+                continue
+            hist_records = hist_talent.get(vid_id, {})
+            hist_records = hist_records.get('records', {}) if isinstance(hist_records, dict) else {}
+
+            views_diffs, likes_diffs = [], []
+            prev = n_date
+            for d in n_dates:
+                p, c = hist_records.get(prev, {}), hist_records.get(d, {})
+                views_diffs.append(p.get('再生数', 0) - c.get('再生数', 0) if p and c else '')
+                likes_diffs.append(p.get('高評価数', 0) - c.get('高評価数', 0) if p and c else '')
+                prev = d
+
+            vid_rows.append(
+                [talent, vid_id, vid_snap.get('タイトル', vid_id), vid_snap.get('type', ''),
+                 vid_snap.get('再生数', 0)]
+                + views_diffs
+                + [vid_snap.get('高評価数', 0)]
+                + likes_diffs
+            )
+
+    # ── CSV → Shift-JIS バイト列 ──────────────────
+    def rows_to_sjis(rows):
+        buf = io.StringIO()
+        for row in rows:
+            buf.write(','.join(
+                f'"{str(v)}"' if ',' in str(v) else str(v)
+                for v in row
+            ) + '\r\n')
+        return buf.getvalue().encode('cp932', errors='replace')
+
+    return rows_to_sjis(ch_rows), rows_to_sjis(vid_rows), None
+
+
 def get_available_talents():
     """all_snapshots.json に存在するタレントを固定順で返す。総合ダッシュボードは常に先頭"""
     snapshots = _load_snapshots()
@@ -404,7 +523,35 @@ if selected_talent == "Dashboard":
             <img src="{banner_url}" style="width:100%; height:100%; object-fit:cover; object-position:center top;">
         </div>
         """, unsafe_allow_html=True)
-    st.info("🚧 総合ダッシュボードは準備中です。")
+
+    st.markdown('<hr style="margin:10px 0 16px 0; border:none; border-top:1px solid rgba(128,128,128,0.2);">', unsafe_allow_html=True)
+    st.subheader("📥 CSVエクスポート")
+    st.caption("全タレントのデータを2ファイル（チャンネル統計・動画統計）のZIPでダウンロードします。Shift-JIS形式。")
+
+    if st.button("CSVを生成してダウンロード", type="primary"):
+        with st.spinner("データを集計中..."):
+            ch_bytes, vid_bytes, err = build_csv_data()
+
+        if err:
+            st.error(f"❌ {err}")
+        else:
+            today_str = datetime.now().strftime('%Y%m%d')
+
+            # ZIPにまとめる
+            zip_buf = io.BytesIO()
+            with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+                zf.writestr(f'channel_stats_{today_str}.csv', ch_bytes)
+                zf.writestr(f'video_stats_{today_str}.csv',   vid_bytes)
+            zip_buf.seek(0)
+
+            st.download_button(
+                label="⬇️ ZIPをダウンロード",
+                data=zip_buf,
+                file_name=f'rkmusic_stats_{today_str}.zip',
+                mime='application/zip'
+            )
+            st.success("✅ 生成完了！ボタンをクリックしてダウンロードしてください。")
+
     st.stop()
 
 try:
