@@ -490,24 +490,29 @@ def get_available_talents():
 
 
 def load_channel_stats(talent_name):
-    """チャンネル統計（最新日付分）を返す"""
+    """チャンネル統計を返す。日付ネスト形式なら最新日付分を、フラットならそのまま返す"""
     snapshots = _load_snapshots()
     if not snapshots:
         return {}
-    raw_ch = snapshots.get(talent_name, {}).get('_channel_stats', {})
+    raw_ch = snapshots.get(talent_name, {}).get('channel_stats', {})
     if not raw_ch:
         return {}
-    latest_date = sorted(raw_ch.keys())[-1]
-    return raw_ch[latest_date]
+    # 値がdictなら日付ネスト形式 → 最新日付を返す
+    first_val = next(iter(raw_ch.values()))
+    if isinstance(first_val, dict):
+        latest_date = sorted(raw_ch.keys())[-1]
+        return raw_ch[latest_date]
+    # フラット形式（{"登録者数": X, ...}）ならそのまま返す
+    return raw_ch
 
 
 def load_video_history(talent_name):
-    """動画履歴（アンダースコア始まり以外のキー）を返す"""
+    """動画履歴を返す（videosキー配下）"""
     snapshots = _load_snapshots()
     if not snapshots:
         return {}
-    data = snapshots.get(talent_name, {})
-    return {k: v for k, v in data.items() if not k.startswith('_') and isinstance(v, dict)}
+    videos = snapshots.get(talent_name, {}).get('videos', {})
+    return {k: v for k, v in videos.items() if isinstance(v, dict)}
 
 
 def get_channel_stats_diff(talent_name):
@@ -515,9 +520,14 @@ def get_channel_stats_diff(talent_name):
     snapshots = _load_snapshots()
     if not snapshots:
         return None
-    ch_stats = snapshots.get(talent_name, {}).get('_channel_stats', {})
+    ch_stats = snapshots.get(talent_name, {}).get('channel_stats', {})
     if not ch_stats:
         return None
+    # フラット形式（日次1レコードのみ）の場合は前日比なし
+    first_val = next(iter(ch_stats.values()))
+    if not isinstance(first_val, dict):
+        return None
+    # 日付ネスト形式
     sorted_dates = sorted(ch_stats.keys())
     if len(sorted_dates) < 2:
         return None
@@ -600,10 +610,8 @@ with st.expander("🔍 DEBUG: データ構造確認", expanded=False):
     if snapshots and selected_talent in snapshots:
         raw = snapshots[selected_talent]
         st.write("**トップレベルキー一覧:**", list(raw.keys()))
-        if '_channel_stats' in raw:
-            st.write("**_channel_stats の中身:**", raw['_channel_stats'])
-        else:
-            st.warning("_channel_stats キーが存在しません")
+        st.write("**channel_stats の中身:**", raw.get('channel_stats', '（キーなし）'))
+        st.write("**videos のキー数:**", len(raw.get('videos', {})))
         st.write("**load_channel_stats() の戻り値:**", channel_stats)
     else:
         st.error("snapshots が None またはタレントが見つかりません")
