@@ -609,10 +609,12 @@ with st.expander("🔍 DEBUG: データ構造確認", expanded=False):
     snapshots = _load_snapshots()
     if snapshots and selected_talent in snapshots:
         raw = snapshots[selected_talent]
-        st.write("**トップレベルキー一覧:**", list(raw.keys()))
-        st.write("**channel_stats の中身:**", raw.get('channel_stats', '（キーなし）'))
-        st.write("**videos のキー数:**", len(raw.get('videos', {})))
         st.write("**load_channel_stats() の戻り値:**", channel_stats)
+        st.write("**video_history のキー数:**", len(video_history))
+        if video_history:
+            sample_id = next(iter(video_history))
+            st.write("**サンプル動画ID:**", sample_id)
+            st.write("**サンプル動画の中身:**", video_history[sample_id])
     else:
         st.error("snapshots が None またはタレントが見つかりません")
 # ▲▲▲ デバッグ用ここまで ▲▲▲
