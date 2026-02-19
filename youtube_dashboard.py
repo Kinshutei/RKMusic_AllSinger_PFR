@@ -789,6 +789,32 @@ def load_video_daily_history(talent_name):
                 pass
     return {}
 
+def get_channel_stats_diff(talent_name):
+    """前日比を返す。データがなければ None を返す"""
+    years = [datetime.now().strftime('%Y'), str(int(datetime.now().strftime('%Y')) - 1)]
+    for year in years:
+        path = f'all_history_{year}.json'
+        if os.path.exists(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    history = json.load(f)
+                ch_stats = history.get(talent_name, {}).get('_channel_stats', {})
+                if not ch_stats:
+                    return None
+                sorted_dates = sorted(ch_stats.keys())
+                if len(sorted_dates) < 2:
+                    return None
+                today = ch_stats[sorted_dates[-1]]
+                yesterday = ch_stats[sorted_dates[-2]]
+                return {
+                    '登録者数': today['登録者数'] - yesterday['登録者数'],
+                    '総再生数': today['総再生数'] - yesterday['総再生数'],
+                    '動画数':   today['動画数']   - yesterday['動画数'],
+                }
+            except:
+                pass
+    return None
+
 def filter_videos_by_type(video_history, video_type):
     """動画を種類でフィルタリング"""
     if video_type == 'ALL':
@@ -897,6 +923,7 @@ if not selected_talent:
 history = load_history(selected_talent)
 logs = load_logs(selected_talent)
 video_history = load_video_daily_history(selected_talent)
+diff = get_channel_stats_diff(selected_talent)
 
 if not history:
     st.error(f"❌ {selected_talent} のデータが見つかりません")
@@ -921,11 +948,23 @@ if banner_url:
 else:
     st.subheader(channel_stats.get('チャンネル名', selected_talent))
 
+def _fmt_diff(val):
+    """前日比を (+123) / (-45) / (±0) 形式で返す"""
+    if val is None:
+        return ""
+    if val > 0:
+        return f'<span style="font-size:14px; color:#28a745;"> (+{val:,})</span>'
+    elif val < 0:
+        return f'<span style="font-size:14px; color:#dc3545;"> ({val:,})</span>'
+    else:
+        return f'<span style="font-size:14px; opacity:0.5;"> (±0)</span>'
+
+_d = diff or {}
 st.markdown(f"""
 <div style="display:flex; gap:32px; align-items:baseline; margin:10px 0 6px 4px;">
-    <span style="font-size:16px;">登録者数：<strong style="font-size:20px;">{subs:,}</strong></span>
-    <span style="font-size:16px;">総再生数：<strong style="font-size:20px;">{views:,}</strong></span>
-    <span style="font-size:16px;">動画数：<strong style="font-size:20px;">{vids:,}</strong></span>
+    <span style="font-size:16px;">登録者数：<strong style="font-size:20px;">{subs:,}</strong>{_fmt_diff(_d.get('登録者数'))}</span>
+    <span style="font-size:16px;">総再生数：<strong style="font-size:20px;">{views:,}</strong>{_fmt_diff(_d.get('総再生数'))}</span>
+    <span style="font-size:16px;">動画数：<strong style="font-size:20px;">{vids:,}</strong>{_fmt_diff(_d.get('動画数'))}</span>
 </div>
 <hr style="margin:6px 0 8px 0; border:none; border-top:1px solid rgba(128,128,128,0.2);">
 """, unsafe_allow_html=True)
