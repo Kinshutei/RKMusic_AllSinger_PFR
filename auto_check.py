@@ -322,7 +322,7 @@ def update_snapshots(channel_name, channel_id, channel_stats, videos):
         save_json(SNAPSHOTS_FILE, snapshots)
         print(f'  スナップショット保存: {SNAPSHOTS_FILE}')
 
-def update_history(channel_name, videos, today_str, year):
+def update_history(channel_name, videos, today_str, year, channel_stats=None):
     """all_history_{year}.json を更新（日次集約: 1日1レコード）"""
     path = history_file(year)
     with _file_lock:
@@ -333,33 +333,43 @@ def update_history(channel_name, videos, today_str, year):
 
         channel_history = history[channel_name]
 
-        for video in videos:
-            video_id = video['動画ID']
-
-            if video_id not in channel_history:
-                channel_history[video_id] = {
-                    'タイトル': video['タイトル'],
-                    '公開日': video['公開日'],
-                    'type': video['type'],
-                    'records': {}
-                }
-            else:
-                old_type = channel_history[video_id].get('type')
-                if old_type != video['type']:
-                    print(f'  🔄 タイプ更新: [{video["タイトル"][:40]}] {old_type} → {video["type"]}')
-                channel_history[video_id]['type'] = video['type']
-                channel_history[video_id]['タイトル'] = video['タイトル']
-
-            # 日次集約: 同日のレコードは上書き（最新値で更新）
-            channel_history[video_id]['records'][today_str] = {
-                '再生数': video['再生数'],
-                '高評価数': video['高評価数'],
-                'コメント数': video['コメント数']
+        # チャンネル統計の日次履歴を保存（_channel_stats キーに蓄積）
+        if channel_stats:
+            if '_channel_stats' not in channel_history:
+                channel_history['_channel_stats'] = {}
+            channel_history['_channel_stats'][today_str] = {
+                '登録者数': channel_stats.get('登録者数', 0),
+                '総再生数': channel_stats.get('総再生数', 0),
+                '動画数':   channel_stats.get('動画数', 0),
             }
 
-        history[channel_name] = channel_history
-        save_json(path, history)
-        print(f'  履歴保存: {path}')
+        for video in videos:
+        video_id = video['動画ID']
+
+        if video_id not in channel_history:
+            channel_history[video_id] = {
+                'タイトル': video['タイトル'],
+                '公開日': video['公開日'],
+                'type': video['type'],
+                'records': {}
+            }
+        else:
+            old_type = channel_history[video_id].get('type')
+            if old_type != video['type']:
+                print(f'  🔄 タイプ更新: [{video["タイトル"][:40]}] {old_type} → {video["type"]}')
+            channel_history[video_id]['type'] = video['type']
+            channel_history[video_id]['タイトル'] = video['タイトル']
+
+        # 日次集約: 同日のレコードは上書き（最新値で更新）
+        channel_history[video_id]['records'][today_str] = {
+            '再生数': video['再生数'],
+            '高評価数': video['高評価数'],
+            'コメント数': video['コメント数']
+        }
+
+    history[channel_name] = channel_history
+    save_json(path, history)
+    print(f'  履歴保存: {path}')
 
 # ----------------------------------------------------------------
 # チャンネル処理
@@ -409,7 +419,7 @@ def process_channel(channel_config, overrides, today_str, year):
 
     # 保存
     update_snapshots(channel_name, channel_id, channel_stats, videos)
-    update_history(channel_name, videos, today_str, year)
+    update_history(channel_name, videos, today_str, year, channel_stats=channel_stats)
 
     print(f'  ✓ {channel_name} 完了')
     return True
