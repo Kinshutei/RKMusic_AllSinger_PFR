@@ -703,6 +703,18 @@ if selected_talent == "Dashboard":
             st.write("cwd:", os.getcwd())
             st.write("cwd内ファイル:", os.listdir(os.getcwd()))
             st.write("base内JSONファイル:", glob.glob(os.path.join(base, '*.json')))
+            # historyロード直接テスト
+            year = datetime.now(timezone(timedelta(hours=9))).strftime('%Y')
+            test_path = os.path.join(base, f'all_history_{year}.json')
+            st.write("year:", year)
+            st.write("test_path:", test_path)
+            st.write("exists:", os.path.exists(test_path))
+            try:
+                with open(test_path, 'r', encoding='utf-8') as f:
+                    d = json.load(f)
+                st.write("読み込み成功 タレント数:", len(d))
+            except Exception as e2:
+                st.write("読み込みエラー:", str(e2))
         st.error(f"❌ {err}")
         st.stop()
 
