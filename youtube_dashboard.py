@@ -65,6 +65,10 @@ def get_theme_css(theme):
         font-family: 'Century Gothic', 'Futura', 'Trebuchet MS', 'Noto Sans JP', sans-serif !important;
     }
 
+    section[data-testid="stSidebar"] h2:first-of-type {
+        margin-top: -2.8em !important;
+    }
+
     .block-container {
         padding-top: 4.5rem !important;
         padding-bottom: 1rem !important;
