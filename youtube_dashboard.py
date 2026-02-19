@@ -66,7 +66,7 @@ def get_theme_css(theme):
     }
 
     section[data-testid="stSidebar"] h2:first-of-type {
-        margin-top: -2.4em !important;
+        margin-top: -2.2em !important;
     }
 
     .block-container {
