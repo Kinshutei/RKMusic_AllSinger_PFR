@@ -604,20 +604,7 @@ if not channel_stats and not video_history:
     st.error(f"❌ {selected_talent} のデータが見つかりません")
     st.stop()
 
-# ▼▼▼ デバッグ用（確認後に削除） ▼▼▼
-with st.expander("🔍 DEBUG: データ構造確認", expanded=False):
-    snapshots = _load_snapshots()
-    if snapshots and selected_talent in snapshots:
-        raw = snapshots[selected_talent]
-        st.write("**load_channel_stats() の戻り値:**", channel_stats)
-        st.write("**video_history のキー数:**", len(video_history))
-        if video_history:
-            sample_id = next(iter(video_history))
-            st.write("**サンプル動画ID:**", sample_id)
-            st.write("**サンプル動画の中身:**", video_history[sample_id])
-    else:
-        st.error("snapshots が None またはタレントが見つかりません")
-# ▲▲▲ デバッグ用ここまで ▲▲▲
+# デバッグ削除済み
 
 # --- バナー＋チャンネル統計 ---
 banner_url = TALENT_BANNERS.get(selected_talent, "")
@@ -666,36 +653,41 @@ if not video_history:
 video_list = []
 for video_id, video_data in video_history.items():
     records = video_data.get('records', {})
-    if not records:
-        continue
 
-    sorted_dates  = sorted(records.keys())
-    current_record = records[sorted_dates[-1]]
-    current_views  = current_record.get('再生数', 0)
-    current_likes  = current_record.get('高評価数', 0)
+    if records:
+        # 日付別履歴あり → 最新レコードを使用
+        sorted_dates   = sorted(records.keys())
+        current_record = records[sorted_dates[-1]]
+        current_views  = current_record.get('再生数', 0)
+        current_likes  = current_record.get('高評価数', 0)
 
-    # 1D〜5D の前日比（1D=最新-1日前、2D=1日前-2日前、…）
-    daily_views = []
-    daily_likes = []
-    for i in range(1, 6):
-        if len(sorted_dates) > i:
-            dv = records[sorted_dates[-i]].get('再生数', 0)   - records[sorted_dates[-(i+1)]].get('再生数', 0)
-            dl = records[sorted_dates[-i]].get('高評価数', 0) - records[sorted_dates[-(i+1)]].get('高評価数', 0)
-        else:
-            dv, dl = None, None
-        daily_views.append(dv)
-        daily_likes.append(dl)
+        # 1D〜5D の前日比
+        daily_views, daily_likes = [], []
+        for i in range(1, 6):
+            if len(sorted_dates) > i:
+                dv = records[sorted_dates[-i]].get('再生数', 0)   - records[sorted_dates[-(i+1)]].get('再生数', 0)
+                dl = records[sorted_dates[-i]].get('高評価数', 0) - records[sorted_dates[-(i+1)]].get('高評価数', 0)
+            else:
+                dv, dl = None, None
+            daily_views.append(dv)
+            daily_likes.append(dl)
+    else:
+        # フラット形式（スナップショット）
+        current_views = video_data.get('再生数', 0)
+        current_likes = video_data.get('高評価数', 0)
+        daily_views   = [None] * 5
+        daily_likes   = [None] * 5
 
     video_list.append({
-        'id':         video_id,
-        'タイトル':   video_data.get('タイトル', ''),
-        'type':       video_data.get('type', 'Movie'),
-        '再生数':     current_views,
+        'id':           video_id,
+        'タイトル':     video_data.get('タイトル', video_id),
+        'type':         video_data.get('type', 'Movie'),
+        '再生数':       current_views,
         '再生数5d増加': sum(v for v in daily_views if v is not None),
-        '高評価数':   current_likes,
+        '高評価数':     current_likes,
         '高評価5d増加': sum(v for v in daily_likes if v is not None),
-        '再生数daily': daily_views,
-        '高評価daily': daily_likes,
+        '再生数daily':  daily_views,
+        '高評価daily':  daily_likes,
     })
 
 # ソート選択
