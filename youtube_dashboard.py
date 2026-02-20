@@ -899,90 +899,122 @@ for video_id, video_data in video_history.items():
         '高評価daily':  daily_likes,
     })
 
-# ソート選択
+# ソートボタン定義
+SORT_OPTIONS = [
+    ("📊 再生数TOP",     '再生数'),
+    ("👍 高評価TOP",     '高評価数'),
+    ("📈 再生5日増加",   '再生数5d増加'),
+    ("💹 高評価5日増加", '高評価5d増加'),
+]
+
+# タブごとのsession_state初期化
+for _tab_key in ['sort_Movie', 'sort_Short', 'sort_LiveArchive']:
+    if _tab_key not in st.session_state:
+        st.session_state[_tab_key] = '再生数'
+
+# タイプ別に動画を分類
+video_by_type = {'Movie': [], 'Short': [], 'LiveArchive': []}
+for video in video_list:
+    vtype = video.get('type', 'Movie')
+    if vtype in video_by_type:
+        video_by_type[vtype].append(video)
+
+TAB_DEFS = [
+    ('Movie',       '📹 Movie'),
+    ('Short',       '🎬 Short'),
+    ('LiveArchive', '🔴 LiveArchive'),
+]
+# 動画が存在するタブのみ生成
+active_tabs = [(vtype, label) for vtype, label in TAB_DEFS if video_by_type[vtype]]
+
 st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-col_label, col_select = st.columns([1, 5], vertical_alignment="center")
-with col_label:
-    st.markdown("**🔽 並び替え**")
-with col_select:
-    sort_option = st.selectbox(
-        "並び替え",
-        ["📊 再生数TOP", "👍 高評価TOP", "📊📈 [再]5日増加TOP", "👍💹 [高]5日増加TOP"],
-        label_visibility="collapsed"
-    )
 
-sort_key_map = {
-    "📊 再生数TOP":      '再生数',
-    "👍 高評価TOP":      '高評価数',
-    "📊📈 [再]5日増加TOP": '再生数5d増加',
-    "👍💹 [高]5日増加TOP": '高評価5d増加',
-}
-video_list.sort(key=lambda x: x[sort_key_map[sort_option]], reverse=True)
-
-# 動画カードを表示
+# 動画カード描画関数
 def fmt_diff(v):
     if v is None:
         return "—"
     return f"+{v:,}" if v >= 0 else f"{v:,}"
 
-for video in video_list:
-    video_url  = f"https://www.youtube.com/watch?v={video['id']}"
-    type_emoji = "📹" if video['type'] == 'Movie' else ("🎬" if video['type'] == 'Short' else "🔴")
+def render_video_cards(videos):
+    for video in videos:
+        video_url = f"https://www.youtube.com/watch?v={video['id']}"
+        v1d = video['再生数daily'][0]
+        l1d = video['高評価daily'][0]
 
-    v1d = video['再生数daily'][0]
-    l1d = video['高評価daily'][0]
+        day_headers, view_vals, like_vals = [], [], []
+        for i in range(1, 5):
+            v = video['再生数daily'][i]
+            l = video['高評価daily'][i]
+            if v is None:
+                break
+            day_headers.append(f"{i+1}D")
+            view_vals.append(fmt_diff(v))
+            like_vals.append(fmt_diff(l))
 
-    # 2D〜5D テーブル
-    day_headers, view_vals, like_vals = [], [], []
-    for i in range(1, 5):
-        v = video['再生数daily'][i]
-        l = video['高評価daily'][i]
-        if v is None:
-            break
-        day_headers.append(f"{i+1}D")
-        view_vals.append(fmt_diff(v))
-        like_vals.append(fmt_diff(l))
+        header_cells = '<td style="padding:2px 12px 2px 0; font-size:11px; color:#aaa;"></td>' + "".join(
+            f'<td style="padding:2px 16px 2px 0; font-size:11px; color:#aaa; font-weight:500;">{d}</td>'
+            for d in day_headers
+        )
+        view_row_cells = '<td style="padding:2px 12px 2px 0; font-size:11px; color:#888;">再生</td>' + "".join(
+            f'<td style="padding:2px 16px 2px 0; font-size:12px; font-weight:600;">{v}</td>'
+            for v in view_vals
+        )
+        like_row_cells = '<td style="padding:2px 12px 2px 0; font-size:11px; color:#888;">高評価</td>' + "".join(
+            f'<td style="padding:2px 16px 2px 0; font-size:12px; font-weight:600;">{v}</td>'
+            for v in like_vals
+        )
+        day_table = f"""
+        <table style="border-collapse:collapse; margin-top:6px;">
+            <tr>{header_cells}</tr>
+            <tr>{view_row_cells}</tr>
+            <tr>{like_row_cells}</tr>
+        </table>
+        """ if day_headers else ""
 
-    header_cells = '<td style="padding:2px 12px 2px 0; font-size:11px; color:#aaa;"></td>' + "".join(
-        f'<td style="padding:2px 16px 2px 0; font-size:11px; color:#aaa; font-weight:500;">{d}</td>'
-        for d in day_headers
-    )
-    view_row_cells = '<td style="padding:2px 12px 2px 0; font-size:11px; color:#888;">再生</td>' + "".join(
-        f'<td style="padding:2px 16px 2px 0; font-size:12px; font-weight:600;">{v}</td>'
-        for v in view_vals
-    )
-    like_row_cells = '<td style="padding:2px 12px 2px 0; font-size:11px; color:#888;">高評価</td>' + "".join(
-        f'<td style="padding:2px 16px 2px 0; font-size:12px; font-weight:600;">{v}</td>'
-        for v in like_vals
-    )
-
-    day_table = f"""
-    <table style="border-collapse:collapse; margin-top:6px;">
-        <tr>{header_cells}</tr>
-        <tr>{view_row_cells}</tr>
-        <tr>{like_row_cells}</tr>
-    </table>
-    """ if day_headers else ""
-
-    st.markdown(f'''
-    <div class="video-card">
-        <div class="video-title">
-            {type_emoji} <a href="{video_url}" target="_blank">{video['タイトル']}</a>
-        </div>
-        <div style="margin-top:6px; font-size:13px;">
-            <span style="margin-right:24px;">
-                再生数：<strong>{video['再生数']:,}</strong>
-                <span class="stat-change {'positive-change' if v1d and v1d > 0 else 'neutral-change'}" style="font-size:12px;">
-                    ({fmt_diff(v1d)})
+        st.markdown(f'''
+        <div class="video-card">
+            <div class="video-title">
+                <a href="{video_url}" target="_blank">{video['タイトル']}</a>
+            </div>
+            <div style="margin-top:6px; font-size:13px;">
+                <span style="margin-right:24px;">
+                    再生数：<strong>{video['再生数']:,}</strong>
+                    <span class="stat-change {'positive-change' if v1d and v1d > 0 else 'neutral-change'}" style="font-size:12px;">
+                        ({fmt_diff(v1d)})
+                    </span>
                 </span>
-            </span>
-            <span>
-                高評価：<strong>{video['高評価数']:,}</strong>
-                <span class="stat-change {'positive-change' if l1d and l1d > 0 else 'neutral-change'}" style="font-size:12px;">
-                    ({fmt_diff(l1d)})
+                <span>
+                    高評価：<strong>{video['高評価数']:,}</strong>
+                    <span class="stat-change {'positive-change' if l1d and l1d > 0 else 'neutral-change'}" style="font-size:12px;">
+                        ({fmt_diff(l1d)})
+                    </span>
                 </span>
-            </span>
+            </div>
+            {day_table}
         </div>
-        {day_table}
-    </div>
-    ''', unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
+
+# タブ描画
+if active_tabs:
+    tab_labels = [label for _, label in active_tabs]
+    tab_objects = st.tabs(tab_labels)
+
+    for tab_obj, (vtype, _) in zip(tab_objects, active_tabs):
+        with tab_obj:
+            sort_state_key = f'sort_{vtype}'
+            current_sort   = st.session_state[sort_state_key]
+
+            # ソートボタン横並び
+            btn_cols = st.columns(len(SORT_OPTIONS))
+            for col, (label, sort_key) in zip(btn_cols, SORT_OPTIONS):
+                with col:
+                    btn_type = "primary" if current_sort == sort_key else "secondary"
+                    if st.button(label, key=f"sort_{vtype}_{sort_key}", type=btn_type, use_container_width=True):
+                        st.session_state[sort_state_key] = sort_key
+                        st.rerun()
+
+            # ソート＆描画
+            sorted_videos = sorted(video_by_type[vtype], key=lambda x: x[current_sort], reverse=True)
+            render_video_cards(sorted_videos)
+else:
+    st.info("📡 動画データを蓄積中です。")
