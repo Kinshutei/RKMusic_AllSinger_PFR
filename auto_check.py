@@ -368,9 +368,9 @@ def update_history(channel_name, videos, today_str, year, channel_stats=None):
                 'コメント数': video['コメント数']
             }
 
-    history[channel_name] = channel_history
-    save_json(path, history)
-    print(f'  履歴保存: {path}')
+        history[channel_name] = channel_history
+        save_json(path, history)
+        print(f'  履歴保存: {path}')
 
 # ----------------------------------------------------------------
 # チャンネル処理
