@@ -312,6 +312,7 @@ def update_snapshots(channel_name, channel_id, channel_stats, videos):
             'channel_stats': channel_stats,
             'videos': {
                 v['動画ID']: {
+                    'タイトル': v['タイトル'],
                     '再生数': v['再生数'],
                     '高評価数': v['高評価数'],
                     'type': v['type']
