@@ -53,6 +53,7 @@ TALENT_BANNERS = {
 DASHBOARD_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
 html, body, [class*="css"],
 h1, h2, h3, h4, h5, h6, p, span, div, button, input, select, textarea,
