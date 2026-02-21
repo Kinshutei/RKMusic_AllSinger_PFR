@@ -17,7 +17,7 @@ import os
 import json
 import requests
 import threading
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from googleapiclient.discovery import build
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
@@ -430,7 +430,7 @@ def process_channel(channel_config, overrides, today_str, year):
 # ----------------------------------------------------------------
 
 def main():
-    now = datetime.now()
+    now = datetime.now(timezone(timedelta(hours=9)))
     today_str = now.strftime('%Y-%m-%d')
     year = now.strftime('%Y')
 
