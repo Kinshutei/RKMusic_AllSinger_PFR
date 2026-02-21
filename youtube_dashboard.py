@@ -567,17 +567,14 @@ def load_video_history(talent_name):
 
 def get_channel_stats_diff(talent_name):
     """チャンネル統計の前日比を返す。データ不足時は None"""
-    snapshots = _load_snapshots()
-    if not snapshots:
+    # all_snapshots.json の channel_stats はフラット形式（最新1件のみ）のため、
+    # 日付ネスト形式で蓄積されている all_history_{year}.json の _channel_stats を参照する
+    history = _load_history_year()
+    if not history:
         return None
-    ch_stats = snapshots.get(talent_name, {}).get('channel_stats', {})
+    ch_stats = history.get(talent_name, {}).get('_channel_stats', {})
     if not ch_stats:
         return None
-    # フラット形式（日次1レコードのみ）の場合は前日比なし
-    first_val = next(iter(ch_stats.values()))
-    if not isinstance(first_val, dict):
-        return None
-    # 日付ネスト形式
     sorted_dates = sorted(ch_stats.keys())
     if len(sorted_dates) < 2:
         return None
