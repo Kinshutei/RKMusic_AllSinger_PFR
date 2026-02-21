@@ -53,7 +53,6 @@ TALENT_BANNERS = {
 DASHBOARD_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
-@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
 html, body, [class*="css"],
 h1, h2, h3, h4, h5, h6, p, span, div, button, input, select, textarea,
@@ -68,37 +67,52 @@ section[data-testid="stSidebar"] h2:first-of-type {
     margin-top: 0 !important;
 }
 
-/* デスクトップではサイドバートグルボタンを非表示 */
-@media (min-width: 769px) {
-    [data-testid="stSidebarCollapseButton"],
-    [data-testid="stSidebarHeader"],
-    [data-testid="collapsedControl"],
-    [data-testid="stSidebarCollapsedControl"] {
-        display: none !important;
+/* ネイティブのサイドバートグルボタンは全デバイスで非表示 */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarHeader"],
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"] {
+    display: none !important;
+}
+
+/* モバイル: サイドバーをデフォルト非表示、openクラスで表示 */
+@media (max-width: 768px) {
+    section[data-testid="stSidebar"] {
+        transform: translateX(-110%) !important;
+        transition: transform 0.3s ease !important;
+        position: fixed !important;
+        z-index: 999 !important;
+        top: 0 !important;
+        left: 0 !important;
+        height: 100vh !important;
+    }
+    section[data-testid="stSidebar"].sidebar-open {
+        transform: translateX(0) !important;
+    }
+    /* オーバーレイ */
+    #sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.4);
+        z-index: 998;
+    }
+    #sidebar-overlay.active {
+        display: block;
+    }
+    /* >> ボタン */
+    #mobile-sidebar-btn {
+        display: flex !important;
     }
 }
 
-/* モバイルではサイドバートグルボタンを表示 */
-@media (max-width: 768px) {
-    [data-testid="stSidebarCollapseButton"],
-    [data-testid="collapsedControl"],
-    [data-testid="stSidebarCollapsedControl"] {
-        display: block !important;
-    }
-    /* アイコンテキストを非表示にして >> で代替 */
-    [data-testid="collapsedControl"] button span,
-    [data-testid="stSidebarCollapsedControl"] button span,
-    [data-testid="collapsedControl"] svg,
-    [data-testid="stSidebarCollapsedControl"] svg {
+@media (min-width: 769px) {
+    #mobile-sidebar-btn {
         display: none !important;
     }
-    [data-testid="collapsedControl"] button::after,
-    [data-testid="stSidebarCollapsedControl"] button::after {
-        content: ">>" !important;
-        font-family: 'Noto Sans JP', sans-serif !important;
-        font-size: 16px !important;
-        font-weight: 700 !important;
-        color: #333 !important;
+    #sidebar-overlay {
+        display: none !important;
     }
 }
 
@@ -281,6 +295,58 @@ div[data-testid="column"]:last-child  { padding-right: 0 !important; }
 
 # CSSを適用
 st.markdown(DASHBOARD_CSS, unsafe_allow_html=True)
+
+# モバイル用サイドバートグルボタン（JS制御）
+st.markdown("""
+<div id="sidebar-overlay" onclick="closeSidebar()"></div>
+<div id="mobile-sidebar-btn" onclick="toggleSidebar()"
+     style="
+         display: none;
+         align-items: center;
+         justify-content: center;
+         position: fixed;
+         top: 12px;
+         left: 12px;
+         width: 40px;
+         height: 40px;
+         background: #ffffff;
+         border: 2px solid rgba(13,110,253,0.4);
+         border-radius: 8px;
+         font-size: 18px;
+         font-weight: 900;
+         color: #0d6efd;
+         cursor: pointer;
+         z-index: 1000;
+         box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+         user-select: none;
+     ">&#xBB;</div>
+<script>
+function getSidebar() {
+    return document.querySelector('section[data-testid="stSidebar"]');
+}
+function getOverlay() {
+    return document.getElementById('sidebar-overlay');
+}
+function toggleSidebar() {
+    var sidebar = getSidebar();
+    var overlay = getOverlay();
+    if (!sidebar) return;
+    var isOpen = sidebar.classList.contains('sidebar-open');
+    if (isOpen) {
+        closeSidebar();
+    } else {
+        sidebar.classList.add('sidebar-open');
+        if (overlay) overlay.classList.add('active');
+    }
+}
+function closeSidebar() {
+    var sidebar = getSidebar();
+    var overlay = getOverlay();
+    if (sidebar) sidebar.classList.remove('sidebar-open');
+    if (overlay) overlay.classList.remove('active');
+}
+</script>
+""", unsafe_allow_html=True)
 
 
 # ==============================================================================
