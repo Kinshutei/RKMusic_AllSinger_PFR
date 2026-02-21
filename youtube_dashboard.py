@@ -78,12 +78,27 @@ section[data-testid="stSidebar"] h2:first-of-type {
     }
 }
 
-/* モバイルではサイドバートグルボタンを表示（Streamlitデフォルト） */
+/* モバイルではサイドバートグルボタンを表示 */
 @media (max-width: 768px) {
     [data-testid="stSidebarCollapseButton"],
     [data-testid="collapsedControl"],
     [data-testid="stSidebarCollapsedControl"] {
         display: block !important;
+    }
+    /* アイコンテキストを非表示にして >> で代替 */
+    [data-testid="collapsedControl"] button span,
+    [data-testid="stSidebarCollapsedControl"] button span,
+    [data-testid="collapsedControl"] svg,
+    [data-testid="stSidebarCollapsedControl"] svg {
+        display: none !important;
+    }
+    [data-testid="collapsedControl"] button::after,
+    [data-testid="stSidebarCollapsedControl"] button::after {
+        content: ">>" !important;
+        font-family: 'Noto Sans JP', sans-serif !important;
+        font-size: 16px !important;
+        font-weight: 700 !important;
+        color: #333 !important;
     }
 }
 
