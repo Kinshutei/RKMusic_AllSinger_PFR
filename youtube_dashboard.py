@@ -53,6 +53,21 @@ TALENT_BANNERS = {
 DASHBOARD_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
+span[data-testid="stIconMaterial"] {
+    font-family: 'Material Icons' !important;
+    font-size: 20px !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    letter-spacing: normal !important;
+    text-transform: none !important;
+    white-space: nowrap !important;
+    direction: ltr !important;
+    -webkit-font-feature-settings: 'liga' !important;
+    font-feature-settings: 'liga' !important;
+    -webkit-font-smoothing: antialiased !important;
+}
 
 html, body, [class*="css"],
 h1, h2, h3, h4, h5, h6, p, span, div, button, input, select, textarea,
