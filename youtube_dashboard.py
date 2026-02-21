@@ -53,21 +53,6 @@ TALENT_BANNERS = {
 DASHBOARD_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
-@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
-
-span[data-testid="stIconMaterial"] {
-    font-family: 'Material Icons' !important;
-    font-size: 20px !important;
-    font-style: normal !important;
-    font-weight: normal !important;
-    letter-spacing: normal !important;
-    text-transform: none !important;
-    white-space: nowrap !important;
-    direction: ltr !important;
-    -webkit-font-feature-settings: 'liga' !important;
-    font-feature-settings: 'liga' !important;
-    -webkit-font-smoothing: antialiased !important;
-}
 
 html, body, [class*="css"],
 h1, h2, h3, h4, h5, h6, p, span, div, button, input, select, textarea,
@@ -82,14 +67,11 @@ section[data-testid="stSidebar"] h2:first-of-type {
     margin-top: 0 !important;
 }
 
-/* ネイティブのサイドバートグルボタンはデスクトップのみ非表示 */
-@media (min-width: 769px) {
-    [data-testid="stSidebarCollapseButton"],
-    [data-testid="stSidebarHeader"],
-    [data-testid="collapsedControl"],
-    [data-testid="stSidebarCollapsedControl"] {
-        display: none !important;
-    }
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarHeader"],
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"] {
+    display: none !important;
 }
 
 .block-container {
@@ -271,8 +253,6 @@ div[data-testid="column"]:last-child  { padding-right: 0 !important; }
 
 # CSSを適用
 st.markdown(DASHBOARD_CSS, unsafe_allow_html=True)
-
-
 
 
 # ==============================================================================
@@ -749,7 +729,7 @@ if selected_talent == "Dashboard":
         html += '</table>'
         return html
 
-    def video_rank_table(rows, value_key, diff_key, rate_key=None, top_n=10):
+    def video_rank_table(rows, value_key, diff_key, rate_key=None, top_n=20):
         """動画ランキングテーブルHTML"""
         rows = sorted(rows, key=lambda x: (x[diff_key] or -999999), reverse=True)[:top_n]
         html = '<table style="width:100%; border-collapse:collapse; font-size:12px;">'
