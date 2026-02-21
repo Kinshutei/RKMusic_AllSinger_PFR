@@ -67,30 +67,22 @@ section[data-testid="stSidebar"] h2:first-of-type {
     margin-top: 0 !important;
 }
 
-[data-testid="stSidebarCollapseButton"],
-[data-testid="stSidebarHeader"],
-[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="stSidebarNavCollapseButton"],
-[data-testid="stSidebarNavItems"] ~ div button,
-button[aria-label="Close sidebar"],
-button[aria-label="Open sidebar"],
-button[aria-label="collapse navigation"] {
-    display: none !important;
-}
-
-@media screen and (max-width: 768px) {
+/* デスクトップではサイドバートグルボタンを非表示 */
+@media (min-width: 769px) {
     [data-testid="stSidebarCollapseButton"],
     [data-testid="stSidebarHeader"],
     [data-testid="collapsedControl"],
-    [data-testid="stSidebarCollapsedControl"],
-    [data-testid="stSidebarNavCollapseButton"],
-    button[aria-label="Close sidebar"],
-    button[aria-label="Open sidebar"],
-    button[aria-label="collapse navigation"] {
+    [data-testid="stSidebarCollapsedControl"] {
         display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
+    }
+}
+
+/* モバイルではサイドバートグルボタンを表示（Streamlitデフォルト） */
+@media (max-width: 768px) {
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapsedControl"] {
+        display: block !important;
     }
 }
 
