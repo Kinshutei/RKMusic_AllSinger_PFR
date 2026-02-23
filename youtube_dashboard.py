@@ -546,21 +546,28 @@ def load_channel_stats(talent_name):
 
 
 def load_video_history(talent_name):
-    """動画履歴を返す（videosキー配下）。タイトルはhistoryで補完"""
+    """動画履歴を返す（videosキー配下）。タイトル・recordsはhistoryで補完"""
     snapshots = _load_snapshots()
     if not snapshots:
         return {}
     videos = snapshots.get(talent_name, {}).get('videos', {})
     result = {k: v for k, v in videos.items() if isinstance(v, dict)}
 
-    # スナップショットにタイトルがない場合はhistoryから補完（保険）
+    # historyからタイトルとrecordsを補完
+    # all_snapshots.json の動画データはフラット形式（最新1件のみ）のため、
+    # 前日比計算に必要な日付別 records は all_history_{year}.json から取得する
     history = _load_history_year() or {}
     talent_hist = history.get(talent_name, {})
     for vid_id, vid_data in result.items():
-        if not vid_data.get('タイトル'):
-            hist_entry = talent_hist.get(vid_id, {})
-            if isinstance(hist_entry, dict) and hist_entry.get('タイトル'):
-                vid_data['タイトル'] = hist_entry['タイトル']
+        hist_entry = talent_hist.get(vid_id, {})
+        if not isinstance(hist_entry, dict):
+            continue
+        # タイトル補完（保険）
+        if not vid_data.get('タイトル') and hist_entry.get('タイトル'):
+            vid_data['タイトル'] = hist_entry['タイトル']
+        # records補完：snapshotにはrecordsがないのでhistoryから取る
+        if not vid_data.get('records') and hist_entry.get('records'):
+            vid_data['records'] = hist_entry['records']
 
     return result
 
