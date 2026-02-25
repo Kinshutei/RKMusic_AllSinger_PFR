@@ -296,17 +296,15 @@ def build_csv_data():
     エンコード: Shift-JIS (cp932)
     戻り値: (ch_bytes, vid_bytes, error_message)
     """
-    snapshots = _load_snapshots() or {}
-    history   = _load_history_year() or {}
+    history = _load_history_year() or {}
 
-    # 対象タレント（Dashboard除く・snapshotsに存在するもの）
-    talents = [t for t in TALENT_ORDER if t != "Dashboard" and t in snapshots]
+    # 対象タレント（Dashboard除く・historyに存在するもの）
+    talents = [t for t in TALENT_ORDER if t != "Dashboard" and t in history]
 
     # 全履歴から最新日(N日)を確定
     all_dates = set()
     for talent in talents:
-        ch_stats = history.get(talent, {}).get('_channel_stats', {})
-        all_dates.update(ch_stats.keys())
+        all_dates.update(history.get(talent, {}).get('_channel_stats', {}).keys())
     if not all_dates:
         return None, None, "履歴データが見つかりません（all_history_{year}.json）"
 
@@ -327,8 +325,8 @@ def build_csv_data():
 
     ch_rows = [ch_header]
     for talent in talents:
-        snap_ch = snapshots.get(talent, {}).get('channel_stats', {})
         hist_ch = history.get(talent, {}).get('_channel_stats', {})
+        n_rec   = hist_ch.get(n_date, {})
 
         subs_diffs, views_diffs = [], []
         prev = n_date
@@ -339,11 +337,11 @@ def build_csv_data():
             prev = d
 
         ch_rows.append(
-            [talent, snap_ch.get('登録者数', 0)]
+            [talent, n_rec.get('登録者数', 0)]
             + subs_diffs
-            + [snap_ch.get('総再生数', 0)]
+            + [n_rec.get('総再生数', 0)]
             + views_diffs
-            + [snap_ch.get('動画数', 0)]
+            + [n_rec.get('動画数', 0)]
         )
 
     # ── 動画統計CSV ────────────────────────────────
@@ -356,14 +354,13 @@ def build_csv_data():
 
     vid_rows = [vid_header]
     for talent in talents:
-        snap_videos = snapshots.get(talent, {}).get('videos', {})
         hist_talent = history.get(talent, {})
 
-        for vid_id, vid_snap in snap_videos.items():
-            if not isinstance(vid_snap, dict):
+        for vid_id, hist_vid in hist_talent.items():
+            if vid_id == '_channel_stats' or not isinstance(hist_vid, dict):
                 continue
-            hist_records = hist_talent.get(vid_id, {})
-            hist_records = hist_records.get('records', {}) if isinstance(hist_records, dict) else {}
+            hist_records = hist_vid.get('records', {})
+            n_rec_vid    = hist_records.get(n_date, {})
 
             views_diffs, likes_diffs = [], []
             prev = n_date
@@ -374,10 +371,10 @@ def build_csv_data():
                 prev = d
 
             vid_rows.append(
-                [talent, vid_id, vid_snap.get('タイトル', vid_id), vid_snap.get('type', ''),
-                 vid_snap.get('再生数', 0)]
+                [talent, vid_id, hist_vid.get('タイトル', vid_id), hist_vid.get('type', ''),
+                 n_rec_vid.get('再生数', 0)]
                 + views_diffs
-                + [vid_snap.get('高評価数', 0)]
+                + [n_rec_vid.get('高評価数', 0)]
                 + likes_diffs
             )
 
@@ -395,9 +392,9 @@ def build_csv_data():
 
 
 def get_available_talents():
-    """all_snapshots.json に存在するタレントを固定順で返す。Dashboardは常に先頭"""
-    snapshots = _load_snapshots()
-    existing = set(snapshots.keys()) if snapshots else set()
+    """all_history_{year}.json に存在するタレントを固定順で返す。Dashboardは常に先頭"""
+    history  = _load_history_year()
+    existing = set(history.keys()) if history else set()
     ordered = [t for t in TALENT_ORDER if t in existing or t == "Dashboard"]
     extras  = sorted(t for t in existing if t not in TALENT_ORDER)
     return ordered + extras
@@ -418,36 +415,32 @@ def build_dashboard_data():
         n_date       : str  基準日 (YYYY-MM-DD)
         error        : str or None
     """
-    history   = _load_history_year() or {}
-    snapshots = _load_snapshots()    or {}
+    history = _load_history_year() or {}
 
-    talents = [t for t in TALENT_ORDER if t != "Dashboard" and t in snapshots]
+    talents = [t for t in TALENT_ORDER if t != "Dashboard" and t in history]
     if not talents:
-        return None, None, None, "スナップショットデータが見つかりません"
+        return None, None, None, "履歴データが見つかりません（all_history_{year}.json）"
 
-    # N日を確定
+    # N日を確定（全タレントの最新日のうち最も新しいもの）
     all_dates = set()
     for talent in talents:
         all_dates.update(history.get(talent, {}).get('_channel_stats', {}).keys())
     if not all_dates:
         return None, None, None, "履歴データが見つかりません（all_history_{year}.json）"
 
-    sorted_dates = sorted(all_dates)
-    n_date = sorted_dates[-1]
-    p_date = sorted_dates[-2] if len(sorted_dates) >= 2 else None
+    n_date = sorted(all_dates)[-1]
+    p_date = (datetime.strptime(n_date, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d')
 
     # ── Singer部門 ──────────────────────────────
     singer_data = []
     for talent in talents:
-        # 現在値はsnapshotsから取得（確実に存在する）
-        snap_ch = snapshots.get(talent, {}).get('channel_stats', {})
-        subs_n  = snap_ch.get('登録者数', 0)
-        views_n = snap_ch.get('総再生数', 0)
+        # 現在値・前日比ともにhistoryのn_date / p_dateから取得
+        ch    = history.get(talent, {}).get('_channel_stats', {})
+        n_rec = ch.get(n_date, {})
+        p_rec = ch.get(p_date, {})
 
-        # 前日比はhistoryから計算
-        ch     = history.get(talent, {}).get('_channel_stats', {})
-        n_rec  = ch.get(n_date, {})
-        p_rec  = ch.get(p_date, {}) if p_date else {}
+        subs_n  = n_rec.get('登録者数', 0)
+        views_n = n_rec.get('総再生数', 0)
 
         subs_diff  = (n_rec.get('登録者数', 0) - p_rec.get('登録者数', 0)) if n_rec and p_rec else None
         views_diff = (n_rec.get('総再生数', 0) - p_rec.get('総再生数', 0)) if n_rec and p_rec else None
@@ -473,21 +466,19 @@ def build_dashboard_data():
 
     for talent in talents:
         talent_hist = history.get(talent, {})
-        snap_videos = snapshots.get(talent, {}).get('videos', {})
 
-        for vid_id, snap in snap_videos.items():
-            if not isinstance(snap, dict):
+        for vid_id, hist_vid in talent_hist.items():
+            if vid_id == '_channel_stats' or not isinstance(hist_vid, dict):
                 continue
-            vtype = snap.get('type', 'Movie')
+            vtype = hist_vid.get('type', 'Movie')
             if vtype not in video_data:
                 continue
 
-            hist_vid = talent_hist.get(vid_id, {})
-            records  = hist_vid.get('records', {}) if isinstance(hist_vid, dict) else {}
-            title    = snap.get('タイトル') or (hist_vid.get('タイトル') if isinstance(hist_vid, dict) else None) or vid_id
+            records = hist_vid.get('records', {})
+            title   = hist_vid.get('タイトル') or vid_id
 
             n_rec = records.get(n_date, {})
-            p_rec = records.get(p_date, {}) if p_date else {}
+            p_rec = records.get(p_date, {})
 
             views_n    = n_rec.get('再生数', 0)
             likes_n    = n_rec.get('高評価数', 0)
@@ -519,63 +510,33 @@ def build_dashboard_data():
     return singer_data, video_data, n_date, None
 
 
-
-    """all_snapshots.json に存在するタレントを固定順で返す。総合ダッシュボードは常に先頭"""
-    snapshots = _load_snapshots()
-    existing = set(snapshots.keys()) if snapshots else set()
-    ordered = [t for t in TALENT_ORDER if t in existing or t == "Dashboard"]
-    extras  = sorted(t for t in existing if t not in TALENT_ORDER)
-    return ordered + extras
-
-
 def load_channel_stats(talent_name):
-    """チャンネル統計を返す。日付ネスト形式なら最新日付分を、フラットならそのまま返す"""
-    snapshots = _load_snapshots()
-    if not snapshots:
+    """チャンネル統計の最新値を返す（historyの最新日付分）"""
+    history = _load_history_year()
+    if not history:
         return {}
-    raw_ch = snapshots.get(talent_name, {}).get('channel_stats', {})
-    if not raw_ch:
+    ch_stats = history.get(talent_name, {}).get('_channel_stats', {})
+    if not ch_stats:
         return {}
-    # 値がdictなら日付ネスト形式 → 最新日付を返す
-    first_val = next(iter(raw_ch.values()))
-    if isinstance(first_val, dict):
-        latest_date = sorted(raw_ch.keys())[-1]
-        return raw_ch[latest_date]
-    # フラット形式（{"登録者数": X, ...}）ならそのまま返す
-    return raw_ch
+    latest_date = sorted(ch_stats.keys())[-1]
+    return ch_stats[latest_date]
 
 
 def load_video_history(talent_name):
-    """動画履歴を返す（videosキー配下）。タイトル・recordsはhistoryで補完"""
-    snapshots = _load_snapshots()
-    if not snapshots:
+    """動画履歴を返す（historyのみ使用）"""
+    history = _load_history_year()
+    if not history:
         return {}
-    videos = snapshots.get(talent_name, {}).get('videos', {})
-    result = {k: v for k, v in videos.items() if isinstance(v, dict)}
-
-    # historyからタイトルとrecordsを補完
-    # all_snapshots.json の動画データはフラット形式（最新1件のみ）のため、
-    # 前日比計算に必要な日付別 records は all_history_{year}.json から取得する
-    history = _load_history_year() or {}
     talent_hist = history.get(talent_name, {})
-    for vid_id, vid_data in result.items():
-        hist_entry = talent_hist.get(vid_id, {})
-        if not isinstance(hist_entry, dict):
-            continue
-        # タイトル補完（保険）
-        if not vid_data.get('タイトル') and hist_entry.get('タイトル'):
-            vid_data['タイトル'] = hist_entry['タイトル']
-        # records補完：snapshotにはrecordsがないのでhistoryから取る
-        if not vid_data.get('records') and hist_entry.get('records'):
-            vid_data['records'] = hist_entry['records']
-
-    return result
+    return {
+        vid_id: vid_data
+        for vid_id, vid_data in talent_hist.items()
+        if vid_id != '_channel_stats' and isinstance(vid_data, dict)
+    }
 
 
 def get_channel_stats_diff(talent_name):
-    """チャンネル統計の前日比を返す。データ不足時は None"""
-    # all_snapshots.json の channel_stats はフラット形式（最新1件のみ）のため、
-    # 日付ネスト形式で蓄積されている all_history_{year}.json の _channel_stats を参照する
+    """チャンネル統計の前日比を返す。前日 = 暦上1日前。データ不足時は None"""
     history = _load_history_year()
     if not history:
         return None
@@ -583,10 +544,12 @@ def get_channel_stats_diff(talent_name):
     if not ch_stats:
         return None
     sorted_dates = sorted(ch_stats.keys())
-    if len(sorted_dates) < 2:
+    n_date = sorted_dates[-1]
+    p_date = (datetime.strptime(n_date, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d')
+    if p_date not in ch_stats:
         return None
-    today     = ch_stats[sorted_dates[-1]]
-    yesterday = ch_stats[sorted_dates[-2]]
+    today     = ch_stats[n_date]
+    yesterday = ch_stats[p_date]
     return {
         '登録者数': today['登録者数'] - yesterday['登録者数'],
         '総再生数': today['総再生数'] - yesterday['総再生数'],
