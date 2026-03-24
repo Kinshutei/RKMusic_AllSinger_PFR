@@ -1,6 +1,7 @@
 name: Auto Check YouTube Stats
 
 on:
+  workflow_dispatch:
   schedule:
     # JST 00:00 = UTC 15:00
     - cron: '0 15 * * *'
