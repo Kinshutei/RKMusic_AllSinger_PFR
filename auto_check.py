@@ -408,15 +408,18 @@ def process_channel(channel_config, overrides, today_str, year):
         print(f'  ❌ チャンネル統計を取得できませんでした')
         return False
 
-    print(f'  登録者数: {channel_stats["登録者数"]:,}人 / '
-          f'総再生数: {channel_stats["総再生数"]:,}回 / '
-          f'動画数: {channel_stats["動画数"]:,}本')
-
     # 全動画取得
     videos = get_all_videos(youtube, channel_id, channel_name, overrides)
     if not videos:
         print(f'  ❌ 動画を取得できませんでした')
         return False
+
+    # 総再生数 = 全動画（Movie/Short/LiveArchive）の再生数の総和（JST 00:00時点）
+    channel_stats['総再生数'] = sum(v['再生数'] for v in videos)
+
+    print(f'  登録者数: {channel_stats["登録者数"]:,}人 / '
+          f'総再生数: {channel_stats["総再生数"]:,}回 / '
+          f'動画数: {channel_stats["動画数"]:,}本')
 
     # 保存
     update_snapshots(channel_name, channel_id, channel_stats, videos)
