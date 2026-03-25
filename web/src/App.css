@@ -290,6 +290,142 @@ a:hover { color: #1a5a5b; text-decoration: underline; }
 .day-label { padding: 1px 8px 1px 0; font-size: 10px; color: #888; }
 .day-val   { padding: 1px 10px 1px 0; font-size: 11px; font-weight: 600; }
 
+/* ── Statistics タブ ── */
+.stats-search-input {
+  width: 100%;
+  padding: 9px 14px;
+  border: 1px solid #cce0e0;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  color: #2a2a2a;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.stats-search-input:focus {
+  border-color: #8ab8b9;
+  box-shadow: 0 0 0 3px rgba(172,208,209,0.25);
+}
+.stats-search-input::placeholder { color: #aaa; }
+
+.stats-dropdown {
+  border: 1px solid #cce0e0;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  overflow: hidden;
+  margin-top: -1px;
+}
+.stats-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #f0ebe4;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #2a2a2a;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.stats-dropdown-item:last-child { border-bottom: none; }
+.stats-dropdown-item:hover { background: rgba(172,208,209,0.18); color: #1a4a4b; }
+
+.stats-video-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 20px 0 10px;
+}
+.stats-video-title a { color: #2a2a2a; text-decoration: none; }
+.stats-video-title a:hover { color: #3a7a7b; text-decoration: underline; }
+
+.stats-metric-btns { display: flex; gap: 6px; margin-bottom: 8px; }
+
+.stats-type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #5a8a8b;
+  margin-right: 6px;
+  letter-spacing: 0.02em;
+}
+
+.stats-table-wrap { margin-top: 16px; overflow-x: auto; }
+.stats-info-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  width: auto;
+}
+.stats-info-table th, .stats-info-table td {
+  padding: 7px 14px;
+  text-align: center;
+  border: 1px solid #d8cfc4;
+  white-space: nowrap;
+}
+.stats-info-table th {
+  background: rgba(172,208,209,0.25);
+  font-weight: 700;
+  font-size: 12px;
+  color: #5a8a8b;
+}
+.stats-info-table td:first-child {
+  text-align: left;
+  background: rgba(172,208,209,0.08);
+  color: #2a2a2a;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.stats-info-table strong { color: #1a4a4b; }
+
+/* ── キリ番アラート ── */
+.milestone-alert-wrap {
+  margin-top: 24px;
+  border: 1px solid #d8cfc4;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.milestone-alert-header {
+  background: rgba(172,208,209,0.3);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a4a4b;
+  border-bottom: 1px solid #d8cfc4;
+}
+.milestone-alert-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 9px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid #ede8e0;
+}
+.milestone-alert-item:last-child { border-bottom: none; }
+.milestone-alert-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #2a2a2a;
+  text-decoration: none;
+}
+.milestone-alert-title:hover { color: #3a7a7b; text-decoration: underline; }
+.milestone-alert-nums {
+  white-space: nowrap;
+  font-size: 12px;
+  color: #555;
+}
+.milestone-alert-nums strong { color: #1a4a4b; }
+.milestone-alert-days {
+  margin-left: 8px;
+  color: #5a8a8b;
+  font-weight: 700;
+}
+
 /* ── レスポンシブ ── */
 @media (max-width: 700px) {
   .two-col   { grid-template-columns: 1fr; }
