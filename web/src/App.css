@@ -282,6 +282,19 @@ a:hover { color: #1a5a5b; text-decoration: underline; }
 .video-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
 .video-title a { color: #2a2a2a; text-decoration: none; }
 .video-title a:hover { color: #3a7a7b; text-decoration: underline; }
+.stats-jump-btn {
+  background: none;
+  border: 1px solid #cce0e0;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  color: #5a8a8b;
+  cursor: pointer;
+  margin-left: 8px;
+  vertical-align: middle;
+  transition: background 0.15s;
+}
+.stats-jump-btn:hover { background: rgba(172,208,209,0.4); }
 .video-stats { display: flex; gap: 24px; font-size: 13px; margin-bottom: 4px; }
 .video-stats strong { font-size: 15px; }
 

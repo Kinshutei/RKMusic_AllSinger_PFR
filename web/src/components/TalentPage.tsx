@@ -7,15 +7,15 @@ interface Props {
   talentName: string
 }
 
-type SortKey = '再生数' | '高評価数' | '再生数5d増加' | '高評価5d増加'
+type SortKey = '再生数' | '高評価数' | '再生数15d増加' | '高評価15d増加'
 type TabType = VideoType | 'Statistics'
 type StatsMetric = '再生数' | '高評価数'
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: '再生数',       label: '📊 再生数TOP' },
   { key: '高評価数',     label: '👍 高評価TOP' },
-  { key: '再生数5d増加', label: '📈 再生5日増加' },
-  { key: '高評価5d増加', label: '💹 高評価5日増加' },
+  { key: '再生数15d増加', label: '📈 再生15日増加' },
+  { key: '高評価15d増加', label: '💹 高評価15日増加' },
 ]
 
 const ALL_TABS: { type: TabType; label: string }[] = [
@@ -142,13 +142,18 @@ function estimateDate(latestDate: string, latestVal: number, milestone: number, 
 }
 
 // ── Statisticsタブ ────────────────────────────────────────────────────────────
-function StatisticsTab({ history, talentName, allVideos }: {
+function StatisticsTab({ history, talentName, allVideos, preselect }: {
   history: AllHistory
   talentName: string
   allVideos: VideoCard[]
+  preselect?: string | null
 }) {
   const [searchText, setSearchText] = useState('')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(preselect ?? null)
+
+  useEffect(() => {
+    if (preselect) setSelectedId(preselect)
+  }, [preselect])
   const [metric, setMetric] = useState<StatsMetric>('再生数')
 
   const query = searchText.trim().toLowerCase()
@@ -347,13 +352,13 @@ function StatisticsTab({ history, talentName, allVideos }: {
 }
 
 // ── 動画カード ────────────────────────────────────────────────────────────────
-function VideoCardItem({ video }: { video: VideoCard }) {
+function VideoCardItem({ video, onStatsClick }: { video: VideoCard; onStatsClick: () => void }) {
   const v1d = video.再生数daily[0]
   const l1d = video.高評価daily[0]
   const url = `https://www.youtube.com/watch?v=${video.id}`
 
   const days = []
-  for (let i = 1; i < 5; i++) {
+  for (let i = 1; i < 15; i++) {
     const v = video.再生数daily[i]
     const l = video.高評価daily[i]
     if (v === null) break
@@ -364,6 +369,7 @@ function VideoCardItem({ video }: { video: VideoCard }) {
     <div className="video-card">
       <div className="video-title">
         <a href={url} target="_blank" rel="noopener noreferrer">{video.タイトル}</a>
+        <button className="stats-jump-btn" onClick={onStatsClick} title="Statisticsで見る">📊</button>
       </div>
       <div className="video-stats">
         <span>
@@ -429,6 +435,7 @@ export default function TalentPage({ history, talentName }: Props) {
   )
   const [activeType, setActiveType] = useState<TabType>(activeTabs[0]?.type ?? 'Movie')
   const [sortKey, setSortKey] = useState<SortKey>('再生数')
+  const [statsPreselect, setStatsPreselect] = useState<string | null>(null)
 
   function fmtStatDiff(v: number | null) {
     if (v === null) return null
@@ -477,7 +484,7 @@ export default function TalentPage({ history, talentName }: Props) {
           </div>
 
           {activeType === 'Statistics' ? (
-            <StatisticsTab history={history} talentName={talentName} allVideos={allVideos} />
+            <StatisticsTab history={history} talentName={talentName} allVideos={allVideos} preselect={statsPreselect} />
           ) : (
             <>
               {/* ソートボタン */}
@@ -495,7 +502,13 @@ export default function TalentPage({ history, talentName }: Props) {
 
               {/* 動画カード */}
               <div className="video-list">
-                {sorted.map(v => <VideoCardItem key={v.id} video={v} />)}
+                {sorted.map(v => (
+                  <VideoCardItem
+                    key={v.id}
+                    video={v}
+                    onStatsClick={() => { setStatsPreselect(v.id); setActiveType('Statistics') }}
+                  />
+                ))}
               </div>
             </>
           )}
