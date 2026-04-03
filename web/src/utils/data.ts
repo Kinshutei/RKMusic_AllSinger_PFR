@@ -129,7 +129,7 @@ export function buildTalentVideoList(history: AllHistory, talentName: string): V
 
     const daily_views: (number | null)[] = []
     const daily_likes: (number | null)[] = []
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 15; i++) {
       if (sorted.length > i) {
         const curr = vid.records[sorted[sorted.length - i]]   ?? {}
         const prev = vid.records[sorted[sorted.length - i - 1]] ?? {}
@@ -146,9 +146,9 @@ export function buildTalentVideoList(history: AllHistory, talentName: string): V
       タイトル: vid.タイトル ?? vid_id,
       type: (vid.type ?? 'Movie') as VideoType,
       再生数: current_views,
-      再生数5d増加: daily_views.reduce<number>((a, v) => a + (v ?? 0), 0),
+      再生数15d増加: daily_views.reduce<number>((a, v) => a + (v ?? 0), 0),
       高評価数: current_likes,
-      高評価5d増加: daily_likes.reduce<number>((a, v) => a + (v ?? 0), 0),
+      高評価15d増加: daily_likes.reduce<number>((a, v) => a + (v ?? 0), 0),
       再生数daily: daily_views,
       高評価daily: daily_likes,
     })

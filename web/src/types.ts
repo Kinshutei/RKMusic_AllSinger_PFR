@@ -56,9 +56,9 @@ export interface VideoCard {
   タイトル: string
   type: VideoType
   再生数: number
-  再生数5d増加: number
+  再生数15d増加: number
   高評価数: number
-  高評価5d増加: number
+  高評価15d増加: number
   再生数daily: (number | null)[]
   高評価daily: (number | null)[]
 }
