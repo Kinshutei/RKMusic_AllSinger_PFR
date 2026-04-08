@@ -26,6 +26,13 @@ function SingerTable({ rows, valKey, diffKey, rateKey }: {
   rateKey: 'subs_rate' | 'views_rate'
 }) {
   const sorted = [...rows].sort((a, b) => (b[diffKey] ?? -999999) - (a[diffKey] ?? -999999))
+  const totalVal = sorted.reduce((sum, r) => sum + r[valKey], 0)
+  const totalDiff = sorted.every(r => r[diffKey] === null)
+    ? null
+    : sorted.reduce((sum, r) => sum + (r[diffKey] ?? 0), 0)
+  const totalRate = totalDiff !== null && totalVal - totalDiff > 0
+    ? Math.round(totalDiff / (totalVal - totalDiff) * 1000) / 10
+    : null
   return (
     <table className="rank-table">
       <tbody>
@@ -39,6 +46,14 @@ function SingerTable({ rows, valKey, diffKey, rateKey }: {
             </td>
           </tr>
         ))}
+        <tr style={{ borderTop: '2px solid #555', fontWeight: 'bold' }}>
+          <td className="rank-no"></td>
+          <td className="rank-name">合計</td>
+          <td className="rank-val">{totalVal.toLocaleString()}</td>
+          <td className="rank-diff" style={{ color: diffColor(totalDiff) }}>
+            {fmtDiff(totalDiff, totalRate)}
+          </td>
+        </tr>
       </tbody>
     </table>
   )
