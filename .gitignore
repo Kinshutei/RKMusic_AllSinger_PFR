@@ -1,4 +1,5 @@
 find_missing_videos.py
+live_alert/config.json
 node_modules/
 web/node_modules/
 web/dist/
