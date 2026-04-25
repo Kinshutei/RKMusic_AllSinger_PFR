@@ -67,10 +67,10 @@ def save_json(path, data):
 # ----------------------------------------------------------------
 
 def load_overrides():
-    overrides = load_json('video_type_overrides.json', {})
+    overrides = load_json('video_flags.json', {})
     total = sum(len(v) for v in overrides.values())
     if total:
-        print(f'✓ 例外設定を読み込みました: {total}件')
+        print(f'✓ フラグ設定を読み込みました: {total}件')
     return overrides
 
 # ----------------------------------------------------------------
@@ -281,7 +281,10 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
                     '再生数': int(video['statistics'].get('viewCount', 0)),
                     '高評価数': int(video['statistics'].get('likeCount', 0)),
                     'コメント数': int(video['statistics'].get('commentCount', 0)),
-                    'type': vtype
+                    'type': vtype,
+                    'duration': int(isodate.parse_duration(
+                        video['contentDetails'].get('duration', 'PT0S')
+                    ).total_seconds()),
                 })
 
             next_page_token = playlist_resp.get('nextPageToken')
@@ -352,6 +355,7 @@ def update_history(channel_name, videos, today_str, year, channel_stats=None):
                     'タイトル': video['タイトル'],
                     '公開日': video['公開日'],
                     'type': video['type'],
+                    'duration': video.get('duration', 0),
                     'records': {}
                 }
             else:
@@ -360,6 +364,7 @@ def update_history(channel_name, videos, today_str, year, channel_stats=None):
                     print(f'  🔄 タイプ更新: [{video["タイトル"][:40]}] {old_type} → {video["type"]}')
                 channel_history[video_id]['type'] = video['type']
                 channel_history[video_id]['タイトル'] = video['タイトル']
+                channel_history[video_id]['duration'] = video.get('duration', 0)
 
             # 日次集約: 同日のレコードは上書き（最新値で更新）
             channel_history[video_id]['records'][today_str] = {

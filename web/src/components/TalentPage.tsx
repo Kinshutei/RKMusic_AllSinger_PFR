@@ -19,10 +19,10 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 ]
 
 const ALL_TABS: { type: TabType; label: string }[] = [
-  { type: 'Movie',       label: '📹 Movie' },
-  { type: 'Short',       label: '🎬 Short' },
-  { type: 'LiveArchive', label: '🔴 LiveArchive' },
-  { type: 'Statistics',  label: '📊 Statistics' },
+  { type: 'Movie',       label: '動画' },
+  { type: 'Short',       label: 'ショート' },
+  { type: 'LiveArchive', label: 'ライブ' },
+  { type: 'Statistics',  label: 'Statistics' },
 ]
 
 function fmtDiff(v: number | null): string {

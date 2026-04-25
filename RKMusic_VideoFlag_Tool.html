@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RKMusic 動画フラグ設定ツール</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0f14;
+      --surface: #141720;
+      --surface2: #1c2030;
+      --border: #2a2f42;
+      --accent: #6b9fd4;
+      --accent-dim: rgba(107,159,212,0.15);
+      --text: #e0e4f0;
+      --text-sub: #b4bcd0;
+      --text-muted: #6b7280;
+      --text-dim: #9ca3af;
+      --success: #4ade80;
+      --warn: #fbbf24;
+      --danger: #f87171;
+      --live: #f87171;
+      --live-dim: rgba(248,113,113,0.15);
+      --movie: #6b9fd4;
+      --movie-dim: rgba(107,159,212,0.15);
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Noto Sans JP', sans-serif;
+      --max-w: 1100px;
+    }
+
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
+
+    /* ── ヘッダー ── */
+    .page-header {
+      position: sticky; top: 0; z-index: 200;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+    }
+    .header-inner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      display: flex; align-items: center; gap: 8px;
+      height: 48px;
+    }
+    .page-header h1 {
+      font-size: 14px; font-weight: 500; color: var(--accent);
+      letter-spacing: 0.05em; white-space: nowrap;
+    }
+    .page-header h1 span { font-size: 11px; color: var(--text-dim); font-weight: 400; margin-left: 6px; }
+    .header-spacer { flex: 1; }
+    .gh-token-input {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 5px;
+      color: var(--text); font-family: var(--mono); font-size: 12px;
+      padding: 5px 10px; outline: none; transition: border-color 0.15s; width: 180px;
+    }
+    .gh-token-input:focus { border-color: var(--accent); }
+    .gh-token-input::placeholder { color: var(--text-muted); }
+    .push-st { font-size: 11px; font-family: var(--mono); white-space: nowrap; }
+    .push-st.err { color: var(--danger); }
+    .push-st.inf { color: var(--text-dim); }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      background: var(--surface2); border: 1px solid var(--success);
+      color: var(--success); font-family: var(--mono); font-size: 12px;
+      padding: 10px 18px; border-radius: 6px; pointer-events: none;
+      opacity: 0; transform: translateY(8px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.inf { border-color: var(--text-dim); color: var(--text-dim); }
+
+    .tool-btn {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 5px;
+      color: var(--text-dim); font-family: var(--sans); font-size: 12px;
+      padding: 5px 12px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .tool-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .tool-btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 500; }
+    .tool-btn.primary:hover { opacity: 0.85; }
+    .tool-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── ファイルロードエリア ── */
+    #load-area {
+      display: flex; align-items: center; justify-content: center;
+      min-height: calc(100vh - 44px);
+    }
+    .load-box {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 28px 36px; width: 460px; max-width: 90vw;
+    }
+    .load-box h2 { font-size: 14px; font-weight: 500; margin-bottom: 18px; color: var(--text); }
+    .load-btn { margin-top: 8px; width: 100%; padding: 9px; font-size: 13px; }
+    .load-status { font-size: 12px; color: var(--text-dim); font-family: var(--mono); margin-top: 10px; min-height: 18px; }
+    .load-status.err { color: var(--danger); }
+    .load-status.ok  { color: var(--success); }
+
+    /* ── メインレイアウト ── */
+    #main-area { display: none; }
+
+    .singer-bar {
+      position: sticky; top: 48px; z-index: 100;
+      background: var(--bg); border-bottom: 1px solid var(--border);
+      display: flex; flex-wrap: wrap; overflow: hidden;
+      gap: 6px; padding: 8px 16px;
+      height: 72px; /* 2行固定: (5+13+5)px + 2px border × 2行 + 6px gap + 16px padding */
+    }
+    .singer-tab {
+      padding: 5px 12px; background: none;
+      border: 1px solid var(--border); border-radius: 4px;
+      cursor: pointer; font-size: 13px; font-weight: 500; line-height: 1;
+      color: var(--text-sub); font-family: var(--sans); transition: all 0.15s; white-space: nowrap;
+    }
+    .singer-tab:hover { border-color: var(--text-dim); color: var(--text); }
+    .singer-tab.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    /* ── コントロールバー ── */
+    .control-bar {
+      position: sticky; top: 120px; z-index: 50;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      padding: 0 20px;
+    }
+    .control-inner {
+      max-width: var(--max-w); margin: 0 auto;
+      display: flex; align-items: center; gap: 8px;
+      height: 44px;
+    }
+    .control-label { font-size: 11px; color: var(--text-sub); letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
+    .sort-btn {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
+      color: var(--text-sub); font-family: var(--sans); font-size: 12px;
+      padding: 4px 10px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .sort-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .sort-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .search-wrap { display: flex; align-items: center; gap: 6px; margin-left: 12px; }
+    .search-wrap .search-label { font-size: 11px; color: var(--text-sub); white-space: nowrap; }
+    .search-input-wrap { position: relative; display: flex; align-items: center; }
+    .search-input {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
+      color: var(--text); font-family: var(--sans); font-size: 12px;
+      padding: 4px 10px; outline: none; transition: border-color 0.15s; width: 200px;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--text-muted); }
+    .search-input.has-value { padding-right: 26px; }
+    .search-clear {
+      position: absolute; right: 5px;
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 13px; line-height: 1;
+      padding: 2px 3px; display: none;
+    }
+    .search-clear:hover { color: var(--text); }
+    .stats-label { font-size: 11px; color: var(--text-sub); margin-left: auto; font-family: var(--mono); white-space: nowrap; }
+
+    /* ── 動画リスト ── */
+    .video-list-wrap { padding: 0 20px 40px; }
+    .video-list { max-width: var(--max-w); margin: 0 auto; }
+
+    .video-row {
+      display: grid;
+      grid-template-columns: 1fr 80px 148px;
+      border-bottom: 1px solid var(--border);
+      padding: 7px 0;
+      align-items: center;
+    }
+    .video-row:hover { background: rgba(255,255,255,0.06); }
+
+    .video-title-cell { overflow: hidden; padding-right: 12px; }
+    .video-title-link {
+      color: var(--text-sub); text-decoration: none; font-size: 13px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;
+    }
+    .video-title-link:hover { color: var(--accent); }
+
+    .video-dur {
+      font-family: var(--mono); font-size: 12px; color: var(--text-dim);
+      text-align: right; padding-right: 14px;
+    }
+    .video-dur.unknown { color: var(--border); }
+
+    .flag-cell { display: flex; gap: 5px; justify-content: flex-end; }
+
+    .flag-btn {
+      padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 500;
+      letter-spacing: 0.04em; cursor: pointer; border: 1px solid var(--border);
+      background: none; color: var(--text-muted); font-family: var(--sans);
+      transition: all 0.15s;
+    }
+    .flag-btn:hover { border-color: var(--text-dim); color: var(--text-dim); }
+    .flag-btn.active-movie { background: var(--movie-dim); color: var(--movie); border-color: rgba(107,159,212,0.4); }
+    .flag-btn.active-live  { background: var(--live-dim);  color: var(--live);  border-color: rgba(248,113,113,0.4); }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="header-inner">
+    <h1>RKMusic 動画フラグ設定ツール <span>動画 / ライブ 分類</span></h1>
+    <div class="header-spacer"></div>
+    <button class="tool-btn" onclick="window.open(location.href,'_blank','width=1200,height=900');window.close()" title="推奨サイズのウィンドウで開き直す">⇔ 推奨サイズで開く</button>
+    <input  class="gh-token-input" id="gh-token" type="password" placeholder="ghp_xxxx..." autocomplete="off">
+    <button class="tool-btn" onclick="saveToken()">Token保存</button>
+    <button class="tool-btn primary" id="btn-push" style="display:none" onclick="pushToGitHub()">GitHubに保存</button>
+    <span class="push-st" id="push-st"></span>
+  </div>
+</header>
+<div class="toast" id="toast"></div>
+
+<!-- ファイルロード -->
+<div id="load-area">
+  <div class="load-box">
+    <h2>データを読み込む</h2>
+    <button class="tool-btn primary load-btn" onclick="loadFromGitHub()">GitHub から読み込む</button>
+    <p class="load-status" id="gh-status"></p>
+  </div>
+</div>
+
+<!-- メイン -->
+<div id="main-area">
+  <div class="singer-bar" id="singer-bar"></div>
+  <div class="control-bar">
+    <div class="control-inner">
+      <span class="control-label">ソート</span>
+      <button class="sort-btn active" id="sort-dur"   onclick="toggleSort('dur')">再生時間 ▼</button>
+      <button class="sort-btn"        id="sort-title" onclick="toggleSort('title')">タイトル（A→Z）</button>
+      <div class="search-wrap">
+        <span class="search-label">検索：</span>
+        <div class="search-input-wrap">
+          <input class="search-input" id="search-input" type="text" placeholder="タイトルを入力" oninput="onSearch(this.value)">
+          <button class="search-clear" id="search-clear" onclick="clearSearch()" tabindex="-1">×</button>
+        </div>
+      </div>
+      <span class="stats-label" id="stats-label"></span>
+    </div>
+  </div>
+  <div class="video-list-wrap">
+    <div class="video-list" id="video-list"></div>
+  </div>
+</div>
+
+<script>
+  const REPO = 'Kinshutei/RKMusic_AllSinger_PFR'
+  const BRANCH = 'main'
+  const RAW = `https://raw.githubusercontent.com/${REPO}/${BRANCH}`
+
+  let historyData = null
+  let flags = {}
+  let currentSinger = null
+  let sortMode = 'dur-desc'
+  let searchQuery = ''
+
+  // ── GitHub から取得 ──────────────────────────────────────────────
+
+  async function loadFromGitHub() {
+    const st = document.getElementById('gh-status')
+    st.className = 'load-status'
+    st.textContent = '読み込み中...'
+
+    const year = new Date().getFullYear()
+    const historyUrl = `${RAW}/all_history_${year}.json`
+    const flagsUrl   = `${RAW}/video_flags.json`
+
+    try {
+      st.textContent = `all_history_${year}.json を取得中...`
+      const hRes = await fetch(historyUrl)
+      if (!hRes.ok) throw new Error(`history: HTTP ${hRes.status}`)
+      historyData = await hRes.json()
+
+      st.textContent = 'video_flags.json を取得中...'
+      const fRes = await fetch(flagsUrl)
+      flags = fRes.ok ? await fRes.json() : {}
+
+      st.className = 'load-status ok'
+      st.textContent = '取得完了'
+      showMain()
+    } catch (e) {
+      st.className = 'load-status err'
+      st.textContent = 'エラー: ' + e.message
+    }
+  }
+
+
+  function showMain() {
+    document.getElementById('load-area').style.display = 'none'
+    document.getElementById('main-area').style.display = 'block'
+    document.getElementById('btn-push').style.display = ''
+    const saved = localStorage.getItem('gh_token')
+    if (saved) document.getElementById('gh-token').value = saved
+    buildSingerBar()
+  }
+
+  // ── GitHub Token ─────────────────────────────────────────────────
+
+  function saveToken() {
+    const val = document.getElementById('gh-token').value.trim()
+    if (!val) return
+    localStorage.setItem('gh_token', val)
+    setPushSt('✓ Token保存済み', 'ok')
+    setTimeout(() => setPushSt('', ''), 2000)
+  }
+
+  function getToken() { return (document.getElementById('gh-token').value.trim()) || localStorage.getItem('gh_token') || '' }
+
+  function ghHeaders() {
+    return { 'Authorization': `Bearer ${getToken()}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' }
+  }
+
+  function toBase64(str) {
+    const bytes = new TextEncoder().encode(str)
+    let bin = ''
+    for (const b of bytes) bin += String.fromCharCode(b)
+    return btoa(bin)
+  }
+
+  function setPushSt(msg, cls) {
+    const el = document.getElementById('push-st')
+    el.textContent = msg
+    el.className = 'push-st' + (cls ? ' ' + cls : '')
+  }
+
+  function showToast(msg, type = 'ok', persist = false) {
+    const t = document.getElementById('toast')
+    t.textContent = msg
+    t.className = 'toast show' + (type !== 'ok' ? ' ' + type : '')
+    clearTimeout(t._timer)
+    if (!persist) t._timer = setTimeout(() => t.classList.remove('show'), 2500)
+  }
+
+  // ── GitHub Push ──────────────────────────────────────────────────
+
+  async function pushToGitHub() {
+    if (!getToken()) { setPushSt('❌ Token が未設定です', 'err'); return }
+
+    const btn = document.getElementById('btn-push')
+    btn.disabled = true
+    showToast('送信中...', 'inf', true)
+
+    try {
+      const out = buildFullFlagsOut()
+      const jsonText = JSON.stringify(out, null, 2)
+
+      const FILE_PATH = 'video_flags.json'
+      const API_BASE  = `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`
+
+      // 現在のSHAを取得（更新の場合に必要）
+      const current = await fetch(`${API_BASE}?ref=${BRANCH}`, { headers: ghHeaders() })
+      const currentJson = current.ok ? await current.json() : null
+
+      const payload = {
+        message: 'Update video_flags.json via flag tool',
+        content: toBase64(jsonText),
+        branch: BRANCH,
+      }
+      if (currentJson?.sha) payload.sha = currentJson.sha
+
+      const res = await fetch(API_BASE, { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(payload) })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.message || `HTTP ${res.status}`) }
+
+      setPushSt('', '')
+      showToast('✓ GitHubに保存しました')
+    } catch (err) {
+      setPushSt(`❌ ${err.message}`, 'err')
+    } finally {
+      btn.disabled = false
+    }
+  }
+
+  // ── シンガーバー ─────────────────────────────────────────────────
+
+  const TALENT_ORDER = [
+    '焔魔るり','HACHI','瀬戸乃とと','水瀬凪',
+    'KMNZ','VESPERBELL','CULUA','NEUN','MEDA','CONA',
+    'IMI','XIDEN','ヨノ','LEWNE','羽緒','Cil','深影','wouca',
+    'Diα','妃玖','HONKTHEHORN','NUROJUNK',
+  ]
+
+  function buildSingerBar() {
+    const singers = Object.keys(historyData).filter(k => k !== '_channel_stats')
+    const ordered = TALENT_ORDER.filter(n => singers.includes(n))
+    const extras = singers.filter(n => !TALENT_ORDER.includes(n)).sort()
+    const all = [...ordered, ...extras]
+
+    const bar = document.getElementById('singer-bar')
+    bar.innerHTML = ''
+    all.forEach(name => {
+      const btn = document.createElement('button')
+      btn.className = 'singer-tab'
+      btn.textContent = name
+      btn.onclick = () => selectSinger(name)
+      bar.appendChild(btn)
+    })
+    if (all.length > 0) selectSinger(all[0])
+  }
+
+  function selectSinger(name) {
+    currentSinger = name
+    document.querySelectorAll('.singer-tab').forEach(b =>
+      b.classList.toggle('active', b.textContent === name)
+    )
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    renderList()
+  }
+
+  // ── ソート ───────────────────────────────────────────────────────
+
+  function toggleSort(key) {
+    const btnDur   = document.getElementById('sort-dur')
+    const btnTitle = document.getElementById('sort-title')
+    if (key === 'dur') {
+      if (sortMode === 'dur-desc') {
+        sortMode = 'dur-asc'
+        btnDur.textContent = '再生時間 ▲'
+      } else {
+        sortMode = 'dur-desc'
+        btnDur.textContent = '再生時間 ▼'
+      }
+      btnDur.classList.add('active')
+      btnTitle.classList.remove('active')
+    } else {
+      if (sortMode === 'title-asc') {
+        sortMode = 'title-desc'
+        btnTitle.textContent = 'タイトル（Z→A）'
+      } else {
+        sortMode = 'title-asc'
+        btnTitle.textContent = 'タイトル（A→Z）'
+      }
+      btnTitle.classList.add('active')
+      btnDur.classList.remove('active')
+    }
+    renderList()
+  }
+
+  function onSearch(val) {
+    searchQuery = val.trim().toLowerCase()
+    const hasVal = val.length > 0
+    document.getElementById('search-input')?.classList.toggle('has-value', hasVal)
+    const clr = document.getElementById('search-clear')
+    if (clr) clr.style.display = hasVal ? 'block' : 'none'
+    renderList()
+  }
+
+  function clearSearch() {
+    const inp = document.getElementById('search-input')
+    if (inp) { inp.value = ''; inp.classList.remove('has-value') }
+    const clr = document.getElementById('search-clear')
+    if (clr) clr.style.display = 'none'
+    searchQuery = ''
+    renderList()
+  }
+
+  // ── duration フォーマット ────────────────────────────────────────
+
+  function fmtDur(sec) {
+    if (!sec || sec <= 0) return '--:--'
+    const h = Math.floor(sec / 3600)
+    const m = Math.floor((sec % 3600) / 60)
+    const s = sec % 60
+    const mm = String(m).padStart(2, '0')
+    const ss = String(s).padStart(2, '0')
+    return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
+  }
+
+  // ── フラグ取得・設定 ─────────────────────────────────────────────
+
+  function getFlag(singer, vidId, histType) {
+    if (flags[singer]?.[vidId] !== undefined) return flags[singer][vidId]
+    return histType === 'LiveArchive' ? 'LiveArchive' : 'Movie'
+  }
+
+  function setFlag(singer, vidId, value) {
+    if (!flags[singer]) flags[singer] = {}
+    flags[singer][vidId] = value
+    const row = document.querySelector(`[data-vid="${vidId}"]`)
+    if (row) {
+      row.querySelector('.flag-btn-movie').className =
+        'flag-btn flag-btn-movie' + (value === 'Movie' ? ' active-movie' : '')
+      row.querySelector('.flag-btn-live').className =
+        'flag-btn flag-btn-live' + (value === 'LiveArchive' ? ' active-live' : '')
+    }
+    updateStats()
+  }
+
+  // ── リスト描画 ───────────────────────────────────────────────────
+
+  function renderList() {
+    const singer = currentSinger
+    const singerData = historyData[singer] || {}
+
+    let videos = []
+    for (const [vid_id, entry] of Object.entries(singerData)) {
+      if (vid_id === '_channel_stats') continue
+      if (!entry || typeof entry !== 'object') continue
+      const histType = entry.type || 'Movie'
+      if (histType === 'Short') continue   // ショートは非表示
+      const dur = typeof entry.duration === 'number' ? entry.duration : 0
+      const flag = getFlag(singer, vid_id, histType)
+      videos.push({ vid_id, title: entry.タイトル || vid_id, histType, dur, flag })
+    }
+
+    if (searchQuery) videos = videos.filter(v => v.title.toLowerCase().includes(searchQuery))
+
+    if      (sortMode === 'dur-desc')   videos.sort((a, b) => b.dur - a.dur)
+    else if (sortMode === 'dur-asc')    videos.sort((a, b) => a.dur - b.dur)
+    else if (sortMode === 'title-asc')  videos.sort((a, b) => a.title.localeCompare(b.title, 'ja'))
+    else if (sortMode === 'title-desc') videos.sort((a, b) => b.title.localeCompare(a.title, 'ja'))
+
+    const list = document.getElementById('video-list')
+    list.innerHTML = ''
+    const frag = document.createDocumentFragment()
+
+    for (const v of videos) {
+      const row = document.createElement('div')
+      row.className = 'video-row'
+      row.dataset.vid = v.vid_id
+
+      const url = `https://www.youtube.com/watch?v=${v.vid_id}`
+      const durClass = v.dur > 0 ? '' : ' unknown'
+      const mActive = v.flag === 'Movie'       ? ' active-movie' : ''
+      const lActive = v.flag === 'LiveArchive' ? ' active-live'  : ''
+
+      row.innerHTML =
+        `<div class="video-title-cell">` +
+          `<a class="video-title-link" href="${url}" target="_blank" rel="noopener">${esc(v.title)}</a>` +
+        `</div>` +
+        `<div class="video-dur${durClass}">${fmtDur(v.dur)}</div>` +
+        `<div class="flag-cell">` +
+          `<button class="flag-btn flag-btn-movie${mActive}" onclick="setFlag('${esc(singer)}','${v.vid_id}','Movie')">動画</button>` +
+          `<button class="flag-btn flag-btn-live${lActive}"  onclick="setFlag('${esc(singer)}','${v.vid_id}','LiveArchive')">ライブ</button>` +
+        `</div>`
+
+      frag.appendChild(row)
+    }
+    list.appendChild(frag)
+    updateStats(videos)
+  }
+
+  function updateStats(videos) {
+    if (!videos) {
+      // 再描画なしでカウントだけ更新する場合
+      const singer = currentSinger
+      const singerData = historyData[singer] || {}
+      videos = Object.entries(singerData)
+        .filter(([k, e]) => k !== '_channel_stats' && e && e.type !== 'Short')
+        .map(([k]) => ({ flag: getFlag(singer, k, singerData[k].type) }))
+    }
+    const lives = videos.filter(v => v.flag === 'LiveArchive').length
+    document.getElementById('stats-label').textContent =
+      `${videos.length} 件 / ライブ ${lives} 件`
+  }
+
+  // ── エクスポート ─────────────────────────────────────────────────
+
+  function buildFullFlagsOut() {
+    const out = {}
+    for (const [singer, singerData] of Object.entries(historyData)) {
+      const singerFlags = {}
+      for (const [vid_id, entry] of Object.entries(singerData)) {
+        if (vid_id === '_channel_stats') continue
+        if (!entry || typeof entry !== 'object') continue
+        const histType = entry.type || 'Movie'
+        if (histType === 'Short') continue
+        singerFlags[vid_id] = getFlag(singer, vid_id, histType)
+      }
+      if (Object.keys(singerFlags).length > 0) out[singer] = singerFlags
+    }
+    return out
+  }
+
+  function exportFlags() {
+    const out = buildFullFlagsOut()
+    const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'video_flags.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // ── ユーティリティ ───────────────────────────────────────────────
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+  }
+</script>
+</body>
+</html>
