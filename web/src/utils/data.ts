@@ -62,10 +62,25 @@ export function buildDashboardData(history: AllHistory) {
     const views_n = n?.総再生数 ?? 0
     const subs_diff  = (n && p) ? subs_n  - (p.登録者数 ?? 0) : null
     const views_diff = (n && p) ? views_n - (p.総再生数 ?? 0) : null
+
+    let comments_n = 0, comments_p = 0, has_p = false
+    for (const [vid_id, raw] of Object.entries(history[talent] ?? {})) {
+      if (vid_id === '_channel_stats') continue
+      const vid = raw as { records?: Record<string, { コメント数?: number }> }
+      if (!vid.records) continue
+      comments_n += vid.records[n_date]?.コメント数 ?? 0
+      if (vid.records[p_date] !== undefined) {
+        comments_p += vid.records[p_date]?.コメント数 ?? 0
+        has_p = true
+      }
+    }
+    const comments_diff = has_p ? comments_n - comments_p : null
+
     singerData.push({
       talent, subs_n, views_n,
       subs_diff,  subs_rate:  rate(subs_n,  subs_diff),
       views_diff, views_rate: rate(views_n, views_diff),
+      comments_n, comments_diff, comments_rate: rate(comments_n, comments_diff),
     })
   }
 
@@ -94,6 +109,26 @@ export function buildDashboardData(history: AllHistory) {
   }
 
   return { singerData, videoData, n_date }
+}
+
+export function buildStatsData(history: AllHistory): { date: string; subs: number; views: number }[] {
+  const talents = TALENT_ORDER.filter(t => t !== 'Dashboard' && t in history)
+  const dateMap = new Map<string, { subs: number; views: number }>()
+
+  for (const talent of talents) {
+    const cs = history[talent]?._channel_stats as Record<string, ChannelStats> | undefined
+    if (!cs) continue
+    for (const [date, stats] of Object.entries(cs)) {
+      const cur = dateMap.get(date) ?? { subs: 0, views: 0 }
+      cur.subs  += stats.登録者数 ?? 0
+      cur.views += stats.総再生数 ?? 0
+      dateMap.set(date, cur)
+    }
+  }
+
+  return Array.from(dateMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, v]) => ({ date, ...v }))
 }
 
 export function getLatestChannelStats(history: AllHistory, talentName: string) {

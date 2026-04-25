@@ -36,6 +36,9 @@ export interface SingerRankItem {
   views_n: number
   views_diff: number | null
   views_rate: number | null
+  comments_n: number
+  comments_diff: number | null
+  comments_rate: number | null
 }
 
 export interface VideoRankItem {
