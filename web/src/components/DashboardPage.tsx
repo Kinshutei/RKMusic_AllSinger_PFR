@@ -1,7 +1,5 @@
-import { useState } from 'react'
 import { AllHistory, SingerRankItem, VideoRankItem, VideoType } from '../types'
 import { buildDashboardData } from '../utils/data'
-import { buildAndDownloadCsv } from '../utils/csvExport'
 
 interface Props {
   history: AllHistory
@@ -97,41 +95,16 @@ function VideoTable({ rows, valKey, diffKey, rateKey, top = 20 }: {
 }
 
 const VIDEO_SECTIONS: { type: VideoType; label: string }[] = [
-  { type: 'Movie',       label: '🎬 Movie部門' },
-  { type: 'Short',       label: '📱 Short部門' },
-  { type: 'LiveArchive', label: '🔴 LiveArchive部門' },
+  { type: 'Movie',       label: '動画部門' },
+  { type: 'Short',       label: 'ショート部門' },
+  { type: 'LiveArchive', label: 'ライブ部門' },
 ]
 
 export default function DashboardPage({ history }: Props) {
-  const [csvLoading, setCsvLoading] = useState(false)
-  const [csvError, setCsvError] = useState<string | null>(null)
-
   const data = buildDashboardData(history)
-
-  const handleCsv = async () => {
-    setCsvLoading(true)
-    setCsvError(null)
-    try {
-      await buildAndDownloadCsv(history)
-    } catch (e) {
-      setCsvError(String(e))
-    } finally {
-      setCsvLoading(false)
-    }
-  }
 
   return (
     <div>
-      {/* CSV エクスポート */}
-      <div className="section-box">
-        <div className="section-title">📥 CSVエクスポート</div>
-        <p className="section-desc">チャンネル統計・動画統計の2ファイルをZIP（Shift-JIS）でダウンロード</p>
-        <button className="btn-primary" onClick={handleCsv} disabled={csvLoading}>
-          {csvLoading ? '生成中...' : 'CSVをダウンロード'}
-        </button>
-        {csvError && <p className="error-text">{csvError}</p>}
-      </div>
-
       {!data ? (
         <p className="muted">データがありません</p>
       ) : (
