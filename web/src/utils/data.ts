@@ -128,6 +128,7 @@ export function buildStatsData(history: AllHistory): { date: string; subs: numbe
 
   return Array.from(dateMap.entries())
     .sort(([a], [b]) => a.localeCompare(b))
+    .filter(([date]) => date >= '2026-04-01')
     .map(([date, v]) => ({ date, ...v }))
 }
 
