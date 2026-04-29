@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { AllHistory, SingerRankItem, VideoRankItem, VideoType } from '../types'
+import { AllHistory, SingerRankItem, VideoRankItem, VideoType, VideoFlags } from '../types'
 import { buildDashboardData, buildStatsData } from '../utils/data'
 
 interface Props {
   history: AllHistory
+  flags: VideoFlags
 }
 
 function fmtDiff(diff: number | null, rate?: number | null): string {
@@ -223,10 +224,10 @@ const VIDEO_SECTIONS: { type: VideoType; label: string }[] = [
   { type: 'LiveArchive', label: 'ライブ部門' },
 ]
 
-export default function DashboardPage({ history }: Props) {
+export default function DashboardPage({ history, flags }: Props) {
   const [view, setView] = useState<'ranking' | 'stats'>('ranking')
   const [statsMode, setStatsMode] = useState<'cumulative' | 'increment'>('cumulative')
-  const data = buildDashboardData(history)
+  const data = buildDashboardData(history, flags)
   const statsPoints = buildStatsData(history)
 
   const incrementPoints: StatsPoint[] = statsPoints.slice(1).map((p, i) => ({

@@ -1,5 +1,5 @@
 import {
-  AllHistory, ChannelStats, VideoType,
+  AllHistory, ChannelStats, VideoType, VideoFlags,
   SingerRankItem, VideoRankItem, VideoCard,
 } from '../types'
 
@@ -15,10 +15,22 @@ const HISTORY_URL =
   import.meta.env.VITE_HISTORY_URL ??
   `https://raw.githubusercontent.com/Kinshutei/RKMusic_AllSinger_PFR/main/all_history_${new Date().getFullYear()}.json`
 
+const FLAGS_URL = 'https://raw.githubusercontent.com/Kinshutei/RKMusic_AllSinger_PFR/main/video_flags.json'
+
 export async function loadHistory(): Promise<AllHistory> {
   const res = await fetch(HISTORY_URL)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
+}
+
+export async function loadVideoFlags(): Promise<VideoFlags> {
+  try {
+    const res = await fetch(`${FLAGS_URL}?t=${Date.now()}`)
+    if (!res.ok) return {}
+    return res.json()
+  } catch {
+    return {}
+  }
 }
 
 export function getAvailableTalents(history: AllHistory): string[] {
@@ -40,7 +52,7 @@ function rate(val: number, diff: number | null): number | null {
   return base > 0 ? Math.round(diff / base * 1000) / 10 : null
 }
 
-export function buildDashboardData(history: AllHistory) {
+export function buildDashboardData(history: AllHistory, flags: VideoFlags = {}) {
   const talents = TALENT_ORDER.filter(t => t !== 'Dashboard' && t in history)
 
   const allDates = new Set<string>()
@@ -90,7 +102,7 @@ export function buildDashboardData(history: AllHistory) {
       if (vid_id === '_channel_stats') continue
       const vid = raw as { タイトル?: string; type?: string; records?: Record<string, { 再生数?: number; 高評価数?: number; コメント数?: number }> }
       if (!vid.records) continue
-      const vtype = (vid.type ?? 'Movie') as VideoType
+      const vtype = (flags[talent]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
       if (!(vtype in videoData)) continue
       const nr = vid.records[n_date], pr = vid.records[p_date]
       const views_n    = nr?.再生数    ?? 0
@@ -148,7 +160,7 @@ export function getLatestChannelStats(history: AllHistory, talentName: string) {
   return { stats: n, diff, n_date }
 }
 
-export function buildTalentVideoList(history: AllHistory, talentName: string): VideoCard[] {
+export function buildTalentVideoList(history: AllHistory, talentName: string, flags: VideoFlags = {}): VideoCard[] {
   const talentHist = history[talentName]
   if (!talentHist) return []
 
@@ -180,7 +192,7 @@ export function buildTalentVideoList(history: AllHistory, talentName: string): V
     result.push({
       id: vid_id,
       タイトル: vid.タイトル ?? vid_id,
-      type: (vid.type ?? 'Movie') as VideoType,
+      type: (flags[talentName]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType,
       再生数: current_views,
       再生数15d増加: daily_views.reduce<number>((a, v) => a + (v ?? 0), 0),
       高評価数: current_likes,

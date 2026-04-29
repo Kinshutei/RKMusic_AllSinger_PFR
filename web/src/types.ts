@@ -1,4 +1,5 @@
 export type VideoType = 'Movie' | 'Short' | 'LiveArchive'
+export type VideoFlags = Record<string, Record<string, VideoType>>
 
 export interface ChannelStats {
   登録者数: number

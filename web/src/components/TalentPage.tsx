@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
-import { AllHistory, VideoCard, VideoHistoryEntry, VideoType } from '../types'
+import { AllHistory, VideoCard, VideoHistoryEntry, VideoType, VideoFlags } from '../types'
 import { getLatestChannelStats, buildTalentVideoList } from '../utils/data'
 
 interface Props {
   history: AllHistory
   talentName: string
+  flags: VideoFlags
 }
 
 type SortKey = '再生数' | '高評価数' | '再生数15d増加' | '高評価15d増加'
@@ -419,9 +420,9 @@ function VideoCardItem({ video, onStatsClick }: { video: VideoCard; onStatsClick
   )
 }
 
-export default function TalentPage({ history, talentName }: Props) {
+export default function TalentPage({ history, talentName, flags }: Props) {
   const { stats, diff } = getLatestChannelStats(history, talentName)
-  const allVideos = buildTalentVideoList(history, talentName)
+  const allVideos = buildTalentVideoList(history, talentName, flags)
 
   const videoByType: Record<VideoType, VideoCard[]> = { Movie: [], Short: [], LiveArchive: [] }
   for (const v of allVideos) {

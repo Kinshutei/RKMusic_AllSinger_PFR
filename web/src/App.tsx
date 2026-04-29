@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { AllHistory } from './types'
-import { loadHistory, getAvailableTalents } from './utils/data'
+import { AllHistory, VideoFlags } from './types'
+import { loadHistory, loadVideoFlags, getAvailableTalents } from './utils/data'
 import DashboardPage from './components/DashboardPage'
 import TalentPage from './components/TalentPage'
 import Footer from './components/Footer'
@@ -10,14 +10,15 @@ type Page = string  // 'Dashboard' or talent name
 
 export default function App() {
   const [history, setHistory]       = useState<AllHistory | null>(null)
+  const [flags, setFlags]           = useState<VideoFlags>({})
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState<string | null>(null)
   const [activePage, setActivePage] = useState<Page>('Dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   useEffect(() => {
-    loadHistory()
-      .then(h => setHistory(h))
+    Promise.all([loadHistory(), loadVideoFlags()])
+      .then(([h, f]) => { setHistory(h); setFlags(f) })
       .catch(e => setError(String(e)))
       .finally(() => setLoading(false))
   }, [])
@@ -61,8 +62,8 @@ export default function App() {
           {error   && <p className="error-text">データの取得に失敗しました: {error}</p>}
           {!loading && !error && history && (
             activePage === 'Dashboard'
-              ? <DashboardPage history={history} />
-              : <TalentPage history={history} talentName={activePage} />
+              ? <DashboardPage history={history} flags={flags} />
+              : <TalentPage history={history} talentName={activePage} flags={flags} />
           )}
         </div>
         <Footer />
