@@ -357,51 +357,7 @@ a:hover { color: #3a4fa8; text-decoration: underline; }
     margin-left: 0;
   }
 
-  /* Dashboardランクテーブル → カードスタイル */
-  .rank-table,
-  .rank-table tbody,
-  .rank-table tr,
-  .rank-table td {
-    display: block;
-  }
-  .rank-table tr {
-    border: 1px solid #d0d4ec;
-    border-radius: 8px;
-    padding: 8px 12px;
-    margin-bottom: 6px;
-    background: #fff !important;
-  }
-  .rank-table tr:last-child {
-    border-top: 2px solid #3a4580;
-    border-radius: 8px;
-  }
-  .rank-no {
-    display: inline;
-    width: auto;
-  }
-  .rank-name {
-    display: inline;
-    max-width: none;
-    white-space: normal;
-  }
-  .rank-name a {
-    font-size: 12px;
-  }
-  .rank-talent {
-    display: inline;
-    margin-right: 4px;
-  }
-  .rank-val {
-    display: block;
-    text-align: left;
-    font-size: 15px;
-    font-weight: 700;
-    padding: 2px 0 0;
-  }
-  .rank-diff {
-    display: inline-block;
-    text-align: left;
-    padding: 0;
-    font-size: 12px;
-  }
+  /* ランクテーブル幅最適化 */
+  .rank-name { max-width: 90px; }
+  .rank-diff { font-size: 10px; }
 }
