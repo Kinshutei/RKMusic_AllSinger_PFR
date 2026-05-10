@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { VideoCard, VideoType, VideoFlags, AllHistory } from '../types'
 import { getLatestChannelStats, buildTalentVideoList } from '../utils/data'
 
@@ -67,6 +67,19 @@ function MiniBarChart({ daily, title }: {
   daily: (number | null)[]
   title: string
 }) {
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [containerW, setContainerW] = useState(500)
+
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const update = () => setContainerW(el.clientWidth)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   const n = daily.findIndex(v => v === null)
   const count = n === -1 ? daily.length : n
   if (count < 2) return null
@@ -74,10 +87,12 @@ function MiniBarChart({ daily, title }: {
   const vals = daily.slice(0, count) as number[]
   const labels = vals.map((_, i) => `${i + 2}D`)
 
-  const BAR_SLOT = 36
-  const BAR_W = 30
   const PAD = { top: 22, right: 8, bottom: 22, left: 4 }
   const PLOT_H = 72
+
+  const availableW = containerW - PAD.left - PAD.right
+  const BAR_SLOT = count > 0 ? Math.min(36, Math.floor(availableW / count)) : 36
+  const BAR_W = Math.min(30, BAR_SLOT - 4)
 
   const svgW = PAD.left + PAD.right + count * BAR_SLOT
   const svgH = PAD.top + PLOT_H + PAD.bottom
@@ -90,14 +105,14 @@ function MiniBarChart({ daily, title }: {
   const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
 
   return (
-    <div style={{ marginBottom: 6 }}>
+    <div ref={wrapperRef} style={{ marginBottom: 6 }}>
       <div style={{ fontSize: 12, color: '#888', marginBottom: 2 }}>
         {title}
         <span style={{ marginLeft: 8, color: '#2a305c' }}>
           （{vals.length}日間平均：{fmtBarLabel(avg)}）
         </span>
       </div>
-      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <div>
         <svg width={svgW} height={svgH} style={{ fontFamily: 'inherit', display: 'block' }}>
           {ticks.map(tick => {
             const y = sy(tick)
