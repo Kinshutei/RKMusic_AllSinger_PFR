@@ -1,25 +1,94 @@
 [
-  {"name": "焔魔るり",      "url": "https://www.youtube.com/channel/UC1nqXaKzG4hd1SRFVra16gw"},
-  {"name": "HACHI",        "url": "https://www.youtube.com/channel/UC7XCjKxBEct0uAukpQXNFPw"},
-  {"name": "瀬戸乃とと",    "url": "https://www.youtube.com/channel/UC-M0Poxo4VXMxdIzinqWOig"},
-  {"name": "水瀬凪",        "url": "https://www.youtube.com/channel/UCAplyWK80Y6_YTkb3CCDk1Q"},
-  {"name": "KMNZ",         "url": "https://www.youtube.com/channel/UCwuS0uY-Z2Gr_5OV2oFybFA"},
-  {"name": "VESPERBELL",   "url": "https://www.youtube.com/channel/UCPd0Z22gF43dUidPYEQO5-w"},
-  {"name": "CULUA",        "url": "https://www.youtube.com/channel/UCn1Zf28m6WbhMDjMjdIjOIA"},
-  {"name": "NEUN",         "url": "https://www.youtube.com/channel/UCFWD2vvDJqjimIzhjEvogNQ"},
-  {"name": "MEDA",         "url": "https://www.youtube.com/channel/UC0HX1e5jJnhN5Xn0epV2wzA"},
-  {"name": "CONA",         "url": "https://www.youtube.com/channel/UCbJYvStAmq5Jm3nSDNSLT4A"},
-  {"name": "IMI",          "url": "https://www.youtube.com/channel/UCnKt20HH_BiuID0FDHGMcvw"},
-  {"name": "XIDEN",        "url": "https://www.youtube.com/channel/UCgPGVORhti-KKcV4CqUyumQ"},
-  {"name": "ヨノ",          "url": "https://www.youtube.com/channel/UCqYXJ5M55HWE6zyvl6rjIaA"},
-  {"name": "メメシア",      "url": "https://www.youtube.com/channel/UCtS9Q3R-61XbExd4oCVLoYA"},
-  {"name": "LEWNE",        "url": "https://www.youtube.com/channel/UCw0ty0mpHBx6xZt-K_hfNcA"},
-  {"name": "羽緒",          "url": "https://www.youtube.com/channel/UCjoGLVLapRciX38bwgDtttw"},
-  {"name": "Cil",          "url": "https://www.youtube.com/channel/UCgfFx9EhDX9MFUyMpx0AddQ"},
-  {"name": "深影",          "url": "https://www.youtube.com/channel/UC2daHxnuJJBM5NWci1RRkeA"},
-  {"name": "wouca",        "url": "https://www.youtube.com/channel/UC8TVZmQuOl0GNbpvThwwSdQ"},
-  {"name": "Diα",          "url": "https://www.youtube.com/channel/UC80TduEq6Sp4n2DkiUH2eLQ"},
-  {"name": "妃玖",          "url": "https://www.youtube.com/channel/UCFBc8kuCtTwmtdsBcJoZ3qA"},
-  {"name": "HONK THE HORN", "url": "https://www.youtube.com/channel/UCQXuGcIoseWY5HmW6-U7teg"},
-  {"name": "NUROJUNK",     "url": "https://www.youtube.com/channel/UCuvYHCPdMxfvjW_F9w5LmRA"}
+  {
+    "name": "焔魔るり",
+    "url": "https://www.youtube.com/channel/UC1nqXaKzG4hd1SRFVra16gw"
+  },
+  {
+    "name": "HACHI",
+    "url": "https://www.youtube.com/channel/UC7XCjKxBEct0uAukpQXNFPw"
+  },
+  {
+    "name": "瀬戸乃とと",
+    "url": "https://www.youtube.com/channel/UC-M0Poxo4VXMxdIzinqWOig"
+  },
+  {
+    "name": "水瀬凪",
+    "url": "https://www.youtube.com/channel/UCAplyWK80Y6_YTkb3CCDk1Q"
+  },
+  {
+    "name": "KMNZ",
+    "url": "https://www.youtube.com/channel/UCwuS0uY-Z2Gr_5OV2oFybFA"
+  },
+  {
+    "name": "VESPERBELL",
+    "url": "https://www.youtube.com/channel/UCPd0Z22gF43dUidPYEQO5-w"
+  },
+  {
+    "name": "CULUA",
+    "url": "https://www.youtube.com/channel/UCn1Zf28m6WbhMDjMjdIjOIA"
+  },
+  {
+    "name": "NEUN",
+    "url": "https://www.youtube.com/channel/UCFWD2vvDJqjimIzhjEvogNQ"
+  },
+  {
+    "name": "MEDA",
+    "url": "https://www.youtube.com/channel/UC0HX1e5jJnhN5Xn0epV2wzA"
+  },
+  {
+    "name": "CONA",
+    "url": "https://www.youtube.com/channel/UCbJYvStAmq5Jm3nSDNSLT4A"
+  },
+  {
+    "name": "IMI",
+    "url": "https://www.youtube.com/channel/UCnKt20HH_BiuID0FDHGMcvw"
+  },
+  {
+    "name": "XIDEN",
+    "url": "https://www.youtube.com/channel/UCgPGVORhti-KKcV4CqUyumQ"
+  },
+  {
+    "name": "ヨノ",
+    "url": "https://www.youtube.com/channel/UCqYXJ5M55HWE6zyvl6rjIaA"
+  },
+  {
+    "name": "MEMESIA",
+    "url": "https://www.youtube.com/channel/UCtS9Q3R-61XbExd4oCVLoYA"
+  },
+  {
+    "name": "LEWNE",
+    "url": "https://www.youtube.com/channel/UCw0ty0mpHBx6xZt-K_hfNcA"
+  },
+  {
+    "name": "羽緒",
+    "url": "https://www.youtube.com/channel/UCjoGLVLapRciX38bwgDtttw"
+  },
+  {
+    "name": "Cil",
+    "url": "https://www.youtube.com/channel/UCgfFx9EhDX9MFUyMpx0AddQ"
+  },
+  {
+    "name": "深影",
+    "url": "https://www.youtube.com/channel/UC2daHxnuJJBM5NWci1RRkeA"
+  },
+  {
+    "name": "wouca",
+    "url": "https://www.youtube.com/channel/UC8TVZmQuOl0GNbpvThwwSdQ"
+  },
+  {
+    "name": "Diα",
+    "url": "https://www.youtube.com/channel/UC80TduEq6Sp4n2DkiUH2eLQ"
+  },
+  {
+    "name": "妃玖",
+    "url": "https://www.youtube.com/channel/UCFBc8kuCtTwmtdsBcJoZ3qA"
+  },
+  {
+    "name": "HONK THE HORN",
+    "url": "https://www.youtube.com/channel/UCQXuGcIoseWY5HmW6-U7teg"
+  },
+  {
+    "name": "NUROJUNK",
+    "url": "https://www.youtube.com/channel/UCuvYHCPdMxfvjW_F9w5LmRA"
+  }
 ]
