@@ -11,16 +11,26 @@ export const TALENT_ORDER = [
   'Diα', '妃玖', 'HONK THE HORN', 'NUROJUNK',
 ]
 
-const HISTORY_URL =
-  import.meta.env.VITE_HISTORY_URL ??
-  `https://raw.githubusercontent.com/Kinshutei/RKMusic_AllSinger_PFR/main/all_history_${new Date().getFullYear()}.json`
+const HISTORY_BASE_URL =
+  import.meta.env.VITE_HISTORY_BASE_URL ??
+  'https://raw.githubusercontent.com/Kinshutei/RKMusic_AllSinger_PFR/main'
 
 const FLAGS_URL = 'https://raw.githubusercontent.com/Kinshutei/RKMusic_AllSinger_PFR/main/video_flags.json'
 
 export async function loadHistory(): Promise<AllHistory> {
-  const res = await fetch(HISTORY_URL)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
+  const talents = TALENT_ORDER.filter(t => t !== 'Dashboard')
+  const results = await Promise.all(
+    talents.map(async talent => {
+      try {
+        const res = await fetch(`${HISTORY_BASE_URL}/history_${encodeURIComponent(talent)}.json`)
+        if (!res.ok) return {}
+        return res.json() as Promise<AllHistory>
+      } catch {
+        return {}
+      }
+    })
+  )
+  return Object.assign({}, ...results)
 }
 
 export async function loadVideoFlags(): Promise<VideoFlags> {

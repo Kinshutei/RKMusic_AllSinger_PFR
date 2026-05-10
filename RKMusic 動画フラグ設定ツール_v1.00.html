@@ -276,15 +276,21 @@
     st.className = 'load-status'
     st.textContent = '読み込み中...'
 
-    const year = new Date().getFullYear()
-    const historyUrl = `${RAW}/all_history_${year}.json`
-    const flagsUrl   = `${RAW}/video_flags.json`
+    const flagsUrl = `${RAW}/video_flags.json`
 
     try {
-      st.textContent = `all_history_${year}.json を取得中...`
-      const hRes = await fetch(historyUrl)
-      if (!hRes.ok) throw new Error(`history: HTTP ${hRes.status}`)
-      historyData = await hRes.json()
+      const talents = TALENT_ORDER.filter(t => t !== 'Dashboard')
+      st.textContent = `履歴データを取得中 (0/${talents.length})...`
+
+      const parts = await Promise.all(
+        talents.map(async (talent, i) => {
+          const res = await fetch(`${RAW}/history_${encodeURIComponent(talent)}.json`)
+          st.textContent = `履歴データを取得中 (${i + 1}/${talents.length})...`
+          if (!res.ok) return {}
+          return res.json()
+        })
+      )
+      historyData = Object.assign({}, ...parts)
 
       st.textContent = 'video_flags.json を取得中...'
       const fRes = await fetch(flagsUrl)

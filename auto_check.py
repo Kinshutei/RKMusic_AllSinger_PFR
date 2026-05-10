@@ -39,11 +39,11 @@ CHANNEL_WORKERS = 3   # チャンネル処理の同時並列数
 
 SNAPSHOTS_FILE = 'all_snapshots.json'
 
-# ファイル書き込みの排他制御用ロック（並列処理による競合防止）
-_file_lock = threading.Lock()
+# スナップショット書き込みの排他制御用ロック（並列処理による競合防止）
+_snapshot_lock = threading.Lock()
 
-def history_file(year):
-    return f'all_history_{year}.json'
+def history_file(channel_name):
+    return f'history_{channel_name}.json'
 
 # ----------------------------------------------------------------
 # ファイル読み書き
@@ -307,7 +307,7 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
 
 def update_snapshots(channel_name, channel_id, channel_stats, videos):
     """all_snapshots.json を更新"""
-    with _file_lock:
+    with _snapshot_lock:
         snapshots = load_json(SNAPSHOTS_FILE, {})
 
         snapshots[channel_name] = {
@@ -326,16 +326,15 @@ def update_snapshots(channel_name, channel_id, channel_stats, videos):
         save_json(SNAPSHOTS_FILE, snapshots)
         print(f'  スナップショット保存: {SNAPSHOTS_FILE}')
 
-def update_history(channel_name, videos, today_str, year, channel_stats=None):
-    """all_history_{year}.json を更新（日次集約: 1日1レコード）"""
-    path = history_file(year)
-    with _file_lock:
-        history = load_json(path, {})
+def update_history(channel_name, videos, today_str, channel_stats=None):
+    """history_{channel_name}.json を更新（日次集約: 1日1レコード）"""
+    path = history_file(channel_name)
+    history = load_json(path, {})
 
-        if channel_name not in history:
-            history[channel_name] = {}
+    if channel_name not in history:
+        history[channel_name] = {}
 
-        channel_history = history[channel_name]
+    channel_history = history[channel_name]
 
         # チャンネル統計の日次履歴を保存（_channel_stats キーに蓄積）
         if channel_stats:
@@ -373,15 +372,15 @@ def update_history(channel_name, videos, today_str, year, channel_stats=None):
                 'コメント数': video['コメント数']
             }
 
-        history[channel_name] = channel_history
-        save_json(path, history)
-        print(f'  履歴保存: {path}')
+    history[channel_name] = channel_history
+    save_json(path, history)
+    print(f'  履歴保存: {path}')
 
 # ----------------------------------------------------------------
 # チャンネル処理
 # ----------------------------------------------------------------
 
-def process_channel(channel_config, overrides, today_str, year):
+def process_channel(channel_config, overrides, today_str):
     """1チャンネルの処理（スレッドセーフ：APIクライアントを個別生成）"""
     channel_name = channel_config['name']
     channel_url = channel_config['url']
@@ -428,7 +427,7 @@ def process_channel(channel_config, overrides, today_str, year):
 
     # 保存
     update_snapshots(channel_name, channel_id, channel_stats, videos)
-    update_history(channel_name, videos, today_str, year, channel_stats=channel_stats)
+    update_history(channel_name, videos, today_str, channel_stats=channel_stats)
 
     print(f'  ✓ {channel_name} 完了')
     return True
@@ -440,7 +439,6 @@ def process_channel(channel_config, overrides, today_str, year):
 def main():
     now = datetime.now(timezone(timedelta(hours=9)))
     today_str = now.strftime('%Y-%m-%d')
-    year = now.strftime('%Y')
 
     print('=' * 50)
     print('YouTube統計 自動チェック開始')
@@ -466,7 +464,7 @@ def main():
     with ThreadPoolExecutor(max_workers=CHANNEL_WORKERS) as executor:
         futures = {
             executor.submit(
-                process_channel, ch, overrides, today_str, year
+                process_channel, ch, overrides, today_str
             ): ch['name']
             for ch in CHANNELS
         }
