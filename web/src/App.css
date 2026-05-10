@@ -360,4 +360,14 @@ a:hover { color: #3a4fa8; text-decoration: underline; }
   /* ランクテーブル幅最適化 */
   .rank-name { max-width: 90px; }
   .rank-diff { font-size: 10px; }
+
+  /* TalentPage */
+  .channel-stats { gap: 12px; font-size: 13px; }
+  .channel-stats span strong { font-size: 16px; }
+  .video-stats { flex-wrap: wrap; gap: 10px; font-size: 12px; }
+  .video-stats strong { font-size: 13px; }
+  .video-card { padding: 10px 12px; }
+  .video-title { font-size: 13px; }
+  .sort-btns { gap: 4px; }
+  .sort-btn { font-size: 11px; padding: 3px 8px; }
 }

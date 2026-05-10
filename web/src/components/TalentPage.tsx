@@ -97,38 +97,40 @@ function MiniBarChart({ daily, title }: {
           （{vals.length}日間平均：{fmtBarLabel(avg)}）
         </span>
       </div>
-      <svg width={svgW} height={svgH} style={{ fontFamily: 'inherit', display: 'block' }}>
-        {ticks.map(tick => {
-          const y = sy(tick)
-          return (
-            <line key={tick} x1={PAD.left} y1={y} x2={PAD.left + count * BAR_SLOT} y2={y}
-              stroke={tick === 0 ? '#3a4580' : '#e0e3f5'} strokeWidth={tick === 0 ? 1 : 0.5} />
-          )
-        })}
-        {vals.map((v, i) => {
-          const bTop = Math.min(sy(v), zeroY)
-          const bH = Math.max(Math.abs(sy(v) - zeroY), 1)
-          const x = PAD.left + BAR_SLOT * i + (BAR_SLOT - BAR_W) / 2
-          const cx = x + BAR_W / 2
-          const labelY = v >= 0 ? bTop - 3 : bTop + bH + 10
-          return (
-            <g key={i}>
-              <rect x={x} y={bTop} width={BAR_W} height={bH}
-                fill={v >= 0 ? '#3a4580' : '#e88899'} rx={2}>
-                <title>{labels[i]}: {v >= 0 ? '+' : ''}{v.toLocaleString()}</title>
-              </rect>
-              <text x={cx} y={labelY} textAnchor="middle" fontSize={10}
-                fill={v >= 0 ? '#2a305c' : '#aa2233'}>
-                {fmtBarLabel(v)}
-              </text>
-              <text x={cx} y={PAD.top + PLOT_H + 15}
-                textAnchor="middle" fontSize={11} fill="#b0b6d8">
-                {labels[i]}
-              </text>
-            </g>
-          )
-        })}
-      </svg>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <svg width={svgW} height={svgH} style={{ fontFamily: 'inherit', display: 'block' }}>
+          {ticks.map(tick => {
+            const y = sy(tick)
+            return (
+              <line key={tick} x1={PAD.left} y1={y} x2={PAD.left + count * BAR_SLOT} y2={y}
+                stroke={tick === 0 ? '#3a4580' : '#e0e3f5'} strokeWidth={tick === 0 ? 1 : 0.5} />
+            )
+          })}
+          {vals.map((v, i) => {
+            const bTop = Math.min(sy(v), zeroY)
+            const bH = Math.max(Math.abs(sy(v) - zeroY), 1)
+            const x = PAD.left + BAR_SLOT * i + (BAR_SLOT - BAR_W) / 2
+            const cx = x + BAR_W / 2
+            const labelY = v >= 0 ? bTop - 3 : bTop + bH + 10
+            return (
+              <g key={i}>
+                <rect x={x} y={bTop} width={BAR_W} height={bH}
+                  fill={v >= 0 ? '#3a4580' : '#e88899'} rx={2}>
+                  <title>{labels[i]}: {v >= 0 ? '+' : ''}{v.toLocaleString()}</title>
+                </rect>
+                <text x={cx} y={labelY} textAnchor="middle" fontSize={10}
+                  fill={v >= 0 ? '#2a305c' : '#aa2233'}>
+                  {fmtBarLabel(v)}
+                </text>
+                <text x={cx} y={PAD.top + PLOT_H + 15}
+                  textAnchor="middle" fontSize={11} fill="#b0b6d8">
+                  {labels[i]}
+                </text>
+              </g>
+            )
+          })}
+        </svg>
+      </div>
     </div>
   )
 }
