@@ -356,14 +356,16 @@ function StatisticsTab({ history, talentName, allVideos, preselect }: {
 function VideoCardItem({ video, onStatsClick }: { video: VideoCard; onStatsClick: () => void }) {
   const v1d = video.再生数daily[0]
   const l1d = video.高評価daily[0]
+  const c1d = video.コメント数daily[0]
   const url = `https://www.youtube.com/watch?v=${video.id}`
 
   const days = []
   for (let i = 1; i < 15; i++) {
     const v = video.再生数daily[i]
     const l = video.高評価daily[i]
+    const c = video.コメント数daily[i]
     if (v === null) break
-    days.push({ label: `${i + 1}D`, v, l })
+    days.push({ label: `${i + 1}D`, v, l, c })
   }
 
   return (
@@ -389,6 +391,14 @@ function VideoCardItem({ video, onStatsClick }: { video: VideoCard; onStatsClick
             </span>
           )}
         </span>
+        <span>
+          コメント：<strong>{video.コメント数.toLocaleString()}</strong>
+          {c1d !== null && (
+            <span className="stat-diff" style={{ color: diffColor(c1d) }}>
+              {' '}({fmtDiff(c1d)})
+            </span>
+          )}
+        </span>
       </div>
       {days.length > 0 && (
         <table className="day-table">
@@ -410,6 +420,14 @@ function VideoCardItem({ video, onStatsClick }: { video: VideoCard; onStatsClick
               {days.map(d => (
                 <td key={d.label} className="day-val" style={{ color: diffColor(d.l) }}>
                   {fmtDiff(d.l)}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <td className="day-label">コメント</td>
+              {days.map(d => (
+                <td key={d.label} className="day-val" style={{ color: diffColor(d.c) }}>
+                  {fmtDiff(d.c)}
                 </td>
               ))}
             </tr>

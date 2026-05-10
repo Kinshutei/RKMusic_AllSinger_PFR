@@ -4,7 +4,7 @@ RKMusic 所属シンガー全員のYouTubeチャンネル統計・動画デー�
 
 ## 対象シンガー（22名）
 
-焔魔るり / HACHI / 瀬戸乃とと / 水瀬凪 / KMNZ / VESPERBELL / CULUA / NEUN / MEDA / CONA / IMI / XIDEN / ヨノ / LEWNE / 羽緒 / Cil / 深影 / wouca / Diα / 妃玖 / HONKTHEHORN / NUROJUNK
+焔魔るり / HACHI / 瀬戸乃とと / 水瀬凪 / KMNZ / VESPERBELL / CULUA / NEUN / MEDA / CONA / IMI / XIDEN / ヨノ / LEWNE / 羽緒 / Cil / 深影 / wouca / Diα / 妃玖 / HONK THE HORN / NUROJUNK
 
 ## 機能
 

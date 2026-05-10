@@ -218,6 +218,33 @@ function TotalBarChart({ points, yKey, title }: {
   )
 }
 
+function ContentTable({ rows }: { rows: SingerRankItem[] }) {
+  const sorted = [...rows].sort((a, b) => b.content_total - a.content_total)
+  const total = sorted.reduce((s, r) => s + r.content_total, 0)
+  return (
+    <table className="rank-table">
+      <tbody>
+        {sorted.map((r, i) => (
+          <tr key={r.talent} className={i % 2 === 0 ? 'row-even' : ''}>
+            <td className="rank-no">{i + 1}.</td>
+            <td className="rank-name">{r.talent}</td>
+            <td className="rank-val">{r.content_total.toLocaleString()}</td>
+            <td className="rank-diff" style={{ color: '#aaa', fontSize: 10 }}>
+              {r.content_movie}動/{r.content_short}短/{r.content_live}生
+            </td>
+          </tr>
+        ))}
+        <tr style={{ borderTop: '2px solid #555', fontWeight: 'bold' }}>
+          <td className="rank-no"></td>
+          <td className="rank-name">合計</td>
+          <td className="rank-val">{total.toLocaleString()}</td>
+          <td className="rank-diff"></td>
+        </tr>
+      </tbody>
+    </table>
+  )
+}
+
 const VIDEO_SECTIONS: { type: VideoType; label: string }[] = [
   { type: 'Movie',       label: '動画部門' },
   { type: 'Short',       label: 'ショート部門' },
@@ -261,7 +288,7 @@ export default function DashboardPage({ history, flags }: Props) {
 
           {/* Singer別 */}
           <h3>Singer別</h3>
-          <div className="three-col">
+          <div className="four-col">
             <div>
               <div className="col-label">登録者数</div>
               <SingerTable rows={data.singerData} valKey="subs_n" diffKey="subs_diff" rateKey="subs_rate" />
@@ -273,6 +300,10 @@ export default function DashboardPage({ history, flags }: Props) {
             <div>
               <div className="col-label">総コメント数</div>
               <SingerTable rows={data.singerData} valKey="comments_n" diffKey="comments_diff" rateKey="comments_rate" />
+            </div>
+            <div>
+              <div className="col-label">総コンテンツ数</div>
+              <ContentTable rows={data.singerData} />
             </div>
           </div>
 

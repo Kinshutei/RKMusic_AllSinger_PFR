@@ -40,6 +40,10 @@ export interface SingerRankItem {
   comments_n: number
   comments_diff: number | null
   comments_rate: number | null
+  content_total: number
+  content_movie: number
+  content_short: number
+  content_live: number
 }
 
 export interface VideoRankItem {
@@ -63,6 +67,8 @@ export interface VideoCard {
   再生数15d増加: number
   高評価数: number
   高評価15d増加: number
+  コメント数: number
   再生数daily: (number | null)[]
   高評価daily: (number | null)[]
+  コメント数daily: (number | null)[]
 }

@@ -9,10 +9,10 @@ export default function Footer() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: '#acd0d1',
-      borderTop: '1px solid #8ab8b9',
+      background: '#2a305c',
+      borderTop: '1px solid #363d74',
       fontSize: 12,
-      color: 'rgb(40,40,40)',
+      color: '#b0b6d8',
       letterSpacing: '0.06em',
       fontFamily: '"Noto Sans JP", sans-serif',
       zIndex: 200,
@@ -20,7 +20,7 @@ export default function Footer() {
       <span className="footer-full">
         © 2026{' '}
         <a href="https://x.com/WL_GE_inn" target="_blank" rel="noopener noreferrer"
-          style={{ color: 'rgb(40,40,40)', textDecoration: 'none' }}>
+          style={{ color: '#8899e8', textDecoration: 'none' }}>
           金鷲亭
         </a>
         　|　非公式ファンサイト — RK Music All Singer Stats

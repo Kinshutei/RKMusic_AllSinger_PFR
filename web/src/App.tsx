@@ -14,7 +14,6 @@ export default function App() {
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState<string | null>(null)
   const [activePage, setActivePage] = useState<Page>('Dashboard')
-  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   useEffect(() => {
     Promise.all([loadHistory(), loadVideoFlags()])
@@ -25,31 +24,23 @@ export default function App() {
 
   const talents = history ? getAvailableTalents(history) : ['Dashboard']
 
-  const handleSelect = (page: Page) => {
-    setActivePage(page)
-    setSidebarOpen(false)
-  }
-
   return (
-    <>
+    <div className="app-layout">
+      {/* ヘッダー */}
+      <header className="app-header">
+        <span className="app-header-title">RKMusic AllSinger PFR</span>
+      </header>
+
       {/* サイドバー */}
-      <aside className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`}>
-        <button
-          className="sidebar-toggle"
-          onClick={() => setSidebarOpen(o => !o)}
-          aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
-        >
-          <span>ME</span>
-          <span>NU</span>
-        </button>
+      <aside className="sidebar">
         <nav className="sidebar-nav">
           {talents.map(talent => (
             <button
               key={talent}
               className={`sidebar-nav-btn${activePage === talent ? ' active' : ''}`}
-              onClick={() => handleSelect(talent)}
+              onClick={() => setActivePage(talent)}
             >
-              <span className="sidebar-nav-text">{talent}</span>
+              {talent}
             </button>
           ))}
         </nav>
@@ -68,6 +59,6 @@ export default function App() {
         </div>
         <Footer />
       </div>
-    </>
+    </div>
   )
 }

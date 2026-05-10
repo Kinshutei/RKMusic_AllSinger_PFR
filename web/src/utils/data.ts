@@ -8,7 +8,7 @@ export const TALENT_ORDER = [
   '焔魔るり', 'HACHI', '瀬戸乃とと', '水瀬凪',
   'KMNZ', 'VESPERBELL', 'CULUA', 'NEUN', 'MEDA', 'CONA',
   'IMI', 'XIDEN', 'ヨノ', 'LEWNE', '羽緒', 'Cil', '深影', 'wouca',
-  'Diα', '妃玖', 'HONKTHEHORN', 'NUROJUNK',
+  'Diα', '妃玖', 'HONK THE HORN', 'NUROJUNK',
 ]
 
 const HISTORY_URL =
@@ -76,15 +76,20 @@ export function buildDashboardData(history: AllHistory, flags: VideoFlags = {}) 
     const views_diff = (n && p) ? views_n - (p.総再生数 ?? 0) : null
 
     let comments_n = 0, comments_p = 0, has_p = false
+    let content_movie = 0, content_short = 0, content_live = 0
     for (const [vid_id, raw] of Object.entries(history[talent] ?? {})) {
       if (vid_id === '_channel_stats') continue
-      const vid = raw as { records?: Record<string, { コメント数?: number }> }
+      const vid = raw as { type?: string; records?: Record<string, { コメント数?: number }> }
       if (!vid.records) continue
       comments_n += vid.records[n_date]?.コメント数 ?? 0
       if (vid.records[p_date] !== undefined) {
         comments_p += vid.records[p_date]?.コメント数 ?? 0
         has_p = true
       }
+      const vtype = (flags[talent]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
+      if (vtype === 'Movie')       content_movie++
+      else if (vtype === 'Short')  content_short++
+      else if (vtype === 'LiveArchive') content_live++
     }
     const comments_diff = has_p ? comments_n - comments_p : null
 
@@ -93,6 +98,8 @@ export function buildDashboardData(history: AllHistory, flags: VideoFlags = {}) 
       subs_diff,  subs_rate:  rate(subs_n,  subs_diff),
       views_diff, views_rate: rate(views_n, views_diff),
       comments_n, comments_diff, comments_rate: rate(comments_n, comments_diff),
+      content_total: content_movie + content_short + content_live,
+      content_movie, content_short, content_live,
     })
   }
 
@@ -167,25 +174,29 @@ export function buildTalentVideoList(history: AllHistory, talentName: string, fl
   const result: VideoCard[] = []
   for (const [vid_id, raw] of Object.entries(talentHist)) {
     if (vid_id === '_channel_stats') continue
-    const vid = raw as { タイトル?: string; type?: string; records?: Record<string, { 再生数?: number; 高評価数?: number }> }
+    const vid = raw as { タイトル?: string; type?: string; records?: Record<string, { 再生数?: number; 高評価数?: number; コメント数?: number }> }
     if (!vid.records) continue
 
     const sorted = Object.keys(vid.records).sort()
     const last = vid.records[sorted.at(-1) ?? ''] ?? {}
-    const current_views = last.再生数   ?? 0
-    const current_likes = last.高評価数 ?? 0
+    const current_views    = last.再生数   ?? 0
+    const current_likes    = last.高評価数 ?? 0
+    const current_comments = last.コメント数 ?? 0
 
-    const daily_views: (number | null)[] = []
-    const daily_likes: (number | null)[] = []
+    const daily_views:    (number | null)[] = []
+    const daily_likes:    (number | null)[] = []
+    const daily_comments: (number | null)[] = []
     for (let i = 1; i <= 15; i++) {
       if (sorted.length > i) {
-        const curr = vid.records[sorted[sorted.length - i]]   ?? {}
+        const curr = vid.records[sorted[sorted.length - i]]     ?? {}
         const prev = vid.records[sorted[sorted.length - i - 1]] ?? {}
         daily_views.push((curr.再生数   ?? 0) - (prev.再生数   ?? 0))
         daily_likes.push((curr.高評価数 ?? 0) - (prev.高評価数 ?? 0))
+        daily_comments.push((curr.コメント数 ?? 0) - (prev.コメント数 ?? 0))
       } else {
         daily_views.push(null)
         daily_likes.push(null)
+        daily_comments.push(null)
       }
     }
 
@@ -197,8 +208,10 @@ export function buildTalentVideoList(history: AllHistory, talentName: string, fl
       再生数15d増加: daily_views.reduce<number>((a, v) => a + (v ?? 0), 0),
       高評価数: current_likes,
       高評価15d増加: daily_likes.reduce<number>((a, v) => a + (v ?? 0), 0),
+      コメント数: current_comments,
       再生数daily: daily_views,
       高評価daily: daily_likes,
+      コメント数daily: daily_comments,
     })
   }
   return result

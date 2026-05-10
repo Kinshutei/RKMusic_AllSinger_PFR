@@ -118,6 +118,17 @@
     }
     .singer-tab:hover { border-color: var(--text-dim); color: var(--text); }
     .singer-tab.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .singer-tab.new-tab { border-color: rgba(107,159,212,0.5); color: var(--accent); }
+    .singer-tab.new-tab:hover { border-color: var(--accent); }
+    .singer-tab.new-tab.active { background: var(--accent-dim); border-color: var(--accent); }
+
+    .video-row.new-row { grid-template-columns: 100px 1fr 80px 148px; }
+    .video-singer-cell {
+      font-size: 11px; color: var(--text-muted); font-family: var(--mono);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px;
+      display: flex; align-items: center;
+    }
+    .new-empty { padding: 40px 0; text-align: center; color: var(--text-muted); font-size: 13px; }
 
     /* ── コントロールバー ── */
     .control-bar {
@@ -230,6 +241,7 @@
       <span class="control-label">ソート</span>
       <button class="sort-btn active" id="sort-dur"   onclick="toggleSort('dur')">再生時間 ▼</button>
       <button class="sort-btn"        id="sort-title" onclick="toggleSort('title')">タイトル（A→Z）</button>
+      <button class="sort-btn"        id="sort-date"  onclick="toggleSort('date')">配信日(新→古)</button>
       <div class="search-wrap">
         <span class="search-label">検索：</span>
         <div class="search-input-wrap">
@@ -255,6 +267,7 @@
   let currentSinger = null
   let sortMode = 'dur-desc'
   let searchQuery = ''
+  let lastCheckDate = localStorage.getItem('flagtool_lastCheckDate') || null
 
   // ── GitHub から取得 ──────────────────────────────────────────────
 
@@ -377,8 +390,8 @@
   const TALENT_ORDER = [
     '焔魔るり','HACHI','瀬戸乃とと','水瀬凪',
     'KMNZ','VESPERBELL','CULUA','NEUN','MEDA','CONA',
-    'IMI','XIDEN','ヨノ','LEWNE','羽緒','Cil','深影','wouca',
-    'Diα','妃玖','HONKTHEHORN','NUROJUNK',
+    'IMI','XIDEN','ヨノ','メメシア','LEWNE','羽緒','Cil','深影','wouca',
+    'Diα','妃玖','HONK THE HORN','NUROJUNK',
   ]
 
   function buildSingerBar() {
@@ -389,6 +402,14 @@
 
     const bar = document.getElementById('singer-bar')
     bar.innerHTML = ''
+
+    const newBtn = document.createElement('button')
+    newBtn.className = 'singer-tab new-tab'
+    newBtn.id = 'tab-new'
+    newBtn.textContent = '新着コンテンツ'
+    newBtn.onclick = () => selectNewContent()
+    bar.appendChild(newBtn)
+
     all.forEach(name => {
       const btn = document.createElement('button')
       btn.className = 'singer-tab'
@@ -396,7 +417,81 @@
       btn.onclick = () => selectSinger(name)
       bar.appendChild(btn)
     })
-    if (all.length > 0) selectSinger(all[0])
+    selectNewContent()
+  }
+
+  function selectNewContent() {
+    currentSinger = null
+    document.querySelectorAll('.singer-tab').forEach(b => b.classList.remove('active'))
+    document.getElementById('tab-new').classList.add('active')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    renderNewContent()
+    const today = new Date().toISOString().slice(0, 10)
+    localStorage.setItem('flagtool_lastCheckDate', today)
+  }
+
+  function renderNewContent() {
+    const list = document.getElementById('video-list')
+    list.innerHTML = ''
+
+    if (!lastCheckDate) {
+      list.innerHTML = '<div class="new-empty">初回起動のため基準日を記録しました。<br>次回起動時から新着コンテンツが表示されます。</div>'
+      document.getElementById('stats-label').textContent = '新着: 0 件'
+      return
+    }
+
+    const allNew = []
+    for (const [singer, singerData] of Object.entries(historyData)) {
+      if (singer === '_channel_stats') continue
+      for (const [vid_id, entry] of Object.entries(singerData)) {
+        if (vid_id === '_channel_stats') continue
+        if (!entry || typeof entry !== 'object') continue
+        const histType = entry.type || 'Movie'
+        if (histType === 'Short') continue
+        const pubDate = entry.公開日 || ''
+        if (pubDate > lastCheckDate) {
+          allNew.push({
+            singer, vid_id,
+            title: entry.タイトル || vid_id,
+            dur: typeof entry.duration === 'number' ? entry.duration : 0,
+            flag: getFlag(singer, vid_id, histType),
+            pubDate,
+          })
+        }
+      }
+    }
+
+    allNew.sort((a, b) => b.pubDate.localeCompare(a.pubDate))
+
+    if (allNew.length === 0) {
+      list.innerHTML = '<div class="new-empty">新着コンテンツはありません</div>'
+      document.getElementById('stats-label').textContent = '新着: 0 件'
+      return
+    }
+
+    const frag = document.createDocumentFragment()
+    for (const v of allNew) {
+      const row = document.createElement('div')
+      row.className = 'video-row new-row'
+      row.dataset.vid = v.vid_id
+      const url = `https://www.youtube.com/watch?v=${v.vid_id}`
+      const durClass = v.dur > 0 ? '' : ' unknown'
+      const mActive = v.flag === 'Movie'       ? ' active-movie' : ''
+      const lActive = v.flag === 'LiveArchive' ? ' active-live'  : ''
+      row.innerHTML =
+        `<div class="video-singer-cell">${esc(v.singer)}</div>` +
+        `<div class="video-title-cell">` +
+          `<a class="video-title-link" href="${url}" target="_blank" rel="noopener">${esc(v.title)}</a>` +
+        `</div>` +
+        `<div class="video-dur${durClass}">${fmtDur(v.dur)}</div>` +
+        `<div class="flag-cell">` +
+          `<button class="flag-btn flag-btn-movie${mActive}" onclick="setFlag('${esc(v.singer)}','${v.vid_id}','Movie')">動画</button>` +
+          `<button class="flag-btn flag-btn-live${lActive}"  onclick="setFlag('${esc(v.singer)}','${v.vid_id}','LiveArchive')">ライブ</button>` +
+        `</div>`
+      frag.appendChild(row)
+    }
+    list.appendChild(frag)
+    document.getElementById('stats-label').textContent = `新着: ${allNew.length} 件`
   }
 
   function selectSinger(name) {
@@ -413,6 +508,9 @@
   function toggleSort(key) {
     const btnDur   = document.getElementById('sort-dur')
     const btnTitle = document.getElementById('sort-title')
+    const btnDate  = document.getElementById('sort-date')
+    const allBtns  = [btnDur, btnTitle, btnDate]
+    allBtns.forEach(b => b.classList.remove('active'))
     if (key === 'dur') {
       if (sortMode === 'dur-desc') {
         sortMode = 'dur-asc'
@@ -422,8 +520,7 @@
         btnDur.textContent = '再生時間 ▼'
       }
       btnDur.classList.add('active')
-      btnTitle.classList.remove('active')
-    } else {
+    } else if (key === 'title') {
       if (sortMode === 'title-asc') {
         sortMode = 'title-desc'
         btnTitle.textContent = 'タイトル（Z→A）'
@@ -432,7 +529,15 @@
         btnTitle.textContent = 'タイトル（A→Z）'
       }
       btnTitle.classList.add('active')
-      btnDur.classList.remove('active')
+    } else {
+      if (sortMode === 'date-desc') {
+        sortMode = 'date-asc'
+        btnDate.textContent = '配信日(古→新)'
+      } else {
+        sortMode = 'date-desc'
+        btnDate.textContent = '配信日(新→古)'
+      }
+      btnDate.classList.add('active')
     }
     renderList()
   }
@@ -490,6 +595,7 @@
   // ── リスト描画 ───────────────────────────────────────────────────
 
   function renderList() {
+    if (!currentSinger) return
     const singer = currentSinger
     const singerData = historyData[singer] || {}
 
@@ -501,7 +607,8 @@
       if (histType === 'Short') continue   // ショートは非表示
       const dur = typeof entry.duration === 'number' ? entry.duration : 0
       const flag = getFlag(singer, vid_id, histType)
-      videos.push({ vid_id, title: entry.タイトル || vid_id, histType, dur, flag })
+      const pubDate = entry.公開日 || ''
+      videos.push({ vid_id, title: entry.タイトル || vid_id, histType, dur, flag, pubDate })
     }
 
     if (searchQuery) videos = videos.filter(v => v.title.toLowerCase().includes(searchQuery))
@@ -510,6 +617,8 @@
     else if (sortMode === 'dur-asc')    videos.sort((a, b) => a.dur - b.dur)
     else if (sortMode === 'title-asc')  videos.sort((a, b) => a.title.localeCompare(b.title, 'ja'))
     else if (sortMode === 'title-desc') videos.sort((a, b) => b.title.localeCompare(a.title, 'ja'))
+    else if (sortMode === 'date-desc')  videos.sort((a, b) => b.pubDate.localeCompare(a.pubDate))
+    else if (sortMode === 'date-asc')   videos.sort((a, b) => a.pubDate.localeCompare(b.pubDate))
 
     const list = document.getElementById('video-list')
     list.innerHTML = ''
@@ -542,6 +651,7 @@
   }
 
   function updateStats(videos) {
+    if (!currentSinger) return
     if (!videos) {
       // 再描画なしでカウントだけ更新する場合
       const singer = currentSinger
