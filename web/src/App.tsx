@@ -6,7 +6,7 @@ import TalentPage from './components/TalentPage'
 import Footer from './components/Footer'
 import './App.css'
 
-type Page = string  // 'Dashboard' or talent name
+type Page = string
 
 export default function App() {
   const [history, setHistory]       = useState<AllHistory | null>(null)
@@ -14,6 +14,7 @@ export default function App() {
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState<string | null>(null)
   const [activePage, setActivePage] = useState<Page>('Dashboard')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     Promise.all([loadHistory(), loadVideoFlags()])
@@ -24,21 +25,40 @@ export default function App() {
 
   const talents = history ? getAvailableTalents(history) : ['Dashboard']
 
+  function navigate(page: Page) {
+    setActivePage(page)
+    setSidebarOpen(false)
+  }
+
   return (
     <div className="app-layout">
       {/* ヘッダー */}
       <header className="app-header">
+        <button
+          className="hamburger-btn"
+          onClick={() => setSidebarOpen(o => !o)}
+          aria-label="メニュー"
+        >
+          <span />
+          <span />
+          <span />
+        </button>
         <span className="app-header-title">RKMusic AllSinger PFR</span>
       </header>
 
+      {/* オーバーレイ */}
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* サイドバー */}
-      <aside className="sidebar">
+      <aside className={`sidebar${sidebarOpen ? ' sidebar--open' : ''}`}>
         <nav className="sidebar-nav">
           {talents.map(talent => (
             <button
               key={talent}
               className={`sidebar-nav-btn${activePage === talent ? ' active' : ''}`}
-              onClick={() => setActivePage(talent)}
+              onClick={() => navigate(talent)}
             >
               {talent}
             </button>

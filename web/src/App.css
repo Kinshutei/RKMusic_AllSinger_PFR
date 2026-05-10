@@ -295,9 +295,113 @@ a:hover { color: #3a4fa8; text-decoration: underline; }
   font-weight: 700;
 }
 
+/* ── ハンバーガーボタン ── */
+.hamburger-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px 4px 0;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+.hamburger-btn span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: #e0e3f5;
+  border-radius: 2px;
+}
+
+/* ── サイドバーオーバーレイ ── */
+.sidebar-overlay {
+  display: none;
+}
+
 /* ── レスポンシブ ── */
 @media (max-width: 700px) {
   .two-col   { grid-template-columns: 1fr; }
   .three-col { grid-template-columns: 1fr; }
-  .content   { padding: 16px; }
+  .four-col  { grid-template-columns: 1fr; }
+  .content   { padding: 16px 12px; }
+}
+
+@media (max-width: 768px) {
+  /* ハンバーガー表示 */
+  .hamburger-btn { display: flex; }
+
+  /* サイドバー折りたたみ */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 150;
+  }
+  .sidebar.sidebar--open {
+    transform: translateX(0);
+  }
+
+  /* オーバーレイ */
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 140;
+  }
+
+  /* メインを左寄せ */
+  .main-wrapper {
+    margin-left: 0;
+  }
+
+  /* Dashboardランクテーブル → カードスタイル */
+  .rank-table,
+  .rank-table tbody,
+  .rank-table tr,
+  .rank-table td {
+    display: block;
+  }
+  .rank-table tr {
+    border: 1px solid #d0d4ec;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    background: #fff !important;
+  }
+  .rank-table tr:last-child {
+    border-top: 2px solid #3a4580;
+    border-radius: 8px;
+  }
+  .rank-no {
+    display: inline;
+    width: auto;
+  }
+  .rank-name {
+    display: inline;
+    max-width: none;
+    white-space: normal;
+  }
+  .rank-name a {
+    font-size: 12px;
+  }
+  .rank-talent {
+    display: inline;
+    margin-right: 4px;
+  }
+  .rank-val {
+    display: block;
+    text-align: left;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 2px 0 0;
+  }
+  .rank-diff {
+    display: inline-block;
+    text-align: left;
+    padding: 0;
+    font-size: 12px;
+  }
 }
