@@ -87,6 +87,7 @@ export function buildDashboardData(history: AllHistory, flags: VideoFlags = {}) 
 
     let comments_n = 0, comments_p = 0, has_p = false
     let content_movie = 0, content_short = 0, content_live = 0
+    let content_n = 0, content_p = 0, has_content_p = false
     for (const [vid_id, raw] of Object.entries(history[talent] ?? {})) {
       if (vid_id === '_channel_stats') continue
       const vid = raw as { type?: string; records?: Record<string, { コメント数?: number }> }
@@ -100,8 +101,11 @@ export function buildDashboardData(history: AllHistory, flags: VideoFlags = {}) 
       if (vtype === 'Movie')       content_movie++
       else if (vtype === 'Short')  content_short++
       else if (vtype === 'LiveArchive') content_live++
+      if (vid.records[n_date] !== undefined) content_n++
+      if (vid.records[p_date] !== undefined) { content_p++; has_content_p = true }
     }
     const comments_diff = has_p ? comments_n - comments_p : null
+    const content_diff = has_content_p ? content_n - content_p : null
 
     singerData.push({
       talent, subs_n, views_n,
@@ -110,6 +114,7 @@ export function buildDashboardData(history: AllHistory, flags: VideoFlags = {}) 
       comments_n, comments_diff, comments_rate: rate(comments_n, comments_diff),
       content_total: content_movie + content_short + content_live,
       content_movie, content_short, content_live,
+      content_diff, content_rate: rate(content_n, content_diff),
     })
   }
 

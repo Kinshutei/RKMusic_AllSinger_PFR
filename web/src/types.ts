@@ -44,6 +44,8 @@ export interface SingerRankItem {
   content_movie: number
   content_short: number
   content_live: number
+  content_diff: number | null
+  content_rate: number | null
 }
 
 export interface VideoRankItem {

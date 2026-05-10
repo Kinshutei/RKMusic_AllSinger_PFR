@@ -164,16 +164,16 @@ a:hover { color: #3a4fa8; text-decoration: underline; }
 .four-col  { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 .col-label { font-size: 12px; font-weight: 700; color: #3a4580; margin-bottom: 4px; letter-spacing: 0.05em; }
 
-.rank-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.rank-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
 .rank-table tr.row-even { background: rgba(58,69,128,0.05); }
 .rank-table tr:hover td { background: rgba(58,69,128,0.1); }
-.rank-no   { padding: 3px 4px; font-weight: 700; white-space: nowrap; color: #3a4580; width: 24px; }
-.rank-name { padding: 3px 6px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-no   { padding: 3px 4px; font-weight: 700; white-space: nowrap; color: #3a4580; width: 26px; }
+.rank-name { padding: 3px 6px; width: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-name a { color: #2a2a2a; text-decoration: none; font-size: 11px; }
 .rank-name a:hover { color: #3a4580; text-decoration: underline; }
 .rank-talent { display: block; font-size: 10px; color: #888; }
-.rank-val  { padding: 3px 6px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.rank-diff { padding: 3px 4px; text-align: right; white-space: nowrap; font-size: 11px; }
+.rank-val  { padding: 3px 6px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; width: 82px; }
+.rank-diff { padding: 3px 4px; text-align: right; white-space: nowrap; font-size: 11px; width: 116px; overflow: hidden; }
 
 /* ── チャンネルヘッダー ── */
 .channel-header { margin-bottom: 8px; }

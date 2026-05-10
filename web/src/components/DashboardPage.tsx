@@ -221,6 +221,12 @@ function TotalBarChart({ points, yKey, title }: {
 function ContentTable({ rows }: { rows: SingerRankItem[] }) {
   const sorted = [...rows].sort((a, b) => b.content_total - a.content_total)
   const total = sorted.reduce((s, r) => s + r.content_total, 0)
+  const totalDiff = sorted.every(r => r.content_diff === null)
+    ? null
+    : sorted.reduce((s, r) => s + (r.content_diff ?? 0), 0)
+  const totalRate = totalDiff !== null && total - totalDiff > 0
+    ? Math.round(totalDiff / (total - totalDiff) * 1000) / 10
+    : null
   return (
     <table className="rank-table">
       <tbody>
@@ -229,8 +235,8 @@ function ContentTable({ rows }: { rows: SingerRankItem[] }) {
             <td className="rank-no">{i + 1}.</td>
             <td className="rank-name">{r.talent}</td>
             <td className="rank-val">{r.content_total.toLocaleString()}</td>
-            <td className="rank-diff" style={{ color: '#aaa', fontSize: 10 }}>
-              {r.content_movie}動/{r.content_short}短/{r.content_live}生
+            <td className="rank-diff" style={{ color: diffColor(r.content_diff) }}>
+              {fmtDiff(r.content_diff, r.content_rate)}
             </td>
           </tr>
         ))}
@@ -238,7 +244,9 @@ function ContentTable({ rows }: { rows: SingerRankItem[] }) {
           <td className="rank-no"></td>
           <td className="rank-name">合計</td>
           <td className="rank-val">{total.toLocaleString()}</td>
-          <td className="rank-diff"></td>
+          <td className="rank-diff" style={{ color: diffColor(totalDiff) }}>
+            {fmtDiff(totalDiff, totalRate)}
+          </td>
         </tr>
       </tbody>
     </table>
