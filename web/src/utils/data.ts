@@ -7,7 +7,7 @@ export const TALENT_ORDER = [
   'Dashboard',
   '焔魔るり', 'HACHI', '瀬戸乃とと', '水瀬凪',
   'KMNZ', 'VESPERBELL', 'CULUA', 'NEUN', 'MEDA', 'CONA',
-  'IMI', 'XIDEN', 'ヨノ', 'LEWNE', '羽緒', 'Cil', '深影', 'wouca',
+  'IMI', 'XIDEN', 'ヨノ', 'メメシア', 'LEWNE', '羽緒', 'Cil', '深影', 'wouca',
   'Diα', '妃玖', 'HONK THE HORN', 'NUROJUNK',
 ]
 
