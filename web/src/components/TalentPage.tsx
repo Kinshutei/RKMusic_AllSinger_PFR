@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
-import { AllHistory, VideoCard, VideoHistoryEntry, VideoType, VideoFlags } from '../types'
+import { useState } from 'react'
+import { VideoCard, VideoType, VideoFlags, AllHistory } from '../types'
 import { getLatestChannelStats, buildTalentVideoList } from '../utils/data'
 
 interface Props {
@@ -8,22 +8,22 @@ interface Props {
   flags: VideoFlags
 }
 
-type SortKey = '再生数' | '高評価数' | '再生数15d増加' | '高評価15d増加'
-type TabType = VideoType | 'Statistics'
-type StatsMetric = '再生数' | '高評価数'
+type SortKey = '再生数' | '高評価数' | 'コメント数' | '再生数15d増加' | '高評価15d増加' | 'キリ番到達日'
+type TabType = VideoType
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: '再生数',       label: '📊 再生数TOP' },
   { key: '高評価数',     label: '👍 高評価TOP' },
+  { key: 'コメント数',   label: '💬 コメント数TOP' },
   { key: '再生数15d増加', label: '📈 再生15日増加' },
   { key: '高評価15d増加', label: '💹 高評価15日増加' },
+  { key: 'キリ番到達日',   label: '📅 キリ番到達順' },
 ]
 
 const ALL_TABS: { type: TabType; label: string }[] = [
   { type: 'Movie',       label: '動画' },
   { type: 'Short',       label: 'ショート' },
   { type: 'LiveArchive', label: 'ライブ' },
-  { type: 'Statistics',  label: 'Statistics' },
 ]
 
 function fmtDiff(v: number | null): string {
@@ -36,96 +36,103 @@ function diffColor(v: number | null): string {
   return v > 0 ? '#2e7d5a' : v < 0 ? '#c0392b' : '#888'
 }
 
-// ── SVG棒グラフ ───────────────────────────────────────────────────────────────
-function BarChart({ dates, values, metric }: { dates: string[]; values: number[]; metric: string }) {
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const [containerW, setContainerW] = useState(600)
 
-  useEffect(() => {
-    const el = wrapperRef.current
-    if (!el) return
-    const update = () => setContainerW(el.clientWidth)
-    update()
-    const ro = new ResizeObserver(update)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
+function niceScale(dataMin: number, dataMax: number, targetTicks = 4) {
+  const minV = Math.min(dataMin, 0)
+  const maxV = Math.max(dataMax, 0)
+  if (minV === maxV) return { ticks: [0, maxV || 1], niceMin: 0, niceMax: maxV || 1 }
+  const range = maxV - minV
+  const rawStep = range / (targetTicks - 1)
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)))
+  const norm = rawStep / mag
+  const step = norm <= 1 ? mag : norm <= 2 ? 2 * mag : norm <= 5 ? 5 * mag : 10 * mag
+  const niceMin = Math.floor(minV / step) * step
+  const niceMax = Math.ceil(maxV / step) * step
+  const ticks: number[] = []
+  for (let v = niceMin; v <= niceMax + step * 0.01; v += step) {
+    ticks.push(Math.round(v * 1e10) / 1e10)
+  }
+  return { ticks, niceMin, niceMax }
+}
 
-  const PADDING = { top: 20, right: 20, bottom: 60, left: 72 }
-  const plotH = 260
-  // バーが多い場合はスクロール、少ない場合はコンテナ幅いっぱいに広げる
-  const minBarSlot = 20
-  const naturalW = PADDING.left + PADDING.right + dates.length * minBarSlot
-  const svgW = Math.max(containerW, naturalW)
-  const plotW = svgW - PADDING.left - PADDING.right
-  const barSlot = plotW / (dates.length || 1)
-  const barW = Math.min(barSlot - 4, 40)
-  const svgH = PADDING.top + plotH + PADDING.bottom
+function fmtBarLabel(v: number): string {
+  const sign = v >= 0 ? '+' : '-'
+  const abs = Math.abs(v)
+  if (abs >= 10000) return `${sign}${Math.round(abs / 1000)}K`
+  if (abs >= 1000)  return `${sign}${(abs / 1000).toFixed(1)}K`
+  return `${sign}${abs}`
+}
 
-  const maxVal = Math.max(...values, 1)
-  const yTickCount = 5
-  const yTicks = Array.from({ length: yTickCount + 1 }, (_, i) => Math.round(maxVal * i / yTickCount))
-  const labelStep = Math.ceil(dates.length / 30)
+function MiniBarChart({ daily, title }: {
+  daily: (number | null)[]
+  title: string
+}) {
+  const n = daily.findIndex(v => v === null)
+  const count = n === -1 ? daily.length : n
+  if (count < 2) return null
+
+  const vals = daily.slice(0, count) as number[]
+  const labels = vals.map((_, i) => `${i + 2}D`)
+
+  const BAR_SLOT = 36
+  const BAR_W = 30
+  const PAD = { top: 22, right: 8, bottom: 22, left: 4 }
+  const PLOT_H = 72
+
+  const svgW = PAD.left + PAD.right + count * BAR_SLOT
+  const svgH = PAD.top + PLOT_H + PAD.bottom
+
+  const { ticks, niceMin, niceMax } = niceScale(Math.min(...vals), Math.max(...vals))
+  const displayRange = niceMax - niceMin || 1
+  const sy = (v: number) => PAD.top + PLOT_H - ((v - niceMin) / displayRange) * PLOT_H
+  const zeroY = sy(0)
+
+  const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
 
   return (
-    <div ref={wrapperRef} style={{ overflowX: 'auto', marginTop: 8 }}>
+    <div style={{ marginBottom: 6 }}>
+      <div style={{ fontSize: 12, color: '#888', marginBottom: 2 }}>
+        {title}
+        <span style={{ marginLeft: 8, color: '#2a305c' }}>
+          （{vals.length}日間平均：{fmtBarLabel(avg)}）
+        </span>
+      </div>
       <svg width={svgW} height={svgH} style={{ fontFamily: 'inherit', display: 'block' }}>
-        {/* グリッド線 + Y軸ラベル */}
-        {yTicks.map((tick, i) => {
-          const y = PADDING.top + plotH - (plotH * i / yTickCount)
+        {ticks.map(tick => {
+          const y = sy(tick)
           return (
-            <g key={tick}>
-              <line x1={PADDING.left} y1={y} x2={PADDING.left + plotW} y2={y}
-                    stroke={i === 0 ? '#888' : '#e0d8d0'} strokeWidth={1} />
-              <text x={PADDING.left - 6} y={y + 4} textAnchor="end" fontSize={10} fill="#888">
-                {tick.toLocaleString()}
+            <line key={tick} x1={PAD.left} y1={y} x2={PAD.left + count * BAR_SLOT} y2={y}
+              stroke={tick === 0 ? '#3a4580' : '#e0e3f5'} strokeWidth={tick === 0 ? 1 : 0.5} />
+          )
+        })}
+        {vals.map((v, i) => {
+          const bTop = Math.min(sy(v), zeroY)
+          const bH = Math.max(Math.abs(sy(v) - zeroY), 1)
+          const x = PAD.left + BAR_SLOT * i + (BAR_SLOT - BAR_W) / 2
+          const cx = x + BAR_W / 2
+          const labelY = v >= 0 ? bTop - 3 : bTop + bH + 10
+          return (
+            <g key={i}>
+              <rect x={x} y={bTop} width={BAR_W} height={bH}
+                fill={v >= 0 ? '#3a4580' : '#e88899'} rx={2}>
+                <title>{labels[i]}: {v >= 0 ? '+' : ''}{v.toLocaleString()}</title>
+              </rect>
+              <text x={cx} y={labelY} textAnchor="middle" fontSize={10}
+                fill={v >= 0 ? '#2a305c' : '#aa2233'}>
+                {fmtBarLabel(v)}
+              </text>
+              <text x={cx} y={PAD.top + PLOT_H + 15}
+                textAnchor="middle" fontSize={11} fill="#b0b6d8">
+                {labels[i]}
               </text>
             </g>
           )
         })}
-
-        {/* バー */}
-        {dates.map((date, i) => {
-          const barH = Math.max((values[i] / maxVal) * plotH, 0)
-          const x = PADDING.left + barSlot * i + (barSlot - barW) / 2
-          const y = PADDING.top + plotH - barH
-          const showLabel = dates.length <= 30 || i % labelStep === 0
-          return (
-            <g key={date}>
-              <rect x={x} y={y} width={barW} height={barH} fill="#acd0d1" rx={2}>
-                <title>{date}: {values[i].toLocaleString()}</title>
-              </rect>
-              {showLabel && (
-                <text
-                  x={x + barW / 2} y={PADDING.top + plotH + 10}
-                  textAnchor="end" fontSize={9} fill="#888"
-                  transform={`rotate(-45, ${x + barW / 2}, ${PADDING.top + plotH + 10})`}
-                >
-                  {date.slice(5)}
-                </text>
-              )}
-            </g>
-          )
-        })}
-
-        {/* Y軸 */}
-        <line x1={PADDING.left} y1={PADDING.top} x2={PADDING.left} y2={PADDING.top + plotH}
-              stroke="#888" strokeWidth={1} />
-
-        {/* Y軸ラベル */}
-        <text
-          x={14} y={PADDING.top + plotH / 2}
-          textAnchor="middle" fontSize={10} fill="#5a8a8b"
-          transform={`rotate(-90, 14, ${PADDING.top + plotH / 2})`}
-        >
-          {metric}
-        </text>
       </svg>
     </div>
   )
 }
 
-// ── キリ番計算ユーティリティ ─────────────────────────────────────────────────
 function getNextMilestone(val: number): number {
   let unit: number
   if (val < 10000)       unit = 1000
@@ -142,237 +149,42 @@ function estimateDate(latestDate: string, latestVal: number, milestone: number, 
   return d.toISOString().slice(0, 10)
 }
 
-// ── Statisticsタブ ────────────────────────────────────────────────────────────
-function StatisticsTab({ history, talentName, allVideos, preselect }: {
-  history: AllHistory
-  talentName: string
-  allVideos: VideoCard[]
-  preselect?: string | null
-}) {
-  const [searchText, setSearchText] = useState('')
-  const [selectedId, setSelectedId] = useState<string | null>(preselect ?? null)
-
-  useEffect(() => {
-    if (preselect) setSelectedId(preselect)
-  }, [preselect])
-  const [metric, setMetric] = useState<StatsMetric>('再生数')
-
-  const query = searchText.trim().toLowerCase()
-  const matches = query
-    ? allVideos.filter(v => v.タイトル.toLowerCase().includes(query)).slice(0, 10)
-    : []
-
-  const talentHist = history[talentName] ?? {}
-  const selectedVid = selectedId
-    ? (talentHist[selectedId] as VideoHistoryEntry | undefined)
-    : null
-
-  const records = selectedVid?.records ?? {}
-  const dates = Object.keys(records).sort()
-  const values = dates.map(d => records[d]?.[metric] ?? 0)
-
-  return (
-    <div>
-      {/* 検索フォーム */}
-      <input
-        className="stats-search-input"
-        type="text"
-        placeholder="タイトルを入力してください..."
-        value={searchText}
-        onChange={e => setSearchText(e.target.value)}
-      />
-
-      {/* アコーディオン */}
-      {matches.length > 0 && (
-        <div className="stats-dropdown">
-          {matches.map(v => (
-            <button
-              key={v.id}
-              className="stats-dropdown-item"
-              onClick={() => { setSelectedId(v.id); setSearchText('') }}
-            >
-              <span className="stats-type-badge">[{v.type}]</span>{v.タイトル}
-            </button>
-          ))}
-        </div>
-      )}
-      {query && matches.length === 0 && (
-        <p className="muted" style={{ fontSize: 12, margin: '4px 0' }}>一致する動画が見つかりません</p>
-      )}
-
-      {/* 選択中コンテンツ */}
-      {selectedId && selectedVid ? (
-        <>
-          <div className="stats-video-title">
-            <a href={`https://www.youtube.com/watch?v=${selectedId}`} target="_blank" rel="noopener noreferrer">
-              {selectedVid.タイトル}
-            </a>
-          </div>
-
-          <div className="stats-metric-btns">
-            <button
-              className={`sort-btn${metric === '再生数' ? ' active' : ''}`}
-              onClick={() => setMetric('再生数')}
-            >再生数</button>
-            <button
-              className={`sort-btn${metric === '高評価数' ? ' active' : ''}`}
-              onClick={() => setMetric('高評価数')}
-            >高評価数</button>
-          </div>
-
-          {dates.length > 0 ? (
-            <>
-              <BarChart dates={dates} values={values} metric={metric} />
-
-              {/* 統計テーブル */}
-              {(() => {
-                const n = dates.length
-                const latestVal = values[n - 1]
-                const latestDate = dates[n - 1]
-
-                // 全期間平均
-                const overallAvg = n >= 2
-                  ? (values[n - 1] - values[0]) / (n - 1)
-                  : null
-
-                // 直近N日の1日平均
-                const calcRecentAvg = (days: number): number | null => {
-                  if (n < 2) return null
-                  const start = Math.max(0, n - days)
-                  const diffs: number[] = []
-                  for (let i = start + 1; i < n; i++) diffs.push(values[i] - values[i - 1])
-                  return diffs.length > 0 ? diffs.reduce((a, b) => a + b, 0) / diffs.length : null
-                }
-
-                const recent90Avg = calcRecentAvg(90)
-                const recent30Avg = calcRecentAvg(30)
-                const recent7Avg  = calcRecentAvg(7)
-
-                const milestone = getNextMilestone(latestVal)
-                const fmtAvg = (v: number | null) =>
-                  v !== null ? `${v >= 0 ? '+' : ''}${v.toFixed(1)}` : '—'
-
-                return (
-                  <div className="stats-table-wrap">
-                    <table className="stats-info-table">
-                      <thead>
-                        <tr>
-                          <th />
-                          <th>全期間</th>
-                          <th>直近3ヶ月</th>
-                          <th>直近1ヶ月</th>
-                          <th>直近7日</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td>1日当たり増加数</td>
-                          <td>{fmtAvg(overallAvg)}</td>
-                          <td>{fmtAvg(recent90Avg)}</td>
-                          <td>{fmtAvg(recent30Avg)}</td>
-                          <td>{fmtAvg(recent7Avg)}</td>
-                        </tr>
-                        <tr>
-                          <td>直近キリ番 <strong>{milestone.toLocaleString()}</strong> 到達予測日</td>
-                          <td>{estimateDate(latestDate, latestVal, milestone, overallAvg)}</td>
-                          <td>{estimateDate(latestDate, latestVal, milestone, recent90Avg)}</td>
-                          <td>{estimateDate(latestDate, latestVal, milestone, recent30Avg)}</td>
-                          <td>{estimateDate(latestDate, latestVal, milestone, recent7Avg)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )
-              })()}
-            </>
-          ) : (
-            <p className="muted">グラフ表示には1日以上の履歴データが必要です</p>
-          )}
-        </>
-      ) : !selectedId && (
-        <p className="muted" style={{ marginTop: 32, textAlign: 'center' }}>
-          ↑ 上の検索フォームから動画を選択してください
-        </p>
-      )}
-
-      {/* キリ番アラート */}
-      {(() => {
-        const alerts: { id: string; title: string; type: string; currentVal: number; milestone: number; daysLeft: number }[] = []
-
-        for (const [vid_id, raw] of Object.entries(talentHist)) {
-          if (vid_id === '_channel_stats') continue
-          const vid = raw as VideoHistoryEntry
-          if (!vid.records) continue
-
-          const sortedDates = Object.keys(vid.records).sort()
-          const n = sortedDates.length
-          if (n < 2) continue
-
-          const latestVal = vid.records[sortedDates[n - 1]]?.再生数 ?? 0
-
-          const start = Math.max(0, n - 7)
-          const diffs: number[] = []
-          for (let i = start + 1; i < n; i++) {
-            diffs.push((vid.records[sortedDates[i]]?.再生数 ?? 0) - (vid.records[sortedDates[i - 1]]?.再生数 ?? 0))
-          }
-          if (diffs.length === 0) continue
-          const avg = diffs.reduce((a, b) => a + b, 0) / diffs.length
-          if (avg <= 0) continue
-
-          const milestone = getNextMilestone(latestVal)
-          const daysLeft = (milestone - latestVal) / avg
-          if (daysLeft <= 2) {
-            alerts.push({ id: vid_id, title: vid.タイトル ?? vid_id, type: vid.type ?? 'Movie', currentVal: latestVal, milestone, daysLeft })
-          }
-        }
-
-        alerts.sort((a, b) => a.daysLeft - b.daysLeft)
-        if (alerts.length === 0) return null
-
-        return (
-          <div className="milestone-alert-wrap">
-            <div className="milestone-alert-header">🎯 キリ番まで2日以内（直近7日平均）</div>
-            {alerts.map(a => (
-              <div key={a.id} className="milestone-alert-item">
-                <span className="stats-type-badge">[{a.type}]</span>
-                <a href={`https://www.youtube.com/watch?v=${a.id}`} target="_blank" rel="noopener noreferrer"
-                   className="milestone-alert-title">
-                  {a.title}
-                </a>
-                <span className="milestone-alert-nums">
-                  {a.currentVal.toLocaleString()} → <strong>{a.milestone.toLocaleString()}</strong>
-                  <span className="milestone-alert-days">約{a.daysLeft.toFixed(1)}日</span>
-                </span>
-              </div>
-            ))}
-          </div>
-        )
-      })()}
-    </div>
-  )
+// ── 動画カード ────────────────────────────────────────────────────────────────
+function viewMilestoneDays(再生数: number, daily: (number | null)[]): number {
+  const vals = daily.filter((v): v is number => v !== null)
+  if (vals.length === 0) return Infinity
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length
+  if (avg <= 0) return Infinity
+  const milestone = getNextMilestone(再生数)
+  const days = (milestone - 再生数) / avg
+  return days > 0 ? days : Infinity
 }
 
-// ── 動画カード ────────────────────────────────────────────────────────────────
-function VideoCardItem({ video, onStatsClick }: { video: VideoCard; onStatsClick: () => void }) {
+function viewMilestoneLabel(再生数: number, daily: (number | null)[]): string | null {
+  const vals = daily.filter((v): v is number => v !== null)
+  if (vals.length === 0) return null
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length
+  if (avg <= 0) return null
+  const milestone = getNextMilestone(再生数)
+  const today = new Date().toISOString().slice(0, 10)
+  const dateStr = estimateDate(today, 再生数, milestone, avg)
+  if (dateStr === '—') return null
+  const [, m, d] = dateStr.split('-')
+  const daysLeft = Math.ceil((new Date(dateStr).getTime() - new Date(today).getTime()) / 86400000)
+  return `次のキリ番 ${milestone.toLocaleString()} / ${parseInt(m)}月${parseInt(d)}日頃（${daysLeft}日後）`
+}
+
+function VideoCardItem({ video }: { video: VideoCard }) {
   const v1d = video.再生数daily[0]
   const l1d = video.高評価daily[0]
   const c1d = video.コメント数daily[0]
   const url = `https://www.youtube.com/watch?v=${video.id}`
-
-  const days = []
-  for (let i = 1; i < 15; i++) {
-    const v = video.再生数daily[i]
-    const l = video.高評価daily[i]
-    const c = video.コメント数daily[i]
-    if (v === null) break
-    days.push({ label: `${i + 1}D`, v, l, c })
-  }
+  const commentLabel = viewMilestoneLabel(video.再生数, video.再生数daily)
 
   return (
     <div className="video-card">
       <div className="video-title">
         <a href={url} target="_blank" rel="noopener noreferrer">{video.タイトル}</a>
-        <button className="stats-jump-btn" onClick={onStatsClick} title="Statisticsで見る">📊</button>
       </div>
       <div className="video-stats">
         <span>
@@ -400,40 +212,13 @@ function VideoCardItem({ video, onStatsClick }: { video: VideoCard; onStatsClick
           )}
         </span>
       </div>
-      {days.length > 0 && (
-        <table className="day-table">
-          <tbody>
-            <tr>
-              <td className="day-label" />
-              {days.map(d => <td key={d.label} className="day-head">{d.label}</td>)}
-            </tr>
-            <tr>
-              <td className="day-label">再生</td>
-              {days.map(d => (
-                <td key={d.label} className="day-val" style={{ color: diffColor(d.v) }}>
-                  {fmtDiff(d.v)}
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <td className="day-label">高評価</td>
-              {days.map(d => (
-                <td key={d.label} className="day-val" style={{ color: diffColor(d.l) }}>
-                  {fmtDiff(d.l)}
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <td className="day-label">コメント</td>
-              {days.map(d => (
-                <td key={d.label} className="day-val" style={{ color: diffColor(d.c) }}>
-                  {fmtDiff(d.c)}
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
+      {commentLabel && (
+        <div style={{ fontSize: 12, color: '#3a4580', marginTop: 2, marginBottom: 12 }}>
+          {commentLabel}
+        </div>
       )}
+      <MiniBarChart daily={video.再生数daily.slice(1)} title="再生数 日別増加" />
+      <MiniBarChart daily={video.高評価daily.slice(1)} title="高評価数 日別増加" />
     </div>
   )
 }
@@ -447,14 +232,9 @@ export default function TalentPage({ history, talentName, flags }: Props) {
     if (v.type in videoByType) videoByType[v.type].push(v)
   }
 
-  const activeTabs = ALL_TABS.filter(t =>
-    t.type === 'Statistics'
-      ? allVideos.length > 0
-      : videoByType[t.type as VideoType].length > 0
-  )
+  const activeTabs = ALL_TABS.filter(t => videoByType[t.type].length > 0)
   const [activeType, setActiveType] = useState<TabType>(activeTabs[0]?.type ?? 'Movie')
   const [sortKey, setSortKey] = useState<SortKey>('再生数')
-  const [statsPreselect, setStatsPreselect] = useState<string | null>(null)
 
   function fmtStatDiff(v: number | null) {
     if (v === null) return null
@@ -462,9 +242,12 @@ export default function TalentPage({ history, talentName, flags }: Props) {
     return <span style={{ fontSize: 13, color: diffColor(v), marginLeft: 6 }}>({sign}{v.toLocaleString()})</span>
   }
 
-  const sorted = activeType !== 'Statistics'
-    ? [...videoByType[activeType as VideoType]].sort((a, b) => b[sortKey] - a[sortKey])
-    : []
+  const sorted = [...videoByType[activeType]].sort((a, b) => {
+    if (sortKey === 'キリ番到達日') {
+      return viewMilestoneDays(a.再生数, a.再生数daily) - viewMilestoneDays(b.再生数, b.再生数daily)
+    }
+    return (b[sortKey] as number) - (a[sortKey] as number)
+  })
 
   return (
     <div>
@@ -492,45 +275,35 @@ export default function TalentPage({ history, talentName, flags }: Props) {
               <button
                 key={t.type}
                 className={`type-tab-btn${activeType === t.type ? ' active' : ''}`}
-                onClick={() => { setActiveType(t.type); if (t.type !== 'Statistics') setSortKey('再生数') }}
+                onClick={() => { setActiveType(t.type); setSortKey('再生数') }}
               >
                 {t.label}
-                {t.type !== 'Statistics' && (
-                  <span className="tab-count">({videoByType[t.type as VideoType].length})</span>
-                )}
+                <span className="tab-count">({videoByType[t.type].length})</span>
               </button>
             ))}
           </div>
 
-          {activeType === 'Statistics' ? (
-            <StatisticsTab history={history} talentName={talentName} allVideos={allVideos} preselect={statsPreselect} />
-          ) : (
-            <>
-              {/* ソートボタン */}
-              <div className="sort-btns">
-                {SORT_OPTIONS.map(o => (
-                  <button
-                    key={o.key}
-                    className={`sort-btn${sortKey === o.key ? ' active' : ''}`}
-                    onClick={() => setSortKey(o.key)}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
+          <>
+            {/* ソートボタン */}
+            <div className="sort-btns">
+              {SORT_OPTIONS.map(o => (
+                <button
+                  key={o.key}
+                  className={`sort-btn${sortKey === o.key ? ' active' : ''}`}
+                  onClick={() => setSortKey(o.key)}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
 
-              {/* 動画カード */}
-              <div className="video-list">
-                {sorted.map(v => (
-                  <VideoCardItem
-                    key={v.id}
-                    video={v}
-                    onStatsClick={() => { setStatsPreselect(v.id); setActiveType('Statistics') }}
-                  />
-                ))}
-              </div>
-            </>
-          )}
+            {/* 動画カード */}
+            <div className="video-list">
+              {sorted.map(v => (
+                <VideoCardItem key={v.id} video={v} />
+              ))}
+            </div>
+          </>
         </>
       )}
     </div>
