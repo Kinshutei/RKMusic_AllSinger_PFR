@@ -16,7 +16,7 @@ function fmtDiff(diff: number | null, rate?: number | null): string {
 
 function diffColor(diff: number | null): string {
   if (diff === null) return '#aaa'
-  return diff > 0 ? '#2e7d5a' : diff < 0 ? '#c0392b' : '#888'
+  return diff > 0 ? '#3a6bcc' : diff < 0 ? '#c0392b' : '#888'
 }
 
 function SingerTable({ rows, valKey, diffKey, rateKey }: {
@@ -173,7 +173,7 @@ function TotalBarChart({ points, yKey, title }: {
             return (
               <g key={tick}>
                 <line x1={PADDING.left} y1={y} x2={PADDING.left + plotW} y2={y}
-                      stroke={tick === 0 ? '#888' : '#e0d8d0'} strokeWidth={1} />
+                      stroke={tick === 0 ? '#888' : '#e0e3f5'} strokeWidth={1} />
                 <text x={PADDING.left - 6} y={y + 4} textAnchor="end" fontSize={10} fill="#888">
                   {fmtY(tick)}
                 </text>
@@ -188,7 +188,7 @@ function TotalBarChart({ points, yKey, title }: {
             const showLabel = dates.length <= 30 || i % labelStep === 0
             return (
               <g key={date}>
-                <rect x={x} y={bTop} width={barW} height={bH} fill="#acd0d1" rx={2}>
+                <rect x={x} y={bTop} width={barW} height={bH} fill="#6677cc" rx={2}>
                   <title>{date}: {v.toLocaleString()}</title>
                 </rect>
                 {showLabel && (
@@ -207,7 +207,7 @@ function TotalBarChart({ points, yKey, title }: {
                 stroke="#888" strokeWidth={1} />
           <text
             x={14} y={PADDING.top + plotH / 2}
-            textAnchor="middle" fontSize={10} fill="#5a8a8b"
+            textAnchor="middle" fontSize={10} fill="#3a4580"
             transform={`rotate(-90, 14, ${PADDING.top + plotH / 2})`}
           >
             {title}

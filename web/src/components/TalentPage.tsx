@@ -33,7 +33,7 @@ function fmtDiff(v: number | null): string {
 
 function diffColor(v: number | null): string {
   if (v === null) return '#aaa'
-  return v > 0 ? '#2e7d5a' : v < 0 ? '#c0392b' : '#888'
+  return v > 0 ? '#3a6bcc' : v < 0 ? '#c0392b' : '#888'
 }
 
 
