@@ -22,7 +22,7 @@ export async function loadHistory(): Promise<AllHistory> {
   const results = await Promise.all(
     talents.map(async talent => {
       try {
-        const res = await fetch(`${HISTORY_BASE_URL}/history_${encodeURIComponent(talent)}.json`)
+        const res = await fetch(`${HISTORY_BASE_URL}/history_${encodeURIComponent(talent)}.json?t=${Date.now()}`)
         if (!res.ok) return {}
         return res.json() as Promise<AllHistory>
       } catch {
