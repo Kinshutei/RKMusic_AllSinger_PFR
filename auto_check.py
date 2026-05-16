@@ -9,8 +9,8 @@ GitHub Actionsで定期実行される（JST 00:00）
 - video_type_overrides.json による例外設定対応
 - チャンネルIDキャッシュで無駄なAPIコールを削減
 - データ保存先:
-    all_snapshots.json        : 全アーティストの最新スナップショット
-    all_history_{year}.json   : 年ごとの動画履歴（日次集約済み）
+    all_snapshots.json           : 全アーティストの最新スナップショット
+    history_{channel_name}.json  : チャンネルごとの動画履歴（日次集約済み）
 """
 
 import os

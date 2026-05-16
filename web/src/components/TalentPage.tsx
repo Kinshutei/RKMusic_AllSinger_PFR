@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { VideoCard, VideoType, VideoFlags, AllHistory } from '../types'
 import { getLatestChannelStats, buildTalentVideoList } from '../utils/data'
+import { niceScale, fmtDiff, diffColor } from '../utils/chartUtils'
 
 interface Props {
   history: AllHistory
@@ -26,34 +27,6 @@ const ALL_TABS: { type: TabType; label: string }[] = [
   { type: 'LiveArchive', label: 'ライブ' },
 ]
 
-function fmtDiff(v: number | null): string {
-  if (v === null) return '—'
-  return v >= 0 ? `+${v.toLocaleString()}` : v.toLocaleString()
-}
-
-function diffColor(v: number | null): string {
-  if (v === null) return '#aaa'
-  return v > 0 ? '#3a6bcc' : v < 0 ? '#c0392b' : '#888'
-}
-
-
-function niceScale(dataMin: number, dataMax: number, targetTicks = 4) {
-  const minV = Math.min(dataMin, 0)
-  const maxV = Math.max(dataMax, 0)
-  if (minV === maxV) return { ticks: [0, maxV || 1], niceMin: 0, niceMax: maxV || 1 }
-  const range = maxV - minV
-  const rawStep = range / (targetTicks - 1)
-  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)))
-  const norm = rawStep / mag
-  const step = norm <= 1 ? mag : norm <= 2 ? 2 * mag : norm <= 5 ? 5 * mag : 10 * mag
-  const niceMin = Math.floor(minV / step) * step
-  const niceMax = Math.ceil(maxV / step) * step
-  const ticks: number[] = []
-  for (let v = niceMin; v <= niceMax + step * 0.01; v += step) {
-    ticks.push(Math.round(v * 1e10) / 1e10)
-  }
-  return { ticks, niceMin, niceMax }
-}
 
 function fmtBarLabel(v: number): string {
   const sign = v >= 0 ? '+' : '-'
@@ -300,8 +273,7 @@ export default function TalentPage({ history, talentName, flags }: Props) {
             ))}
           </div>
 
-          <>
-            {/* ソートボタン */}
+          {/* ソートボタン */}
             <div className="sort-btns">
               {SORT_OPTIONS.map(o => (
                 <button
@@ -320,7 +292,6 @@ export default function TalentPage({ history, talentName, flags }: Props) {
                 <VideoCardItem key={v.id} video={v} />
               ))}
             </div>
-          </>
         </>
       )}
     </div>
