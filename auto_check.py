@@ -19,6 +19,7 @@ import requests
 import threading
 from datetime import datetime, timezone, timedelta
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import isodate
@@ -72,6 +73,22 @@ def load_overrides():
     if total:
         print(f'✓ フラグ設定を読み込みました: {total}件')
     return overrides
+
+# ----------------------------------------------------------------
+# APIリトライ
+# ----------------------------------------------------------------
+
+def execute_with_retry(request, max_retries=3):
+    for attempt in range(max_retries + 1):
+        try:
+            return request.execute()
+        except HttpError as e:
+            if e.status_code in (500, 503) and attempt < max_retries:
+                wait = 2 ** attempt
+                print(f'  ⚠️  API {e.status_code}エラー、{wait}秒後にリトライ ({attempt + 1}/{max_retries})')
+                time.sleep(wait)
+                continue
+            raise
 
 # ----------------------------------------------------------------
 # Short判定
@@ -168,17 +185,17 @@ def get_channel_id(youtube, channel_url):
         if '@' in channel_url:
             handle = channel_url.split('@')[-1]
             # forHandle を使うと @ハンドルで本人チャンネルを直接取得（Topic誤認なし）
-            resp = youtube.channels().list(
+            resp = execute_with_retry(youtube.channels().list(
                 part='id', forHandle=handle
-            ).execute()
+            ))
             if resp.get('items'):
                 return resp['items'][0]['id']
         # /channel/UC... 形式の直接ID指定
         if '/channel/' in channel_url:
             channel_id = channel_url.split('/channel/')[-1].strip('/')
-            resp = youtube.channels().list(
+            resp = execute_with_retry(youtube.channels().list(
                 part='id', id=channel_id
-            ).execute()
+            ))
             if resp.get('items'):
                 return resp['items'][0]['id']
     except Exception as e:
@@ -188,9 +205,9 @@ def get_channel_id(youtube, channel_url):
 def get_channel_stats(youtube, channel_id):
     """チャンネル統計を取得"""
     try:
-        resp = youtube.channels().list(
+        resp = execute_with_retry(youtube.channels().list(
             part='statistics,snippet,brandingSettings', id=channel_id
-        ).execute()
+        ))
         if resp['items']:
             item = resp['items'][0]
             banner_url = (
@@ -219,9 +236,9 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
     cached_videos = snapshots.get(channel_name, {}).get('videos', {})
 
     try:
-        resp = youtube.channels().list(
+        resp = execute_with_retry(youtube.channels().list(
             part='contentDetails', id=channel_id
-        ).execute()
+        ))
         if not resp['items']:
             return videos
 
@@ -229,22 +246,22 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
         next_page_token = None
 
         while True:
-            playlist_resp = youtube.playlistItems().list(
+            playlist_resp = execute_with_retry(youtube.playlistItems().list(
                 part='snippet',
                 playlistId=playlist_id,
                 maxResults=50,
                 pageToken=next_page_token
-            ).execute()
+            ))
 
             video_ids = [
                 item['snippet']['resourceId']['videoId']
                 for item in playlist_resp['items']
             ]
 
-            videos_resp = youtube.videos().list(
+            videos_resp = execute_with_retry(youtube.videos().list(
                 part='snippet,statistics,liveStreamingDetails,contentDetails',
                 id=','.join(video_ids)
-            ).execute()
+            ))
 
             print(f'  取得中... {len(videos) + len(videos_resp["items"])}本')
 
