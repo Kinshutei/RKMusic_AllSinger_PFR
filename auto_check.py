@@ -96,12 +96,17 @@ def execute_with_retry(request, max_retries=3):
 
 def is_short_video(video_id):
     """ShortsのURLにアクセスしてリダイレクト先で判定"""
-    try:
-        url = f'https://www.youtube.com/shorts/{video_id}'
-        response = requests.head(url, allow_redirects=True, timeout=5)
-        return 'shorts' in response.url.lower()
-    except Exception:
-        return False
+    url = f'https://www.youtube.com/shorts/{video_id}'
+    for attempt in range(3):
+        try:
+            response = requests.head(url, allow_redirects=True, timeout=5)
+            return 'shorts' in response.url.lower()
+        except Exception:
+            if attempt < 2:
+                wait = 2 ** attempt
+                print(f'  ⚠️  Short判定失敗、{wait}秒後にリトライ ({attempt + 1}/2): {video_id}')
+                time.sleep(wait)
+    return False
 
 def check_shorts_batch(video_ids):
     """複数動画のShort判定を並列実行"""
@@ -312,11 +317,11 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
         print(f'    Movie: {sum(1 for v in videos if v["type"] == "Movie")}本 / '
               f'Short: {sum(1 for v in videos if v["type"] == "Short")}本 / '
               f'LiveArchive: {sum(1 for v in videos if v["type"] == "LiveArchive")}本')
+        return videos
 
     except Exception as e:
         print(f'  ⚠️  動画取得エラー: {e}')
-
-    return videos
+        return []
 
 # ----------------------------------------------------------------
 # データ保存
