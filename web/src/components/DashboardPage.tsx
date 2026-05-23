@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
+import Plot from 'react-plotly.js'
 import { AllHistory, SingerRankItem, VideoRankItem, VideoType, VideoFlags } from '../types'
-import { buildDashboardData, buildStatsData } from '../utils/data'
+import { buildDashboardData, buildStatsData, buildViewsTypeBreakdown, buildDailyViewsByTalent } from '../utils/data'
 import { niceScale, fmtDiff, diffColor } from '../utils/chartUtils'
 
 interface Props {
@@ -97,8 +98,9 @@ function fmtY(v: number): string {
   return String(v)
 }
 
-function TotalBarChart({ points, yKey, title }: {
-  points: StatsPoint[]
+function DualAxisChart({ statsPoints, incrementPoints, yKey, title }: {
+  statsPoints: StatsPoint[]
+  incrementPoints: StatsPoint[]
   yKey: 'subs' | 'views'
   title: string
 }) {
@@ -115,12 +117,13 @@ function TotalBarChart({ points, yKey, title }: {
     return () => ro.disconnect()
   }, [])
 
-  const dates = points.map(p => p.date)
-  const values = points.map(p => p[yKey])
+  const dates = incrementPoints.map(p => p.date)
+  const barValues = incrementPoints.map(p => p[yKey])
+  const lineValues = statsPoints.slice(1).map(p => p[yKey])
 
-  const PADDING = { top: 20, right: 20, bottom: 60, left: 72 }
+  const PADDING = { top: 20, right: 72, bottom: 60, left: 72 }
   const plotH = 260
-  const minBarSlot = 20
+  const minBarSlot = 40
   const naturalW = PADDING.left + PADDING.right + dates.length * minBarSlot
   const svgW = Math.max(containerW, naturalW)
   const plotW = svgW - PADDING.left - PADDING.right
@@ -128,63 +131,227 @@ function TotalBarChart({ points, yKey, title }: {
   const barW = Math.min(barSlot - 4, 40)
   const svgH = PADDING.top + plotH + PADDING.bottom
 
-  const { ticks, niceMin, niceMax } = niceScale(Math.min(...values), Math.max(...values), 6)
-  const displayRange = niceMax - niceMin || 1
-  const sy = (v: number) => PADDING.top + plotH - ((v - niceMin) / displayRange) * plotH
-  const zeroY = sy(0)
-  const labelStep = Math.ceil(dates.length / 30)
+  const { ticks: ticksL, niceMin: niceMinL, niceMax: niceMaxL } = niceScale(Math.min(0, ...barValues), Math.max(...barValues), 5)
+  const displayRangeL = niceMaxL - niceMinL || 1
+  const syL = (v: number) => PADDING.top + plotH - ((v - niceMinL) / displayRangeL) * plotH
+  const zeroY = syL(0)
+
+  const { ticks: ticksR, niceMin: niceMinR, niceMax: niceMaxR } = niceScale(Math.min(...lineValues), Math.max(...lineValues), 5)
+  const displayRangeR = niceMaxR - niceMinR || 1
+  const syR = (v: number) => PADDING.top + plotH - ((v - niceMinR) / displayRangeR) * plotH
+
+  const linePath = lineValues.map((v, i) => {
+    const x = PADDING.left + barSlot * i + barSlot / 2
+    return `${i === 0 ? 'M' : 'L'} ${x} ${syR(v)}`
+  }).join(' ')
 
   return (
     <div style={{ marginBottom: 32 }}>
       <div className="col-label">{title}</div>
       <div ref={wrapperRef} style={{ overflowX: 'auto', marginTop: 8 }}>
         <svg width={svgW} height={svgH} style={{ fontFamily: 'inherit', display: 'block' }}>
-          {ticks.map((tick) => {
-            const y = sy(tick)
+          {ticksL.map((tick) => {
+            const y = syL(tick)
             return (
               <g key={tick}>
                 <line x1={PADDING.left} y1={y} x2={PADDING.left + plotW} y2={y}
                       stroke={tick === 0 ? '#888' : '#e0e3f5'} strokeWidth={1} />
-                <text x={PADDING.left - 6} y={y + 4} textAnchor="end" fontSize={10} fill="#888">
+                <text x={PADDING.left - 6} y={y + 4} textAnchor="end" fontSize={10} fill="#6677cc">
                   {fmtY(tick)}
                 </text>
               </g>
             )
           })}
+          {ticksR.map((tick) => (
+            <text key={tick} x={PADDING.left + plotW + 6} y={syR(tick) + 4}
+                  textAnchor="start" fontSize={10} fill="#cc4455">
+              {fmtY(tick)}
+            </text>
+          ))}
           {dates.map((date, i) => {
-            const v = values[i]
-            const bTop = Math.min(sy(v), zeroY)
-            const bH = Math.max(Math.abs(sy(v) - zeroY), 1)
+            const v = barValues[i]
+            const bTop = Math.min(syL(v), zeroY)
+            const bH = Math.max(Math.abs(syL(v) - zeroY), 1)
             const x = PADDING.left + barSlot * i + (barSlot - barW) / 2
-            const showLabel = dates.length <= 30 || i % labelStep === 0
+            const showLabel = true
             return (
               <g key={date}>
-                <rect x={x} y={bTop} width={barW} height={bH} fill="#6677cc" rx={2}>
-                  <title>{date}: {v.toLocaleString()}</title>
+                <rect x={x} y={bTop} width={barW} height={bH} fill="rgba(102,119,204,0.7)" rx={2}>
+                  <title>{date} 増加: {v.toLocaleString()}</title>
                 </rect>
+                {showLabel && v !== 0 && (
+                  <text x={x + barW / 2} y={bTop - 3}
+                        textAnchor="middle" fontSize={9} fill="#6677cc">
+                    {fmtY(v)}
+                  </text>
+                )}
                 {showLabel && (
-                  <text
-                    x={x + barW / 2} y={PADDING.top + plotH + 10}
-                    textAnchor="end" fontSize={9} fill="#888"
-                    transform={`rotate(-45, ${x + barW / 2}, ${PADDING.top + plotH + 10})`}
-                  >
+                  <text x={x + barW / 2} y={PADDING.top + plotH + 10}
+                        textAnchor="end" fontSize={9} fill="#888"
+                        transform={`rotate(-45, ${x + barW / 2}, ${PADDING.top + plotH + 10})`}>
                     {date.slice(5)}
                   </text>
                 )}
               </g>
             )
           })}
+          <path d={linePath} fill="none" stroke="#cc4455" strokeWidth={2} />
+          {lineValues.map((v, i) => (
+            <circle key={i} cx={PADDING.left + barSlot * i + barSlot / 2} cy={syR(v)} r={2} fill="#cc4455">
+              <title>{dates[i]} 累計: {v.toLocaleString()}</title>
+            </circle>
+          ))}
           <line x1={PADDING.left} y1={PADDING.top} x2={PADDING.left} y2={PADDING.top + plotH}
-                stroke="#888" strokeWidth={1} />
-          <text
-            x={14} y={PADDING.top + plotH / 2}
-            textAnchor="middle" fontSize={10} fill="#3a4580"
-            transform={`rotate(-90, 14, ${PADDING.top + plotH / 2})`}
-          >
-            {title}
-          </text>
+                stroke="#6677cc" strokeWidth={1.5} />
+          <line x1={PADDING.left + plotW} y1={PADDING.top} x2={PADDING.left + plotW} y2={PADDING.top + plotH}
+                stroke="#cc4455" strokeWidth={1.5} />
+          <text x={12} y={PADDING.top + plotH / 2} textAnchor="middle" fontSize={10} fill="#6677cc"
+                transform={`rotate(-90, 12, ${PADDING.top + plotH / 2})`}>増加分</text>
+          <text x={svgW - 10} y={PADDING.top + plotH / 2} textAnchor="middle" fontSize={10} fill="#cc4455"
+                transform={`rotate(90, ${svgW - 10}, ${PADDING.top + plotH / 2})`}>累計</text>
         </svg>
       </div>
+    </div>
+  )
+}
+
+const PIE_COLORS = { Movie: '#6677cc', Short: '#cc4455', LiveArchive: '#44aa77' }
+const PIE_LABELS = { Movie: '動画', Short: 'ショート', LiveArchive: 'ライブ' }
+
+function PieChart({ breakdown }: {
+  breakdown: { Movie: number; Short: number; LiveArchive: number; date: string }
+}) {
+  const types = ['Movie', 'Short', 'LiveArchive'] as const
+  const total = types.reduce((s, t) => s + breakdown[t], 0)
+  if (total === 0) return null
+
+  const cx = 110, cy = 110, r = 90
+  let cumAngle = -Math.PI / 2
+  const slices = types.map(t => {
+    const value = breakdown[t]
+    const angle = (value / total) * 2 * Math.PI
+    const startAngle = cumAngle
+    cumAngle += angle
+    const endAngle = cumAngle
+    const x1 = cx + r * Math.cos(startAngle)
+    const y1 = cy + r * Math.sin(startAngle)
+    const x2 = cx + r * Math.cos(endAngle)
+    const y2 = cy + r * Math.sin(endAngle)
+    const largeArc = angle > Math.PI ? 1 : 0
+    const pct = (value / total * 100).toFixed(1)
+    return { type: t, value, x1, y1, x2, y2, largeArc, pct, angle }
+  })
+
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div className="col-label">当日増加再生数の内訳（{breakdown.date}）</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 32, marginTop: 8 }}>
+        <svg width={220} height={220} style={{ flexShrink: 0 }}>
+          {slices.map((s) => (
+            s.angle > 0 && (
+              <path key={s.type}
+                d={`M ${cx} ${cy} L ${s.x1} ${s.y1} A ${r} ${r} 0 ${s.largeArc} 1 ${s.x2} ${s.y2} Z`}
+                fill={PIE_COLORS[s.type]} stroke="#fff" strokeWidth={2}
+              >
+                <title>{PIE_LABELS[s.type]}: {s.value.toLocaleString()} ({s.pct}%)</title>
+              </path>
+            )
+          ))}
+        </svg>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {slices.map((s) => (
+            <div key={s.type} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <div style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: PIE_COLORS[s.type], flexShrink: 0 }} />
+              <span style={{ minWidth: 56 }}>{PIE_LABELS[s.type]}</span>
+              <span style={{ fontWeight: 600 }}>{s.pct}%</span>
+              <span style={{ color: '#888' }}>({s.value.toLocaleString()})</span>
+            </div>
+          ))}
+          <div style={{ borderTop: '1px solid #ddd', paddingTop: 6, fontSize: 12, color: '#888' }}>
+            合計: {total.toLocaleString()}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const GROUP_DEFS = [
+  { label: 'LIVE UNION', members: ['焔魔るり', 'HACHI', '瀬戸乃とと', '水瀬凪'],     color: '#2a305c' },
+  { label: 'KMN LABEL',  members: ['KMNZ', 'HONK THE HORN'],                          color: '#363d74' },
+  { label: 'VB+NJ',      members: ['VESPERBELL', 'NUROJUNK'],                          color: '#3a4580' },
+  { label: 'Fused',      members: ['CULUA', 'CONA', '妃玖', 'Diα'],                   color: '#4455aa' },
+  { label: 'GRAY MYTH',  members: ['MEMESIA', 'LEWNE', '羽緒', 'Cil', '深影'],        color: '#6677cc' },
+  { label: 'その他',     members: ['NEUN', 'MEDA', 'IMI', 'XIDEN', 'ヨノ', 'wouca'],  color: '#8899c0' },
+]
+function GroupTreemap({ talentViews, date }: {
+  talentViews: Record<string, number>
+  date: string
+}) {
+  const ids: string[] = []
+  const labels: string[] = []
+  const parents: string[] = []
+  const values: number[] = []
+  const markerColors: string[] = []
+
+  const grandTotal = GROUP_DEFS.reduce((s, g) =>
+    s + g.members.reduce((s2, m) => s2 + (talentViews[m] ?? 0), 0), 0)
+  if (grandTotal === 0) return null
+
+  const groupTotals = GROUP_DEFS.map(g =>
+    g.members.reduce((s, m) => s + (talentViews[m] ?? 0), 0))
+  const maxT = Math.max(...groupTotals)
+  const minT = Math.min(...groupTotals.filter(t => t > 0))
+  const navyShade = (total: number) => {
+    const ratio = maxT > minT ? (total - minT) / (maxT - minT) : 1
+    const r = Math.round(0x88 + (0x2a - 0x88) * ratio)
+    const g = Math.round(0x99 + (0x30 - 0x99) * ratio)
+    const b = Math.round(0xc0 + (0x5c - 0xc0) * ratio)
+    return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`
+  }
+
+  GROUP_DEFS.forEach((g, gi) => {
+    const groupTotal = groupTotals[gi]
+    const groupPct = (groupTotal / grandTotal * 100).toFixed(1)
+    const color = navyShade(groupTotal)
+    ids.push(g.label)
+    labels.push(`${g.label} ${groupPct}%`)
+    parents.push('')
+    values.push(groupTotal)
+    markerColors.push(color)
+    g.members.forEach(m => {
+      const mv = talentViews[m] ?? 0
+      ids.push(m)
+      labels.push(m)
+      parents.push(g.label)
+      values.push(mv)
+      markerColors.push(color + '99')
+    })
+  })
+
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div className="col-label">当日増加再生数のグループ内訳（{date}）</div>
+      <Plot
+        data={[{
+          type: 'treemap',
+          ids,
+          labels,
+          parents,
+          values,
+          branchvalues: 'total',
+          marker: { colors: markerColors },
+          textinfo: 'label+percent root',
+          textfont: { color: '#ffffff' },
+          hovertemplate: '%{label}: %{value:,}<extra></extra>',
+        } as any]}
+        layout={{
+          width: 1100,
+          height: 700,
+          margin: { t: 0, b: 0, l: 0, r: 0 },
+        }}
+        config={{ displayModeBar: false }}
+      />
     </div>
   )
 }
@@ -232,16 +399,16 @@ const VIDEO_SECTIONS: { type: VideoType; label: string }[] = [
 
 export default function DashboardPage({ history, flags }: Props) {
   const [view, setView] = useState<'ranking' | 'stats'>('ranking')
-  const [statsMode, setStatsMode] = useState<'cumulative' | 'increment'>('cumulative')
   const data = buildDashboardData(history, flags)
   const statsPoints = buildStatsData(history)
+  const viewsBreakdown = buildViewsTypeBreakdown(history, flags)
+  const dailyViewsByTalent = buildDailyViewsByTalent(history)
 
   const incrementPoints: StatsPoint[] = statsPoints.slice(1).map((p, i) => ({
     date: p.date,
     subs:  p.subs  - statsPoints[i].subs,
     views: p.views - statsPoints[i].views,
   }))
-  const chartPoints = statsMode === 'cumulative' ? statsPoints : incrementPoints
 
   return (
     <div>
@@ -252,12 +419,10 @@ export default function DashboardPage({ history, flags }: Props) {
 
       {view === 'stats' ? (
         <div style={{ marginTop: 16 }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <button className={`sort-btn${statsMode === 'cumulative' ? ' active' : ''}`} onClick={() => setStatsMode('cumulative')}>累計</button>
-            <button className={`sort-btn${statsMode === 'increment'  ? ' active' : ''}`} onClick={() => setStatsMode('increment')}>増加分</button>
-          </div>
-          <TotalBarChart points={chartPoints} yKey="subs"  title={statsMode === 'cumulative' ? '登録者数（累計）' : '登録者数（日次増加）'} />
-          <TotalBarChart points={chartPoints} yKey="views" title={statsMode === 'cumulative' ? '総再生数（累計）' : '総再生数（日次増加）'} />
+          <DualAxisChart statsPoints={statsPoints} incrementPoints={incrementPoints} yKey="subs"  title="登録者数" />
+          <DualAxisChart statsPoints={statsPoints} incrementPoints={incrementPoints} yKey="views" title="総再生数" />
+          {viewsBreakdown && <PieChart breakdown={viewsBreakdown} />}
+          {dailyViewsByTalent && <GroupTreemap talentViews={dailyViewsByTalent.views} date={dailyViewsByTalent.date} />}
         </div>
       ) : !data ? (
         <p className="muted">データがありません</p>

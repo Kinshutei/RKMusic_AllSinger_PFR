@@ -166,6 +166,75 @@ export function buildStatsData(history: AllHistory): { date: string; subs: numbe
     .map(([date, v]) => ({ date, ...v }))
 }
 
+export function buildViewsTypeBreakdown(
+  history: AllHistory, flags: VideoFlags = {}
+): { Movie: number; Short: number; LiveArchive: number; date: string } | null {
+  const talents = TALENT_ORDER.filter(t => t !== 'Dashboard' && t in history)
+
+  const allDates = new Set<string>()
+  for (const t of talents) {
+    const cs = history[t]?._channel_stats
+    if (cs) Object.keys(cs).forEach(d => allDates.add(d))
+  }
+  if (allDates.size === 0) return null
+
+  const n_date = Array.from(allDates).sort().at(-1)!
+  const p_date = prevDate(n_date)
+
+  const result = { Movie: 0, Short: 0, LiveArchive: 0, date: n_date }
+
+  for (const talent of talents) {
+    for (const [vid_id, raw] of Object.entries(history[talent] ?? {})) {
+      if (vid_id === '_channel_stats') continue
+      const vid = raw as { type?: string; records?: Record<string, { 再生数?: number }> }
+      if (!vid.records) continue
+      const nr = vid.records[n_date]
+      const pr = vid.records[p_date]
+      if (!nr || !pr) continue
+      const diff = (nr.再生数 ?? 0) - (pr.再生数 ?? 0)
+      if (diff <= 0) continue
+      const vtype = (flags[talent]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
+      result[vtype] += diff
+    }
+  }
+
+  return result
+}
+
+export function buildDailyViewsByTalent(
+  history: AllHistory
+): { views: Record<string, number>; date: string } | null {
+  const talents = TALENT_ORDER.filter(t => t !== 'Dashboard' && t in history)
+
+  const allDates = new Set<string>()
+  for (const t of talents) {
+    const cs = history[t]?._channel_stats
+    if (cs) Object.keys(cs).forEach(d => allDates.add(d))
+  }
+  if (allDates.size === 0) return null
+
+  const n_date = Array.from(allDates).sort().at(-1)!
+  const p_date = prevDate(n_date)
+
+  const views: Record<string, number> = {}
+  for (const talent of talents) {
+    let total = 0
+    for (const [vid_id, raw] of Object.entries(history[talent] ?? {})) {
+      if (vid_id === '_channel_stats') continue
+      const vid = raw as { records?: Record<string, { 再生数?: number }> }
+      if (!vid.records) continue
+      const nr = vid.records[n_date]
+      const pr = vid.records[p_date]
+      if (!nr || !pr) continue
+      const diff = (nr.再生数 ?? 0) - (pr.再生数 ?? 0)
+      if (diff > 0) total += diff
+    }
+    views[talent] = total
+  }
+
+  return { views, date: n_date }
+}
+
 export function getLatestChannelStats(history: AllHistory, talentName: string) {
   const cs = history[talentName]?._channel_stats as Record<string, ChannelStats> | undefined
   if (!cs) return { stats: null, diff: null, n_date: null }
