@@ -14,6 +14,7 @@ GitHub Actionsで定期実行される（JST 00:00）
 """
 
 import os
+import sys
 import json
 import requests
 import threading
@@ -234,94 +235,103 @@ def get_channel_stats(youtube, channel_id):
 
 def get_all_videos(youtube, channel_id, channel_name, overrides):
     """チャンネルの全動画を取得してタイプ判定（Short判定はキャッシュ活用）"""
-    videos = []
-
-    # 既存のtypeキャッシュをall_snapshots.jsonから取得
     snapshots = load_json(SNAPSHOTS_FILE, {})
     cached_videos = snapshots.get(channel_name, {}).get('videos', {})
 
-    try:
-        resp = execute_with_retry(youtube.channels().list(
-            part='contentDetails', id=channel_id
-        ))
-        if not resp['items']:
+    for attempt in range(3):
+        videos = []
+        try:
+            resp = execute_with_retry(youtube.channels().list(
+                part='contentDetails', id=channel_id
+            ))
+            if not resp['items']:
+                return videos
+
+            playlist_id = resp['items'][0]['contentDetails']['relatedPlaylists']['uploads']
+            next_page_token = None
+
+            while True:
+                playlist_resp = execute_with_retry(youtube.playlistItems().list(
+                    part='snippet',
+                    playlistId=playlist_id,
+                    maxResults=50,
+                    pageToken=next_page_token
+                ))
+
+                video_ids = [
+                    item['snippet']['resourceId']['videoId']
+                    for item in playlist_resp['items']
+                ]
+
+                videos_resp = execute_with_retry(youtube.videos().list(
+                    part='snippet,statistics,liveStreamingDetails,contentDetails',
+                    id=','.join(video_ids)
+                ))
+
+                print(f'  取得中... {len(videos) + len(videos_resp["items"])}本')
+
+                # 新規動画（キャッシュにないもの）のみShort判定
+                new_video_ids = [
+                    vid for vid in video_ids
+                    if vid not in cached_videos
+                ]
+                if new_video_ids:
+                    print(f'  新規動画 {len(new_video_ids)}本のShort判定を実行')
+                    short_cache = check_shorts_batch(new_video_ids)
+                else:
+                    short_cache = {}
+
+                for video in videos_resp['items']:
+                    vid = video['id']
+
+                    # キャッシュにtypeがある場合は例外設定のみチェックして再利用
+                    if vid in cached_videos and vid not in new_video_ids:
+                        cached_type = cached_videos[vid].get('type', 'Movie')
+                        # 例外設定は常に最優先
+                        if overrides and channel_name in overrides and vid in overrides[channel_name]:
+                            vtype = overrides[channel_name][vid]
+                            print(f'  ⚙️  例外設定: [{video["snippet"]["title"][:40]}] → {vtype}')
+                        else:
+                            vtype = cached_type
+                    else:
+                        vtype = determine_video_type(video, short_cache, overrides, channel_name)
+
+                    videos.append({
+                        '動画ID': vid,
+                        'タイトル': video['snippet']['title'],
+                        '公開日': video['snippet']['publishedAt'][:10],
+                        '再生数': int(video['statistics'].get('viewCount', 0)),
+                        '高評価数': int(video['statistics'].get('likeCount', 0)),
+                        'コメント数': int(video['statistics'].get('commentCount', 0)),
+                        'type': vtype,
+                        'duration': int(isodate.parse_duration(
+                            video['contentDetails'].get('duration', 'PT0S')
+                        ).total_seconds()),
+                    })
+
+                next_page_token = playlist_resp.get('nextPageToken')
+                if not next_page_token:
+                    break
+
+            print(f'  ✓ 完了: {len(videos)}本')
+            print(f'    Movie: {sum(1 for v in videos if v["type"] == "Movie")}本 / '
+                  f'Short: {sum(1 for v in videos if v["type"] == "Short")}本 / '
+                  f'LiveArchive: {sum(1 for v in videos if v["type"] == "LiveArchive")}本')
             return videos
 
-        playlist_id = resp['items'][0]['contentDetails']['relatedPlaylists']['uploads']
-        next_page_token = None
+        except HttpError as e:
+            if e.status_code == 404 and attempt < 2:
+                wait = 30
+                print(f'  ⚠️  404 playlistNotFound、{wait}秒後にリトライ ({attempt + 1}/2)')
+                time.sleep(wait)
+                continue
+            print(f'  ⚠️  動画取得エラー: {e}')
+            return []
+        except Exception as e:
+            print(f'  ⚠️  動画取得エラー: {e}')
+            return []
 
-        while True:
-            playlist_resp = execute_with_retry(youtube.playlistItems().list(
-                part='snippet',
-                playlistId=playlist_id,
-                maxResults=50,
-                pageToken=next_page_token
-            ))
-
-            video_ids = [
-                item['snippet']['resourceId']['videoId']
-                for item in playlist_resp['items']
-            ]
-
-            videos_resp = execute_with_retry(youtube.videos().list(
-                part='snippet,statistics,liveStreamingDetails,contentDetails',
-                id=','.join(video_ids)
-            ))
-
-            print(f'  取得中... {len(videos) + len(videos_resp["items"])}本')
-
-            # 新規動画（キャッシュにないもの）のみShort判定
-            new_video_ids = [
-                vid for vid in video_ids
-                if vid not in cached_videos
-            ]
-            if new_video_ids:
-                print(f'  新規動画 {len(new_video_ids)}本のShort判定を実行')
-                short_cache = check_shorts_batch(new_video_ids)
-            else:
-                short_cache = {}
-
-            for video in videos_resp['items']:
-                vid = video['id']
-
-                # キャッシュにtypeがある場合は例外設定のみチェックして再利用
-                if vid in cached_videos and vid not in new_video_ids:
-                    cached_type = cached_videos[vid].get('type', 'Movie')
-                    # 例外設定は常に最優先
-                    if overrides and channel_name in overrides and vid in overrides[channel_name]:
-                        vtype = overrides[channel_name][vid]
-                        print(f'  ⚙️  例外設定: [{video["snippet"]["title"][:40]}] → {vtype}')
-                    else:
-                        vtype = cached_type
-                else:
-                    vtype = determine_video_type(video, short_cache, overrides, channel_name)
-
-                videos.append({
-                    '動画ID': vid,
-                    'タイトル': video['snippet']['title'],
-                    '公開日': video['snippet']['publishedAt'][:10],
-                    '再生数': int(video['statistics'].get('viewCount', 0)),
-                    '高評価数': int(video['statistics'].get('likeCount', 0)),
-                    'コメント数': int(video['statistics'].get('commentCount', 0)),
-                    'type': vtype,
-                    'duration': int(isodate.parse_duration(
-                        video['contentDetails'].get('duration', 'PT0S')
-                    ).total_seconds()),
-                })
-
-            next_page_token = playlist_resp.get('nextPageToken')
-            if not next_page_token:
-                break
-
-        print(f'  ✓ 完了: {len(videos)}本')
-        print(f'    Movie: {sum(1 for v in videos if v["type"] == "Movie")}本 / '
-              f'Short: {sum(1 for v in videos if v["type"] == "Short")}本 / '
-              f'LiveArchive: {sum(1 for v in videos if v["type"] == "LiveArchive")}本')
-        return videos
-
-    except Exception as e:
-        print(f'  ⚠️  動画取得エラー: {e}')
-        return []
+    return []
 
 # ----------------------------------------------------------------
 # データ保存
@@ -483,24 +493,57 @@ def main():
 
     # チャンネル処理を並列実行（3チャンネル同時）
     success = 0
+    failed_channels = []
     with ThreadPoolExecutor(max_workers=CHANNEL_WORKERS) as executor:
         futures = {
             executor.submit(
                 process_channel, ch, overrides, today_str
-            ): ch['name']
+            ): ch
             for ch in CHANNELS
         }
         for future in as_completed(futures):
-            name = futures[future]
+            ch = futures[future]
             try:
                 if future.result():
                     success += 1
+                else:
+                    failed_channels.append(ch)
             except Exception as e:
-                print(f'  ❌ {name} で予期しないエラー: {e}')
+                print(f'  ❌ {ch["name"]} で予期しないエラー: {e}')
+                failed_channels.append(ch)
+
+    # 失敗チャンネルのリトライ
+    still_failed = []
+    if failed_channels:
+        print(f'\n⚠️  {len(failed_channels)}チャンネルが失敗。30秒後にリトライします...')
+        for ch in failed_channels:
+            print(f'  - {ch["name"]}')
+        time.sleep(30)
+        with ThreadPoolExecutor(max_workers=CHANNEL_WORKERS) as executor:
+            futures = {
+                executor.submit(
+                    process_channel, ch, overrides, today_str
+                ): ch
+                for ch in failed_channels
+            }
+            for future in as_completed(futures):
+                ch = futures[future]
+                try:
+                    if future.result():
+                        success += 1
+                    else:
+                        still_failed.append(ch['name'])
+                except Exception as e:
+                    print(f'  ❌ {ch["name"]} で予期しないエラー: {e}')
+                    still_failed.append(ch['name'])
 
     print(f'\n{"=" * 50}')
     print(f'✓ 全処理完了: {success}/{len(CHANNELS)} チャンネル成功')
     print('=' * 50)
+
+    if still_failed:
+        print(f'❌ リトライ後も失敗: {", ".join(still_failed)}')
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
