@@ -247,8 +247,18 @@ function PieChart({ breakdown }: {
       <div className="col-label">当日増加再生数の内訳（{breakdown.date}）</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 32, marginTop: 8 }}>
         <svg width={220} height={220} style={{ flexShrink: 0 }}>
-          {slices.map((s) => (
-            s.angle > 0 && (
+          {slices.map((s) => {
+            if (s.angle <= 0) return null
+            // 100%（1種類のみ）の場合は arc の始点=終点になり描画されないため circle で代替
+            if (s.angle >= 2 * Math.PI - 0.001) {
+              return (
+                <circle key={s.type} cx={cx} cy={cy} r={r}
+                  fill={PIE_COLORS[s.type]} stroke="#fff" strokeWidth={2}>
+                  <title>{PIE_LABELS[s.type]}: {s.value.toLocaleString()} (100%)</title>
+                </circle>
+              )
+            }
+            return (
               <path key={s.type}
                 d={`M ${cx} ${cy} L ${s.x1} ${s.y1} A ${r} ${r} 0 ${s.largeArc} 1 ${s.x2} ${s.y2} Z`}
                 fill={PIE_COLORS[s.type]} stroke="#fff" strokeWidth={2}
@@ -256,7 +266,7 @@ function PieChart({ breakdown }: {
                 <title>{PIE_LABELS[s.type]}: {s.value.toLocaleString()} ({s.pct}%)</title>
               </path>
             )
-          ))}
+          })}
         </svg>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {slices.map((s) => (

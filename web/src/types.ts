@@ -65,6 +65,7 @@ export interface VideoCard {
   id: string
   タイトル: string
   type: VideoType
+  公開日: string
   再生数: number
   再生数15d増加: number
   高評価数: number
@@ -73,4 +74,25 @@ export interface VideoCard {
   再生数daily: (number | null)[]
   高評価daily: (number | null)[]
   コメント数daily: (number | null)[]
+  collab_tags: string[]
 }
+
+export interface CommentItem {
+  text: string
+  likes: number
+  sentiment: 'positive' | 'neutral' | 'negative'
+}
+
+export interface VideoCommentData {
+  fetched_at: string
+  total_fetched: number
+  sentiment: {
+    positive: number
+    neutral: number
+    negative: number
+  }
+  display_comments: CommentItem[]
+}
+
+export type ChannelComments = Record<string, VideoCommentData>
+export type AllComments = Record<string, ChannelComments>

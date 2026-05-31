@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { AllHistory, VideoFlags } from './types'
-import { loadHistory, loadVideoFlags, getAvailableTalents } from './utils/data'
+import { AllHistory, VideoFlags, AllComments } from './types'
+import { loadHistory, loadVideoFlags, loadComments, getAvailableTalents } from './utils/data'
 import DashboardPage from './components/DashboardPage'
 import TalentPage from './components/TalentPage'
 import Footer from './components/Footer'
@@ -9,16 +9,17 @@ import './App.css'
 type Page = string
 
 export default function App() {
-  const [history, setHistory]       = useState<AllHistory | null>(null)
-  const [flags, setFlags]           = useState<VideoFlags>({})
-  const [loading, setLoading]       = useState(true)
-  const [error, setError]           = useState<string | null>(null)
+  const [history, setHistory]   = useState<AllHistory | null>(null)
+  const [flags, setFlags]       = useState<VideoFlags>({})
+  const [comments, setComments] = useState<AllComments>({})
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState<string | null>(null)
   const [activePage, setActivePage] = useState<Page>('Dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    Promise.all([loadHistory(), loadVideoFlags()])
-      .then(([h, f]) => { setHistory(h); setFlags(f) })
+    Promise.all([loadHistory(), loadVideoFlags(), loadComments()])
+      .then(([h, f, c]) => { setHistory(h); setFlags(f); setComments(c) })
       .catch(e => setError(String(e)))
       .finally(() => setLoading(false))
   }, [])
@@ -74,7 +75,7 @@ export default function App() {
           {!loading && !error && history && (
             activePage === 'Dashboard'
               ? <DashboardPage history={history} flags={flags} />
-              : <TalentPage history={history} talentName={activePage} flags={flags} />
+              : <TalentPage key={activePage} history={history} talentName={activePage} flags={flags} comments={comments} />
           )}
         </div>
         <Footer />

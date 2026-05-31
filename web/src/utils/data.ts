@@ -1,6 +1,7 @@
 import {
   AllHistory, ChannelStats, VideoType, VideoFlags,
   SingerRankItem, VideoRankItem, VideoCard,
+  AllComments, ChannelComments,
 } from '../types'
 
 export const TALENT_ORDER = [
@@ -22,7 +23,7 @@ export async function loadHistory(): Promise<AllHistory> {
   const results = await Promise.all(
     talents.map(async talent => {
       try {
-        const res = await fetch(`${HISTORY_BASE_URL}/history_${encodeURIComponent(talent)}.json?t=${Date.now()}`)
+        const res = await fetch(`${HISTORY_BASE_URL}/history_${encodeURIComponent(talent)}.json`)
         if (!res.ok) return {}
         return res.json() as Promise<AllHistory>
       } catch {
@@ -35,12 +36,29 @@ export async function loadHistory(): Promise<AllHistory> {
 
 export async function loadVideoFlags(): Promise<VideoFlags> {
   try {
-    const res = await fetch(`${FLAGS_URL}?t=${Date.now()}`)
+    const res = await fetch(FLAGS_URL)
     if (!res.ok) return {}
     return res.json()
   } catch {
     return {}
   }
+}
+
+export async function loadComments(): Promise<AllComments> {
+  const talents = TALENT_ORDER.filter(t => t !== 'Dashboard')
+  const results = await Promise.all(
+    talents.map(async talent => {
+      try {
+        const res = await fetch(`${HISTORY_BASE_URL}/comments_${encodeURIComponent(talent)}.json`)
+        if (!res.ok) return {}
+        const data = await res.json() as ChannelComments
+        return { [talent]: data }
+      } catch {
+        return {}
+      }
+    })
+  )
+  return Object.assign({}, ...results)
 }
 
 export function getAvailableTalents(history: AllHistory): string[] {
@@ -49,6 +67,32 @@ export function getAvailableTalents(history: AllHistory): string[] {
   const extras = Object.keys(history).filter(t => !TALENT_ORDER.includes(t)).sort()
   return [...ordered, ...extras]
 }
+
+// ----------------------------------------------------------------
+// コラボ検出
+// ----------------------------------------------------------------
+
+const COLLAB_PATTERNS: [RegExp, string][] = [
+  [/feat\.?\s+/i,  'feat.'],
+  [/ft\.?\s+/i,    'feat.'],
+  [/×/,            '×コラボ'],
+  [/\bw\/\s*/i,    'w/コラボ'],
+  [/コラボ/,        'コラボ'],
+]
+
+export function detectCollabTags(title: string): string[] {
+  const tags: string[] = []
+  for (const [pattern, label] of COLLAB_PATTERNS) {
+    if (pattern.test(title)) {
+      if (!tags.includes(label)) tags.push(label)
+    }
+  }
+  return tags
+}
+
+// ----------------------------------------------------------------
+// 共通ユーティリティ
+// ----------------------------------------------------------------
 
 function prevDate(dateStr: string): string {
   const d = new Date(dateStr)
@@ -61,6 +105,10 @@ function rate(val: number, diff: number | null): number | null {
   const base = val - diff
   return base > 0 ? Math.round(diff / base * 1000) / 10 : null
 }
+
+// ----------------------------------------------------------------
+// ダッシュボード
+// ----------------------------------------------------------------
 
 export function buildDashboardData(history: AllHistory, flags: VideoFlags = {}) {
   const talents = TALENT_ORDER.filter(t => t !== 'Dashboard' && t in history)
@@ -235,6 +283,10 @@ export function buildDailyViewsByTalent(
   return { views, date: n_date }
 }
 
+// ----------------------------------------------------------------
+// タレント個別
+// ----------------------------------------------------------------
+
 export function getLatestChannelStats(history: AllHistory, talentName: string) {
   const cs = history[talentName]?._channel_stats as Record<string, ChannelStats> | undefined
   if (!cs) return { stats: null, diff: null, n_date: null }
@@ -258,7 +310,12 @@ export function buildTalentVideoList(history: AllHistory, talentName: string, fl
   const result: VideoCard[] = []
   for (const [vid_id, raw] of Object.entries(talentHist)) {
     if (vid_id === '_channel_stats') continue
-    const vid = raw as { タイトル?: string; type?: string; records?: Record<string, { 再生数?: number; 高評価数?: number; コメント数?: number }> }
+    const vid = raw as {
+      タイトル?: string
+      公開日?: string
+      type?: string
+      records?: Record<string, { 再生数?: number; 高評価数?: number; コメント数?: number }>
+    }
     if (!vid.records) continue
 
     const sorted = Object.keys(vid.records).sort()
@@ -284,10 +341,12 @@ export function buildTalentVideoList(history: AllHistory, talentName: string, fl
       }
     }
 
+    const title = vid.タイトル ?? vid_id
     result.push({
       id: vid_id,
-      タイトル: vid.タイトル ?? vid_id,
+      タイトル: title,
       type: (flags[talentName]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType,
+      公開日: vid.公開日 ?? '',
       再生数: current_views,
       再生数15d増加: daily_views.reduce<number>((a, v) => a + (v ?? 0), 0),
       高評価数: current_likes,
@@ -296,7 +355,161 @@ export function buildTalentVideoList(history: AllHistory, talentName: string, fl
       再生数daily: daily_views,
       高評価daily: daily_likes,
       コメント数daily: daily_comments,
+      collab_tags: detectCollabTags(title),
     })
   }
   return result
+}
+
+// ----------------------------------------------------------------
+// 直近N日の日別再生数内訳（種別×日付）
+// ----------------------------------------------------------------
+
+export interface DailyViewsEntry {
+  date: string
+  Movie: number
+  Short: number
+  LiveArchive: number
+}
+
+export function buildDailyViewsBreakdown(
+  history: AllHistory,
+  talentName: string,
+  flags: VideoFlags = {},
+  days = 15
+): DailyViewsEntry[] {
+  const talentHist = history[talentName]
+  if (!talentHist) return []
+
+  const cs = talentHist._channel_stats as Record<string, ChannelStats> | undefined
+  if (!cs) return []
+
+  const allDates = Object.keys(cs).sort()
+  if (allDates.length < 2) return []
+
+  const recentDates = allDates.slice(-(days + 1))
+
+  const result: DailyViewsEntry[] = []
+  for (let i = 1; i < recentDates.length; i++) {
+    const date = recentDates[i]
+    const prev = recentDates[i - 1]
+    const entry: DailyViewsEntry = { date, Movie: 0, Short: 0, LiveArchive: 0 }
+
+    for (const [vid_id, raw] of Object.entries(talentHist)) {
+      if (vid_id === '_channel_stats') continue
+      const vid = raw as { type?: string; records?: Record<string, { 再生数?: number }> }
+      if (!vid.records) continue
+      const nr = vid.records[date]
+      const pr = vid.records[prev]
+      if (!nr || !pr) continue
+      const diff = (nr.再生数 ?? 0) - (pr.再生数 ?? 0)
+      if (diff <= 0) continue
+      const vtype = (flags[talentName]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
+      entry[vtype] += diff
+    }
+    result.push(entry)
+  }
+  return result
+}
+
+// ----------------------------------------------------------------
+// 投稿カレンダー（供給ペース）
+// ----------------------------------------------------------------
+
+export interface PostingCalendarEntry {
+  month: string       // "2026-01"
+  Movie: number
+  Short: number
+  LiveArchive: number
+}
+
+export function buildPostingCalendar(
+  history: AllHistory,
+  talentName: string,
+  flags: VideoFlags = {}
+): PostingCalendarEntry[] {
+  const talentHist = history[talentName]
+  if (!talentHist) return []
+
+  const monthMap = new Map<string, PostingCalendarEntry>()
+
+  for (const [vid_id, raw] of Object.entries(talentHist)) {
+    if (vid_id === '_channel_stats') continue
+    const vid = raw as { 公開日?: string; type?: string }
+    if (!vid.公開日) continue
+
+    const month = vid.公開日.slice(0, 7)
+    const vtype = (flags[talentName]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
+
+    if (!monthMap.has(month)) {
+      monthMap.set(month, { month, Movie: 0, Short: 0, LiveArchive: 0 })
+    }
+    monthMap.get(month)![vtype]++
+  }
+
+  return Array.from(monthMap.values()).sort((a, b) => a.month.localeCompare(b.month))
+}
+
+// ----------------------------------------------------------------
+// 初速カーブ（公開日からの再生推移）
+// ----------------------------------------------------------------
+
+export interface VelocityCurvePoint {
+  day: number     // 公開からの経過日数
+  views: number   // その日の累計再生数
+}
+
+export interface VelocityCurveItem {
+  vid_id: string
+  title: string
+  公開日: string
+  curve: VelocityCurvePoint[]
+}
+
+export function buildVelocityCurveData(
+  history: AllHistory,
+  talentName: string,
+  flags: VideoFlags = {},
+  maxVideos = 10,
+  maxDays = 60
+): VelocityCurveItem[] {
+  const talentHist = history[talentName]
+  if (!talentHist) return []
+
+  const items: VelocityCurveItem[] = []
+
+  for (const [vid_id, raw] of Object.entries(talentHist)) {
+    if (vid_id === '_channel_stats') continue
+    const vid = raw as {
+      タイトル?: string
+      公開日?: string
+      type?: string
+      records?: Record<string, { 再生数?: number }>
+    }
+    if (!vid.records || !vid.公開日) continue
+
+    // Movieのみ対象（Short/Liveは初速の性質が異なる）
+    const vtype = (flags[talentName]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
+    if (vtype !== 'Movie') continue
+
+    const pubDate = new Date(vid.公開日)
+    const recordDates = Object.keys(vid.records).sort()
+
+    const curve: VelocityCurvePoint[] = []
+    for (const dateStr of recordDates) {
+      const elapsed = Math.round(
+        (new Date(dateStr).getTime() - pubDate.getTime()) / 86400000
+      )
+      if (elapsed < 0 || elapsed > maxDays) continue
+      curve.push({ day: elapsed, views: vid.records[dateStr]?.再生数 ?? 0 })
+    }
+
+    if (curve.length < 2) continue
+    items.push({ vid_id, title: vid.タイトル ?? vid_id, 公開日: vid.公開日, curve })
+  }
+
+  // 最新公開順で上位N本
+  return items
+    .sort((a, b) => b.公開日.localeCompare(a.公開日))
+    .slice(0, maxVideos)
 }

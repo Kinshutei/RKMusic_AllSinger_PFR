@@ -6,11 +6,12 @@ GitHub Actionsで定期実行される（JST 00:00）
 
 - 全アーティストのチャンネル統計・動画データを収集
 - Movie/Short/LiveArchive自動判別（並列処理）
-- video_type_overrides.json による例外設定対応
+- video_flags.json による例外設定対応
 - チャンネルIDキャッシュで無駄なAPIコールを削減
 - データ保存先:
-    all_snapshots.json           : 全アーティストの最新スナップショット
-    history_{channel_name}.json  : チャンネルごとの動画履歴（日次集約済み）
+    all_snapshots.json            : 全アーティストの最新スナップショット
+    history_{channel_name}.json   : チャンネルごとの動画履歴（日次集約済み）
+    comments_{channel_name}.json  : 動画ごとのトップコメント＋感情サマリー（30日キャッシュ）
 """
 
 import os
@@ -18,6 +19,7 @@ import sys
 import json
 import requests
 import threading
+import tempfile
 from datetime import datetime, timezone, timedelta
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -40,12 +42,16 @@ MAX_WORKERS = 10       # Short判定の同時並列数
 CHANNEL_WORKERS = 3   # チャンネル処理の同時並列数
 
 SNAPSHOTS_FILE = 'all_snapshots.json'
+COMMENTS_CACHE_DAYS = 30  # コメントを再取得するまでの日数
 
 # スナップショット書き込みの排他制御用ロック（並列処理による競合防止）
 _snapshot_lock = threading.Lock()
 
 def history_file(channel_name):
     return f'history_{channel_name}.json'
+
+def comments_file(channel_name):
+    return f'comments_{channel_name}.json'
 
 # ----------------------------------------------------------------
 # ファイル読み書き
@@ -61,8 +67,11 @@ def load_json(path, default):
     return default
 
 def save_json(path, data):
-    with open(path, 'w', encoding='utf-8') as f:
+    dir_ = os.path.dirname(os.path.abspath(path))
+    with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=dir_, delete=False, suffix='.tmp') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+        tmp_path = f.name
+    os.replace(tmp_path, path)
 
 # ----------------------------------------------------------------
 # 例外設定
@@ -137,6 +146,113 @@ def check_shorts_batch(video_ids):
     return results
 
 # ----------------------------------------------------------------
+# 感情極性分析
+# ----------------------------------------------------------------
+
+_POSITIVE_WORDS = [
+    'すき', '好き', '最高', '神', '素晴らしい', 'かわいい', '可愛い', 'かっこいい', 'かこいい',
+    '泣いた', '感動', '推し', 'ありがとう', '最強', 'やばい', 'すごい', '大好き', 'うまい',
+    '上手い', 'いい', 'よかった', 'よい', '良い', 'すてき', '素敵', '幸せ', 'しあわせ',
+    '嬉しい', 'うれしい', '楽しい', 'たのしい', '期待', '応援', 'ファン', '天才', '完璧',
+    'amazing', 'love', 'best', 'beautiful', 'cute', 'cool', 'perfect', 'great', 'awesome',
+]
+_NEGATIVE_WORDS = [
+    '嫌い', '最悪', '残念', '悲しい', '下手', 'つまらない', 'ひどい', '失望', 'きらい',
+    '不満', '微妙', 'いまいち', 'がっかり',
+    'bad', 'worst', 'hate', 'boring', 'awful',
+]
+_POSITIVE_EMOJI = set('😊😍💕❤🎉👍✨🔥💯🥰💖💗💓💞🌟⭐🎵🎶💫😻🤩🙌')
+_NEGATIVE_EMOJI = set('😡👎🤮😤😠💔😞😒🤦😑')
+
+def analyze_sentiment(text: str) -> str:
+    """簡易感情極性判定（positive / neutral / negative）"""
+    lower = text.lower()
+    pos = sum(1 for w in _POSITIVE_WORDS if w in lower)
+    neg = sum(1 for w in _NEGATIVE_WORDS if w in lower)
+    pos += sum(1 for c in text if c in _POSITIVE_EMOJI)
+    neg += sum(1 for c in text if c in _NEGATIVE_EMOJI)
+    if pos > neg:
+        return 'positive'
+    if neg > pos:
+        return 'negative'
+    return 'neutral'
+
+# ----------------------------------------------------------------
+# コメント取得
+# ----------------------------------------------------------------
+
+def get_video_comments(youtube, video_id, max_results=100):
+    """動画のトップコメントを取得（コメント無効・非公開は空リスト）"""
+    try:
+        resp = execute_with_retry(youtube.commentThreads().list(
+            part='snippet',
+            videoId=video_id,
+            order='relevance',
+            maxResults=max_results,
+            textFormat='plainText'
+        ))
+        comments = []
+        for item in resp.get('items', []):
+            snippet = item['snippet']['topLevelComment']['snippet']
+            text = snippet.get('textDisplay', '')
+            likes = int(snippet.get('likeCount', 0))
+            comments.append({
+                'text': text,
+                'likes': likes,
+                'sentiment': analyze_sentiment(text),
+            })
+        return comments
+    except HttpError as e:
+        if e.status_code in (403, 404):
+            return []
+        raise
+
+def update_comments(channel_name, videos, youtube, today_str):
+    """comments_{channel_name}.json を更新（未取得 or 30日以上経過の動画のみ）"""
+    path = comments_file(channel_name)
+    data = load_json(path, {})
+
+    today_dt = datetime.strptime(today_str, '%Y-%m-%d')
+    targets = []
+    for v in videos:
+        vid_id = v['動画ID']
+        cached = data.get(vid_id)
+        if cached is None:
+            targets.append(v)
+        else:
+            fetched_dt = datetime.strptime(cached.get('fetched_at', '2000-01-01'), '%Y-%m-%d')
+            if (today_dt - fetched_dt).days >= COMMENTS_CACHE_DAYS:
+                targets.append(v)
+
+    if not targets:
+        print(f'  コメント: 更新対象なし（全動画キャッシュ済み）')
+        return
+
+    print(f'  コメント取得: {len(targets)}本')
+    updated = 0
+    for v in targets:
+        vid_id = v['動画ID']
+        comments = get_video_comments(youtube, vid_id)
+
+        sentiment = {'positive': 0, 'neutral': 0, 'negative': 0}
+        for c in comments:
+            sentiment[c['sentiment']] += 1
+
+        # 高評価数上位10件を表示用として保存（全本文保持はサイズ過大のため）
+        top_by_likes = sorted(comments, key=lambda c: c['likes'], reverse=True)[:10]
+
+        data[vid_id] = {
+            'fetched_at': today_str,
+            'total_fetched': len(comments),
+            'sentiment': sentiment,
+            'display_comments': top_by_likes,
+        }
+        updated += 1
+
+    save_json(path, data)
+    print(f'  コメント保存: {path}（{updated}本更新）')
+
+# ----------------------------------------------------------------
 # 動画タイプ判定
 # ----------------------------------------------------------------
 
@@ -151,7 +267,7 @@ def get_duration_minutes(video):
 def determine_video_type(video, short_cache, overrides, channel_name):
     """
     判定順序:
-    1. video_type_overrides.json（最優先）
+    1. video_flags.json（最優先）
     2. Short（URLリダイレクト判定）
     3. liveBroadcastContent == completed → duration で Movie/LiveArchive
     4. その他 → Movie
@@ -285,7 +401,7 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
                     vid = video['id']
 
                     # キャッシュにtypeがある場合は例外設定のみチェックして再利用
-                    if vid in cached_videos and vid not in new_video_ids:
+                    if vid in cached_videos:
                         cached_type = cached_videos[vid].get('type', 'Movie')
                         # 例外設定は常に最優先
                         if overrides and channel_name in overrides and vid in overrides[channel_name]:
@@ -312,6 +428,40 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
                 next_page_token = playlist_resp.get('nextPageToken')
                 if not next_page_token:
                     break
+
+            # グリッチ検知: 高評価・コメント数が0だが過去に非0だった動画を再取得
+            glitch_ids = [
+                v['動画ID'] for v in videos
+                if v['高評価数'] == 0 and v['コメント数'] == 0
+                and (
+                    cached_videos.get(v['動画ID'], {}).get('高評価数', 0) > 0
+                    or cached_videos.get(v['動画ID'], {}).get('コメント数', 0) > 0
+                )
+            ]
+            if glitch_ids:
+                print(f'  ⚠️  グリッチ疑い: {len(glitch_ids)}本（高評価・コメント数が0）。5秒後に再取得...')
+                for gid in glitch_ids:
+                    title = next((v['タイトル'] for v in videos if v['動画ID'] == gid), gid)
+                    print(f'    - {title[:50]}')
+                time.sleep(5)
+                retry_resp = execute_with_retry(youtube.videos().list(
+                    part='statistics',
+                    id=','.join(glitch_ids)
+                ))
+                retried = {item['id']: item['statistics'] for item in retry_resp.get('items', [])}
+                fixed = 0
+                for v in videos:
+                    if v['動画ID'] in retried:
+                        stats = retried[v['動画ID']]
+                        new_likes = int(stats.get('likeCount', 0))
+                        new_comments = int(stats.get('commentCount', 0))
+                        if new_likes > 0 or new_comments > 0:
+                            print(f'    ✓ 修正: [{v["タイトル"][:40]}] '
+                                  f'高評価 {v["高評価数"]}→{new_likes} / コメント {v["コメント数"]}→{new_comments}')
+                            v['高評価数'] = new_likes
+                            v['コメント数'] = new_comments
+                            fixed += 1
+                print(f'  グリッチ修正: {fixed}/{len(glitch_ids)}本')
 
             print(f'  ✓ 完了: {len(videos)}本')
             print(f'    Movie: {sum(1 for v in videos if v["type"] == "Movie")}本 / '
@@ -350,6 +500,8 @@ def update_snapshots(channel_name, channel_id, channel_stats, videos):
                     'タイトル': v['タイトル'],
                     '再生数': v['再生数'],
                     '高評価数': v['高評価数'],
+                    'コメント数': v['コメント数'],
+                    'duration': v.get('duration', 0),
                     'type': v['type']
                 } for v in videos
             }
@@ -460,6 +612,7 @@ def process_channel(channel_config, overrides, today_str):
     # 保存
     update_snapshots(channel_name, channel_id, channel_stats, videos)
     update_history(channel_name, videos, today_str, channel_stats=channel_stats)
+    update_comments(channel_name, videos, youtube, today_str)
 
     print(f'  ✓ {channel_name} 完了')
     return True
