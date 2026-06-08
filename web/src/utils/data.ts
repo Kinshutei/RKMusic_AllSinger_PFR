@@ -510,7 +510,8 @@ export function buildMonthlyViewsBreakdown(
     result.push(entry)
   }
 
-  return result
+  // 最初の月はデータ収集開始月で差分が不正確なためスキップ
+  return result.slice(1)
 }
 
 // ----------------------------------------------------------------
