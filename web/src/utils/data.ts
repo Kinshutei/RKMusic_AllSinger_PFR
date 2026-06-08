@@ -510,8 +510,8 @@ export function buildMonthlyViewsBreakdown(
     result.push(entry)
   }
 
-  // 最初の月はデータ収集開始月で差分が不正確なためスキップ
-  return result.slice(1)
+  // 2026-02はデータ収集開始月のため除外（月途中からのスナップショットで不正確）
+  return result.filter(e => e.month >= '2026-03')
 }
 
 // ----------------------------------------------------------------
