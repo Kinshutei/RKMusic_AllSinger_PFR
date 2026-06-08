@@ -3,7 +3,8 @@ import { VideoCard, VideoType, VideoFlags, AllHistory, AllComments, VideoComment
 import {
   getLatestChannelStats, buildTalentVideoList,
   buildPostingCalendar, buildVelocityCurveData, buildDailyViewsBreakdown,
-  PostingCalendarEntry, VelocityCurveItem, DailyViewsEntry,
+  buildMonthlyViewsBreakdown,
+  PostingCalendarEntry, VelocityCurveItem, DailyViewsEntry, MonthlyViewsEntry,
 } from '../utils/data'
 import { niceScale, fmtDiff, diffColor } from '../utils/chartUtils'
 
@@ -653,6 +654,101 @@ function DailyViewsChart({ data }: { data: DailyViewsEntry[] }) {
 }
 
 // ----------------------------------------------------------------
+// 月別再生数内訳チャート
+// ----------------------------------------------------------------
+
+function MonthlyViewsChart({ data }: { data: MonthlyViewsEntry[] }) {
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [containerW, setContainerW] = useState(600)
+
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const update = () => setContainerW(el.clientWidth)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  if (data.length === 0) return <p className="muted">月別再生数データがありません</p>
+
+  const types: VideoType[] = ['Movie', 'Short', 'LiveArchive']
+  const maxTotal = Math.max(...data.map(d => d.Movie + d.Short + d.LiveArchive), 1)
+
+  const PAD = { top: 24, right: 16, bottom: 48, left: 56 }
+  const PLOT_H = 180
+  const BAR_SLOT = Math.max(32, Math.floor((containerW - PAD.left - PAD.right) / data.length))
+  const BAR_W = Math.min(28, BAR_SLOT - 4)
+  const svgW = Math.max(containerW, PAD.left + PAD.right + data.length * BAR_SLOT)
+  const svgH = PAD.top + PLOT_H + PAD.bottom
+
+  const { ticks } = niceScale(0, maxTotal, 5)
+  const yScale = PLOT_H / maxTotal
+
+  return (
+    <div ref={wrapperRef} style={{ overflowX: 'auto' }}>
+      <svg width={svgW} height={svgH} style={{ fontFamily: 'inherit', display: 'block' }}>
+        {ticks.map(tick => {
+          const y = PAD.top + PLOT_H - tick * yScale
+          return (
+            <g key={tick}>
+              <line x1={PAD.left} y1={y} x2={PAD.left + data.length * BAR_SLOT} y2={y}
+                    stroke={tick === 0 ? '#555' : '#e0e3f5'} strokeWidth={1} />
+              <text x={PAD.left - 4} y={y + 4} textAnchor="end" fontSize={10} fill="#888">
+                {fmtViews(tick)}
+              </text>
+            </g>
+          )
+        })}
+
+        {data.map((entry, i) => {
+          const x = PAD.left + i * BAR_SLOT + (BAR_SLOT - BAR_W) / 2
+          let yBase = PAD.top + PLOT_H
+          const total = entry.Movie + entry.Short + entry.LiveArchive
+          return (
+            <g key={entry.month}>
+              {types.map(t => {
+                const count = entry[t]
+                if (count === 0) return null
+                const h = count * yScale
+                yBase -= h
+                return (
+                  <rect key={t} x={x} y={yBase} width={BAR_W} height={h}
+                        fill={TYPE_COLORS[t]} rx={1}>
+                    <title>{entry.month} {TYPE_LABELS[t]}: {count.toLocaleString()}</title>
+                  </rect>
+                )
+              })}
+              {total > 0 && (
+                <text x={x + BAR_W / 2} y={PAD.top + PLOT_H - total * yScale - 3}
+                      textAnchor="middle" fontSize={9} fill="#555">
+                  {fmtViews(total)}
+                </text>
+              )}
+              <text x={x + BAR_W / 2} y={PAD.top + PLOT_H + 14}
+                    textAnchor="end" fontSize={9} fill="#888"
+                    transform={`rotate(-45, ${x + BAR_W / 2}, ${PAD.top + PLOT_H + 14})`}>
+                {entry.month.slice(5)}月
+              </text>
+            </g>
+          )
+        })}
+      </svg>
+
+      <div style={{ display: 'flex', gap: 16, marginTop: 4, fontSize: 12, color: '#666' }}>
+        {types.map(t => (
+          <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: TYPE_COLORS[t], display: 'inline-block' }} />
+            {TYPE_LABELS[t]}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------
 // 分析タブ
 // ----------------------------------------------------------------
 
@@ -661,9 +757,10 @@ function AnalysisTab({ history, talentName, flags }: {
   talentName: string
   flags: VideoFlags
 }) {
-  const calendarData   = buildPostingCalendar(history, talentName, flags)
-  const velocityItems  = buildVelocityCurveData(history, talentName, flags)
-  const dailyViewsData = buildDailyViewsBreakdown(history, talentName, flags, 15)
+  const calendarData      = buildPostingCalendar(history, talentName, flags)
+  const velocityItems     = buildVelocityCurveData(history, talentName, flags)
+  const dailyViewsData    = buildDailyViewsBreakdown(history, talentName, flags, 15)
+  const monthlyViewsData  = buildMonthlyViewsBreakdown(history, talentName, flags)
 
   const years = [...new Set(calendarData.map(d => d.month.slice(0, 4)))].sort()
   const [selectedYear, setSelectedYear] = useState<string>(years.at(-1) ?? '')
@@ -671,10 +768,28 @@ function AnalysisTab({ history, talentName, flags }: {
     ? calendarData.filter(d => d.month.startsWith(selectedYear))
     : calendarData
 
+  const monthlyYears = [...new Set(monthlyViewsData.map(d => d.month.slice(0, 4)))].sort()
+  const [selectedMonthlyYear, setSelectedMonthlyYear] = useState<string>(monthlyYears.at(-1) ?? '')
+  const filteredMonthlyViews = selectedMonthlyYear
+    ? monthlyViewsData.filter(d => d.month.startsWith(selectedMonthlyYear))
+    : monthlyViewsData
+
   return (
     <div style={{ marginTop: 16 }}>
       <h3 style={{ marginBottom: 8 }}>直近15日の再生数内訳（種別×日付）</h3>
       <DailyViewsChart data={dailyViewsData} />
+
+      <h3 style={{ marginTop: 32, marginBottom: 8 }}>月別再生数内訳（種別×月）</h3>
+      {monthlyYears.length > 1 && (
+        <select
+          value={selectedMonthlyYear}
+          onChange={e => setSelectedMonthlyYear(e.target.value)}
+          style={{ marginBottom: 12, padding: '4px 8px', fontSize: 13, borderRadius: 4, border: '1px solid #ccc' }}
+        >
+          {monthlyYears.map(y => <option key={y} value={y}>{y}年</option>)}
+        </select>
+      )}
+      <MonthlyViewsChart data={filteredMonthlyViews} />
 
       <h3 style={{ marginTop: 32, marginBottom: 8 }}>投稿ペース（種別×月別）</h3>
       {years.length > 1 && (

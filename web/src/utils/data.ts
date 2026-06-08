@@ -451,6 +451,69 @@ export function buildPostingCalendar(
 }
 
 // ----------------------------------------------------------------
+// 月別再生数内訳
+// ----------------------------------------------------------------
+
+export interface MonthlyViewsEntry {
+  month: string       // "2026-01"
+  Movie: number
+  Short: number
+  LiveArchive: number
+}
+
+export function buildMonthlyViewsBreakdown(
+  history: AllHistory,
+  talentName: string,
+  flags: VideoFlags = {}
+): MonthlyViewsEntry[] {
+  const talentHist = history[talentName]
+  if (!talentHist) return []
+
+  const monthSet = new Set<string>()
+  for (const [vid_id, raw] of Object.entries(talentHist)) {
+    if (vid_id === '_channel_stats') continue
+    const vid = raw as { records?: Record<string, unknown> }
+    if (!vid.records) continue
+    for (const d of Object.keys(vid.records)) monthSet.add(d.slice(0, 7))
+  }
+
+  const months = Array.from(monthSet).sort()
+  if (months.length === 0) return []
+
+  const result: MonthlyViewsEntry[] = []
+
+  for (const month of months) {
+    const entry: MonthlyViewsEntry = { month, Movie: 0, Short: 0, LiveArchive: 0 }
+
+    for (const [vid_id, raw] of Object.entries(talentHist)) {
+      if (vid_id === '_channel_stats') continue
+      const vid = raw as { type?: string; records?: Record<string, { 再生数?: number }> }
+      if (!vid.records) continue
+
+      const recordDates = Object.keys(vid.records).sort()
+
+      // その月内の最後の記録日
+      const lastInMonth = recordDates.filter(d => d.startsWith(month)).at(-1)
+      if (!lastInMonth) continue
+
+      // その月開始前の最後の記録日
+      const prevBeforeMonth = recordDates.filter(d => d < `${month}-01`).at(-1)
+
+      const curr = vid.records[lastInMonth]?.再生数 ?? 0
+      const prev = prevBeforeMonth ? (vid.records[prevBeforeMonth]?.再生数 ?? 0) : 0
+      const diff = curr - prev
+      if (diff <= 0) continue
+
+      const vtype = (flags[talentName]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
+      entry[vtype] += diff
+    }
+    result.push(entry)
+  }
+
+  return result
+}
+
+// ----------------------------------------------------------------
 // 初速カーブ（公開日からの再生推移）
 // ----------------------------------------------------------------
 
