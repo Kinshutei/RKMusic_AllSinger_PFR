@@ -420,6 +420,16 @@ export default function DashboardPage({ history, flags }: Props) {
     views: p.views - statsPoints[i].views,
   }))
 
+  const availableMonths = [...new Set(incrementPoints.map(p => p.date.slice(0, 7)))].sort()
+  const [selectedMonth, setSelectedMonth] = useState<string>(availableMonths.at(-1) ?? '')
+
+  const monthStartIdx = incrementPoints.findIndex(p => p.date.startsWith(selectedMonth))
+  const monthEndIdx   = [...incrementPoints].reverse().findIndex(p => p.date.startsWith(selectedMonth))
+  const monthEnd      = monthEndIdx === -1 ? -1 : incrementPoints.length - 1 - monthEndIdx
+  const filteredIncrements = monthStartIdx !== -1 ? incrementPoints.slice(monthStartIdx, monthEnd + 1) : incrementPoints
+  // statsPointsはincrementPointsより1つ先行するため、月頭の前日累計値も含めてスライス
+  const filteredStats = monthStartIdx !== -1 ? statsPoints.slice(monthStartIdx, monthEnd + 2) : statsPoints
+
   return (
     <div>
       <div className="tabs">
@@ -429,8 +439,20 @@ export default function DashboardPage({ history, flags }: Props) {
 
       {view === 'stats' ? (
         <div style={{ marginTop: 16 }}>
-          <DualAxisChart statsPoints={statsPoints} incrementPoints={incrementPoints} yKey="subs"  title="登録者数" />
-          <DualAxisChart statsPoints={statsPoints} incrementPoints={incrementPoints} yKey="views" title="総再生数" />
+          <div style={{ marginBottom: 16 }}>
+            <select
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(e.target.value)}
+              style={{ padding: '4px 8px', fontSize: 13, borderRadius: 4, border: '1px solid #ccc' }}
+            >
+              {availableMonths.map(m => {
+                const [y, mo] = m.split('-')
+                return <option key={m} value={m}>{y}年{parseInt(mo)}月</option>
+              })}
+            </select>
+          </div>
+          <DualAxisChart statsPoints={filteredStats} incrementPoints={filteredIncrements} yKey="subs"  title="登録者数" />
+          <DualAxisChart statsPoints={filteredStats} incrementPoints={filteredIncrements} yKey="views" title="総再生数" />
           {viewsBreakdown && <PieChart breakdown={viewsBreakdown} />}
           {dailyViewsByTalent && <GroupTreemap talentViews={dailyViewsByTalent.views} date={dailyViewsByTalent.date} />}
         </div>
