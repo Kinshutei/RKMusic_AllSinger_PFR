@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Plot from 'react-plotly.js'
 import { AllHistory, SingerRankItem, VideoRankItem, VideoType, VideoFlags } from '../types'
-import { buildDashboardData, buildStatsData, buildViewsTypeBreakdown, buildDailyViewsByTalent, buildDashboardDailyViewsBreakdown, DailyViewsEntry } from '../utils/data'
+import { buildDashboardData, buildStatsData, buildDailyViewsByTalent, buildDashboardDailyViewsBreakdown, DailyViewsEntry } from '../utils/data'
 import { niceScale, fmtDiff, diffColor } from '../utils/chartUtils'
 
 interface Props {
@@ -312,74 +312,6 @@ function DashboardDailyViewsChart({ data, title }: { data: DailyViewsEntry[]; ti
   )
 }
 
-function PieChart({ breakdown }: {
-  breakdown: { Movie: number; Short: number; LiveArchive: number; date: string }
-}) {
-  const types = ['Movie', 'Short', 'LiveArchive'] as const
-  const total = types.reduce((s, t) => s + breakdown[t], 0)
-  if (total === 0) return null
-
-  const cx = 110, cy = 110, r = 90
-  let cumAngle = -Math.PI / 2
-  const slices = types.map(t => {
-    const value = breakdown[t]
-    const angle = (value / total) * 2 * Math.PI
-    const startAngle = cumAngle
-    cumAngle += angle
-    const endAngle = cumAngle
-    const x1 = cx + r * Math.cos(startAngle)
-    const y1 = cy + r * Math.sin(startAngle)
-    const x2 = cx + r * Math.cos(endAngle)
-    const y2 = cy + r * Math.sin(endAngle)
-    const largeArc = angle > Math.PI ? 1 : 0
-    const pct = (value / total * 100).toFixed(1)
-    return { type: t, value, x1, y1, x2, y2, largeArc, pct, angle }
-  })
-
-  return (
-    <div style={{ marginBottom: 32 }}>
-      <div className="col-label">当日増加再生数の内訳（{breakdown.date}）</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 32, marginTop: 8 }}>
-        <svg width={220} height={220} style={{ flexShrink: 0 }}>
-          {slices.map((s) => {
-            if (s.angle <= 0) return null
-            // 100%（1種類のみ）の場合は arc の始点=終点になり描画されないため circle で代替
-            if (s.angle >= 2 * Math.PI - 0.001) {
-              return (
-                <circle key={s.type} cx={cx} cy={cy} r={r}
-                  fill={PIE_COLORS[s.type]} stroke="#fff" strokeWidth={2}>
-                  <title>{PIE_LABELS[s.type]}: {s.value.toLocaleString()} (100%)</title>
-                </circle>
-              )
-            }
-            return (
-              <path key={s.type}
-                d={`M ${cx} ${cy} L ${s.x1} ${s.y1} A ${r} ${r} 0 ${s.largeArc} 1 ${s.x2} ${s.y2} Z`}
-                fill={PIE_COLORS[s.type]} stroke="#fff" strokeWidth={2}
-              >
-                <title>{PIE_LABELS[s.type]}: {s.value.toLocaleString()} ({s.pct}%)</title>
-              </path>
-            )
-          })}
-        </svg>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {slices.map((s) => (
-            <div key={s.type} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-              <div style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: PIE_COLORS[s.type], flexShrink: 0 }} />
-              <span style={{ minWidth: 56 }}>{PIE_LABELS[s.type]}</span>
-              <span style={{ fontWeight: 600 }}>{s.pct}%</span>
-              <span style={{ color: '#888' }}>({s.value.toLocaleString()})</span>
-            </div>
-          ))}
-          <div style={{ borderTop: '1px solid #ddd', paddingTop: 6, fontSize: 12, color: '#888' }}>
-            合計: {total.toLocaleString()}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 const GROUP_DEFS = [
   { label: 'LIVE UNION', members: ['焔魔るり', 'HACHI', '瀬戸乃とと', '水瀬凪'],     color: '#2a305c' },
   { label: 'KMN LABEL',  members: ['KMNZ', 'HONK THE HORN'],                          color: '#363d74' },
@@ -505,7 +437,6 @@ export default function DashboardPage({ history, flags }: Props) {
   const [view, setView] = useState<'ranking' | 'stats'>('ranking')
   const data = buildDashboardData(history, flags)
   const statsPoints = buildStatsData(history)
-  const viewsBreakdown = buildViewsTypeBreakdown(history, flags)
   const dailyViewsByTalent = buildDailyViewsByTalent(history)
 
   const incrementPoints: StatsPoint[] = statsPoints.slice(1).map((p, i) => ({
@@ -551,7 +482,6 @@ export default function DashboardPage({ history, flags }: Props) {
           </div>
           <DualAxisChart statsPoints={filteredStats} incrementPoints={filteredIncrements} yKey="subs" title="登録者数" />
           <DashboardDailyViewsChart data={filteredDailyViews} title="総再生数（種別内訳）" />
-          {viewsBreakdown && <PieChart breakdown={viewsBreakdown} />}
           {dailyViewsByTalent && <GroupTreemap talentViews={dailyViewsByTalent.views} date={dailyViewsByTalent.date} />}
         </div>
       ) : !data ? (
