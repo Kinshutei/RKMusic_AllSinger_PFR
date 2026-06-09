@@ -45,8 +45,9 @@ function fmtBarLabel(v: number): string {
   return `${sign}${abs}`
 }
 
-function MiniBarChart({ daily, title }: {
+function MiniBarChart({ daily, dates, title }: {
   daily: (number | null)[]
+  dates?: string[]
   title: string
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -67,7 +68,9 @@ function MiniBarChart({ daily, title }: {
   if (count < 2) return null
 
   const vals = daily.slice(0, count) as number[]
-  const labels = vals.map((_, i) => `${i + 2}D`)
+  const labels = vals.map((_, i) =>
+    dates?.[i] ? String(parseInt(dates[i].slice(8), 10)) : `${i + 2}D`
+  )
 
   const PAD = { top: 22, right: 8, bottom: 22, left: 4 }
   const PLOT_H = 72
@@ -339,8 +342,8 @@ function VideoCardItem({ video, commentData }: {
         </div>
       )}
 
-      <MiniBarChart daily={video.再生数daily.slice(1)} title="再生数 日別増加" />
-      <MiniBarChart daily={video.高評価daily.slice(1)} title="高評価数 日別増加" />
+      <MiniBarChart daily={video.再生数daily.slice(1)} dates={video.再生数daily_dates.slice(1)} title="再生数 日別増加" />
+      <MiniBarChart daily={video.高評価daily.slice(1)} dates={video.再生数daily_dates.slice(1)} title="高評価数 日別増加" />
 
       {/* コメント感情 */}
       {commentData && (

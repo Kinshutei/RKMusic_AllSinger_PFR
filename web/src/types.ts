@@ -72,6 +72,7 @@ export interface VideoCard {
   高評価15d増加: number
   コメント数: number
   再生数daily: (number | null)[]
+  再生数daily_dates: string[]
   高評価daily: (number | null)[]
   コメント数daily: (number | null)[]
   collab_tags: string[]

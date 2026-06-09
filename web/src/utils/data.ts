@@ -326,13 +326,16 @@ export function buildTalentVideoList(history: AllHistory, talentName: string, fl
     const daily_views:    (number | null)[] = []
     const daily_likes:    (number | null)[] = []
     const daily_comments: (number | null)[] = []
+    const daily_dates:    string[]           = []
     for (let i = 1; i <= 15; i++) {
       if (sorted.length > i) {
-        const curr = vid.records[sorted[sorted.length - i]]     ?? {}
+        const dateStr = sorted[sorted.length - i]
+        const curr = vid.records[dateStr]                       ?? {}
         const prev = vid.records[sorted[sorted.length - i - 1]] ?? {}
         daily_views.push((curr.再生数   ?? 0) - (prev.再生数   ?? 0))
         daily_likes.push((curr.高評価数 ?? 0) - (prev.高評価数 ?? 0))
         daily_comments.push((curr.コメント数 ?? 0) - (prev.コメント数 ?? 0))
+        daily_dates.push(dateStr)
       } else {
         daily_views.push(null)
         daily_likes.push(null)
@@ -352,6 +355,7 @@ export function buildTalentVideoList(history: AllHistory, talentName: string, fl
       高評価15d増加: daily_likes.reduce<number>((a, v) => a + (v ?? 0), 0),
       コメント数: current_comments,
       再生数daily: daily_views,
+      再生数daily_dates: daily_dates,
       高評価daily: daily_likes,
       コメント数daily: daily_comments,
       collab_tags: detectCollabTags(title),
