@@ -324,6 +324,19 @@ function GroupTreemap({ talentViews, date }: {
   talentViews: Record<string, number>
   date: string
 }) {
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [containerW, setContainerW] = useState(600)
+
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const update = () => setContainerW(el.clientWidth)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   const ids: string[] = []
   const labels: string[] = []
   const parents: string[] = []
@@ -365,29 +378,33 @@ function GroupTreemap({ talentViews, date }: {
     })
   })
 
+  const plotH = Math.round(Math.max(300, Math.min(700, containerW * 0.65)))
+
   return (
     <div style={{ marginBottom: 32 }}>
       <div className="col-label">当日増加再生数のグループ内訳（{date}）</div>
-      <Plot
-        data={[{
-          type: 'treemap',
-          ids,
-          labels,
-          parents,
-          values,
-          branchvalues: 'total',
-          marker: { colors: markerColors },
-          textinfo: 'label+percent root',
-          textfont: { color: '#ffffff' },
-          hovertemplate: '%{label}: %{value:,}<extra></extra>',
-        } as any]}
-        layout={{
-          width: 1100,
-          height: 700,
-          margin: { t: 0, b: 0, l: 0, r: 0 },
-        }}
-        config={{ displayModeBar: false }}
-      />
+      <div ref={wrapperRef}>
+        <Plot
+          data={[{
+            type: 'treemap',
+            ids,
+            labels,
+            parents,
+            values,
+            branchvalues: 'total',
+            marker: { colors: markerColors },
+            textinfo: 'label+percent root',
+            textfont: { color: '#ffffff' },
+            hovertemplate: '%{label}: %{value:,}<extra></extra>',
+          } as any]}
+          layout={{
+            width: containerW,
+            height: plotH,
+            margin: { t: 0, b: 0, l: 0, r: 0 },
+          }}
+          config={{ displayModeBar: false }}
+        />
+      </div>
     </div>
   )
 }
