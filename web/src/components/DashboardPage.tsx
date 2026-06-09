@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Plot from 'react-plotly.js'
 import { AllHistory, SingerRankItem, VideoRankItem, VideoType, VideoFlags } from '../types'
-import { buildDashboardData, buildStatsData, buildViewsTypeBreakdown, buildDailyViewsByTalent } from '../utils/data'
+import { buildDashboardData, buildStatsData, buildViewsTypeBreakdown, buildDailyViewsByTalent, buildDashboardDailyViewsBreakdown, DailyViewsEntry } from '../utils/data'
 import { niceScale, fmtDiff, diffColor } from '../utils/chartUtils'
 
 interface Props {
@@ -218,6 +218,100 @@ function DualAxisChart({ statsPoints, incrementPoints, yKey, title }: {
 const PIE_COLORS = { Movie: '#6677cc', Short: '#cc4455', LiveArchive: '#44aa77' }
 const PIE_LABELS = { Movie: '動画', Short: 'ショート', LiveArchive: 'ライブ' }
 
+function DashboardDailyViewsChart({ data, title }: { data: DailyViewsEntry[]; title: string }) {
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [containerW, setContainerW] = useState(600)
+
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const update = () => setContainerW(el.clientWidth)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  if (data.length === 0) return <p className="muted">再生数データがありません</p>
+
+  const types = ['Movie', 'Short', 'LiveArchive'] as const
+  const maxTotal = Math.max(...data.map(d => d.Movie + d.Short + d.LiveArchive), 1)
+
+  const PAD = { top: 20, right: 16, bottom: 60, left: 72 }
+  const PLOT_H = 260
+  const minBarSlot = 40
+  const naturalW = PAD.left + PAD.right + data.length * minBarSlot
+  const svgW = Math.max(containerW, naturalW)
+  const barSlot = (svgW - PAD.left - PAD.right) / (data.length || 1)
+  const barW = Math.min(barSlot - 4, 40)
+  const svgH = PAD.top + PLOT_H + PAD.bottom
+
+  const { ticks } = niceScale(0, maxTotal, 5)
+  const yScale = PLOT_H / maxTotal
+
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div className="col-label">{title}</div>
+      <div ref={wrapperRef} style={{ overflowX: 'auto', marginTop: 8 }}>
+        <svg width={svgW} height={svgH} style={{ fontFamily: 'inherit', display: 'block' }}>
+          {ticks.map(tick => {
+            const y = PAD.top + PLOT_H - tick * yScale
+            return (
+              <g key={tick}>
+                <line x1={PAD.left} y1={y} x2={PAD.left + data.length * barSlot} y2={y}
+                      stroke={tick === 0 ? '#888' : '#e0e3f5'} strokeWidth={1} />
+                <text x={PAD.left - 6} y={y + 4} textAnchor="end" fontSize={10} fill="#888">
+                  {fmtY(tick)}
+                </text>
+              </g>
+            )
+          })}
+          {data.map((entry, i) => {
+            const x = PAD.left + barSlot * i + (barSlot - barW) / 2
+            let yBase = PAD.top + PLOT_H
+            const total = entry.Movie + entry.Short + entry.LiveArchive
+            return (
+              <g key={entry.date}>
+                {types.map(t => {
+                  const count = entry[t]
+                  if (count === 0) return null
+                  const h = count * yScale
+                  yBase -= h
+                  return (
+                    <rect key={t} x={x} y={yBase} width={barW} height={h}
+                          fill={PIE_COLORS[t]} rx={1}>
+                      <title>{entry.date} {PIE_LABELS[t]}: {count.toLocaleString()}</title>
+                    </rect>
+                  )
+                })}
+                {total > 0 && (
+                  <text x={x + barW / 2} y={PAD.top + PLOT_H - total * yScale - 3}
+                        textAnchor="middle" fontSize={9} fill="#555">
+                    {fmtY(total)}
+                  </text>
+                )}
+                <text x={x + barW / 2} y={PAD.top + PLOT_H + 10}
+                      textAnchor="end" fontSize={9} fill="#888"
+                      transform={`rotate(-45, ${x + barW / 2}, ${PAD.top + PLOT_H + 10})`}>
+                  {entry.date.slice(5)}
+                </text>
+              </g>
+            )
+          })}
+        </svg>
+        <div style={{ display: 'flex', gap: 16, marginTop: 4, fontSize: 12, color: '#666' }}>
+          {types.map(t => (
+            <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: PIE_COLORS[t], display: 'inline-block' }} />
+              {PIE_LABELS[t]}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function PieChart({ breakdown }: {
   breakdown: { Movie: number; Short: number; LiveArchive: number; date: string }
 }) {
@@ -420,6 +514,8 @@ export default function DashboardPage({ history, flags }: Props) {
     views: p.views - statsPoints[i].views,
   }))
 
+  const allDailyViews = buildDashboardDailyViewsBreakdown(history, flags)
+
   const availableMonths = [...new Set(incrementPoints.map(p => p.date.slice(0, 7)))].sort()
   const [selectedMonth, setSelectedMonth] = useState<string>(availableMonths.at(-1) ?? '')
 
@@ -429,6 +525,8 @@ export default function DashboardPage({ history, flags }: Props) {
   const filteredIncrements = monthStartIdx !== -1 ? incrementPoints.slice(monthStartIdx, monthEnd + 1) : incrementPoints
   // statsPointsはincrementPointsより1つ先行するため、月頭の前日累計値も含めてスライス
   const filteredStats = monthStartIdx !== -1 ? statsPoints.slice(monthStartIdx, monthEnd + 2) : statsPoints
+
+  const filteredDailyViews = allDailyViews.filter(d => d.date.startsWith(selectedMonth))
 
   return (
     <div>
@@ -451,8 +549,8 @@ export default function DashboardPage({ history, flags }: Props) {
               })}
             </select>
           </div>
-          <DualAxisChart statsPoints={filteredStats} incrementPoints={filteredIncrements} yKey="subs"  title="登録者数" />
-          <DualAxisChart statsPoints={filteredStats} incrementPoints={filteredIncrements} yKey="views" title="総再生数" />
+          <DualAxisChart statsPoints={filteredStats} incrementPoints={filteredIncrements} yKey="subs" title="登録者数" />
+          <DashboardDailyViewsChart data={filteredDailyViews} title="総再生数（種別内訳）" />
           {viewsBreakdown && <PieChart breakdown={viewsBreakdown} />}
           {dailyViewsByTalent && <GroupTreemap talentViews={dailyViewsByTalent.views} date={dailyViewsByTalent.date} />}
         </div>

@@ -450,6 +450,50 @@ export function buildPostingCalendar(
 }
 
 // ----------------------------------------------------------------
+// Dashboard用：全タレント合計の日別再生数内訳（種別×日付）
+// ----------------------------------------------------------------
+
+export function buildDashboardDailyViewsBreakdown(
+  history: AllHistory,
+  flags: VideoFlags = {}
+): DailyViewsEntry[] {
+  const talents = TALENT_ORDER.filter(t => t !== 'Dashboard' && t in history)
+
+  const allDates = new Set<string>()
+  for (const t of talents) {
+    const cs = history[t]?._channel_stats as Record<string, ChannelStats> | undefined
+    if (cs) Object.keys(cs).forEach(d => allDates.add(d))
+  }
+  if (allDates.size < 2) return []
+
+  const sortedDates = Array.from(allDates).sort()
+
+  const result: DailyViewsEntry[] = []
+  for (let i = 1; i < sortedDates.length; i++) {
+    const date = sortedDates[i]
+    const prev = sortedDates[i - 1]
+    const entry: DailyViewsEntry = { date, Movie: 0, Short: 0, LiveArchive: 0 }
+
+    for (const talent of talents) {
+      for (const [vid_id, raw] of Object.entries(history[talent] ?? {})) {
+        if (vid_id === '_channel_stats') continue
+        const vid = raw as { type?: string; records?: Record<string, { 再生数?: number }> }
+        if (!vid.records) continue
+        const nr = vid.records[date]
+        const pr = vid.records[prev]
+        if (!nr || !pr) continue
+        const diff = (nr.再生数 ?? 0) - (pr.再生数 ?? 0)
+        if (diff <= 0) continue
+        const vtype = (flags[talent]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
+        entry[vtype] += diff
+      }
+    }
+    result.push(entry)
+  }
+  return result
+}
+
+// ----------------------------------------------------------------
 // 月別再生数内訳
 // ----------------------------------------------------------------
 
