@@ -61,10 +61,10 @@ def load_json(path, default):
             print(f'⚠️  {path} 読み込みエラー: {e}')
     return default
 
-def save_json(path, data):
+def save_json(path, data, indent=2):
     dir_ = os.path.dirname(os.path.abspath(path))
     with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=dir_, delete=False, suffix='.tmp') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        json.dump(data, f, ensure_ascii=False, indent=indent)
         tmp_path = f.name
     os.replace(tmp_path, path)
 
@@ -449,6 +449,119 @@ def update_history(channel_name, videos, today_str, channel_stats=None):
     print(f'  履歴保存: {path}')
 
 # ----------------------------------------------------------------
+# Dashboard用軽量集計ファイル
+# ----------------------------------------------------------------
+
+SUMMARY_FILE = 'dashboard_summary.json'
+CHANNELS_CONFIG_FILE = 'channels_config.json'
+
+def load_talent_names():
+    """channels_config.jsonからタレント名一覧を取得（API/環境変数なしで動作）"""
+    config = load_json(CHANNELS_CONFIG_FILE, [])
+    return [c['name'] for c in config if 'name' in c]
+
+def build_dashboard_summary():
+    """
+    Dashboard（全タレント横断のランキング・統計表示）専用の軽量サマリーを
+    history_{talent}.json から再集計して dashboard_summary.json に書き出す。
+
+    history_*.json は日々肥大化し続けるため、Dashboardの毎回の全件取得が
+    レート制限を引き起こしていた。このサマリーは「全タレントの動画の
+    直近2日分スナップショット」と「チャンネル統計の全期間」のみを持ち、
+    動画本数の増加分でしか大きくならない。
+
+    history_*.json / all_snapshots.json の書き込みには一切関与しない
+    （既存の収集フローとは独立した読み取り専用の後処理）。
+    """
+    talents = load_talent_names()
+    if not talents:
+        print('  ⚠️  channels_config.json からタレント一覧を取得できませんでした。summary生成をスキップします。')
+        return
+
+    channel_stats_summary = {}
+    all_dates = set()
+    talent_videos = {}  # talent -> {vid_id: {タイトル, type, records}}
+
+    for talent in talents:
+        history = load_json(history_file(talent), {})
+        channel_history = history.get(talent)
+        if not channel_history:
+            continue
+
+        cs = channel_history.get('_channel_stats', {})
+        if cs:
+            channel_stats_summary[talent] = cs
+            all_dates.update(cs.keys())
+
+        videos = {
+            vid_id: v for vid_id, v in channel_history.items()
+            if vid_id != '_channel_stats' and v.get('records')
+        }
+        if videos:
+            talent_videos[talent] = videos
+
+    if not all_dates:
+        print('  ⚠️  有効な_channel_statsが見つかりませんでした。summary生成をスキップします。')
+        return
+
+    sorted_dates = sorted(all_dates)
+    n_date = sorted_dates[-1]
+    n_idx = sorted_dates.index(n_date)
+    p_date = sorted_dates[n_idx - 1] if n_idx > 0 else None
+
+    # 動画スナップショット（n_date/p_dateの2日分のみ、記録が無ければnull）
+    video_snapshots = []
+    for talent, videos in talent_videos.items():
+        for vid_id, v in videos.items():
+            records = v.get('records', {})
+            nr = records.get(n_date)
+            pr = records.get(p_date) if p_date else None
+            video_snapshots.append({
+                't': talent,
+                'id': vid_id,
+                'ti': v.get('タイトル', vid_id),
+                'ty': v.get('type', 'Movie'),
+                'vn': nr.get('再生数') if nr else None,
+                'ln': nr.get('高評価数') if nr else None,
+                'cn': nr.get('コメント数') if nr else None,
+                'vp': pr.get('再生数') if pr else None,
+                'lp': pr.get('高評価数') if pr else None,
+                'cp': pr.get('コメント数') if pr else None,
+            })
+
+    # 日別種別内訳（Movie/Short/LiveArchiveの再生数増分、全タレント合計）
+    daily_type_totals = {}
+    for talent, videos in talent_videos.items():
+        for vid_id, v in videos.items():
+            records = v.get('records', {})
+            vtype = v.get('type', 'Movie')
+            vdates = sorted(records.keys())
+            for i in range(1, len(vdates)):
+                d, prev = vdates[i], vdates[i - 1]
+                diff = (records[d].get('再生数', 0) or 0) - (records[prev].get('再生数', 0) or 0)
+                if diff <= 0:
+                    continue
+                bucket = daily_type_totals.setdefault(d, {'Movie': 0, 'Short': 0, 'LiveArchive': 0})
+                if vtype in bucket:
+                    bucket[vtype] += diff
+
+    daily_type_breakdown = [
+        {'date': d, **daily_type_totals[d]} for d in sorted(daily_type_totals.keys())
+    ]
+
+    summary = {
+        'generated_at': datetime.now(timezone(timedelta(hours=9))).strftime('%Y-%m-%d %H:%M:%S'),
+        'n_date': n_date,
+        'p_date': p_date,
+        'channel_stats': channel_stats_summary,
+        'daily_type_breakdown': daily_type_breakdown,
+        'videos': video_snapshots,
+    }
+
+    save_json(SUMMARY_FILE, summary, indent=None)
+    print(f'  Dashboard集計保存: {SUMMARY_FILE}（動画{len(video_snapshots)}件 / タレント{len(channel_stats_summary)}件 / n_date={n_date} p_date={p_date}）')
+
+# ----------------------------------------------------------------
 # チャンネル処理
 # ----------------------------------------------------------------
 
@@ -581,9 +694,23 @@ def main():
     print(f'✓ 全処理完了: {success}/{len(CHANNELS)} チャンネル成功')
     print('=' * 50)
 
+    try:
+        build_dashboard_summary()
+    except Exception as e:
+        print(f'⚠️  dashboard_summary.json 生成に失敗しました（本処理には影響しません）: {e}')
+
     if still_failed:
         print(f'❌ リトライ後も失敗: {", ".join(still_failed)}')
         sys.exit(1)
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--summary-only', action='store_true',
+                         help='既存のhistory_*.jsonからdashboard_summary.jsonのみ再生成（YouTube API呼び出しなし）')
+    args = parser.parse_args()
+
+    if args.summary_only:
+        build_dashboard_summary()
+    else:
+        main()

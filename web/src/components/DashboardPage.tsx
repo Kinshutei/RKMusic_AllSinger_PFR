@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import Plot from 'react-plotly.js'
-import { AllHistory, SingerRankItem, VideoRankItem, VideoType, VideoFlags } from '../types'
+import { DashboardSummary, SingerRankItem, VideoRankItem, VideoType, VideoFlags } from '../types'
 import { buildDashboardData, buildStatsData, buildDailyViewsByTalent, buildDashboardDailyViewsBreakdown, DailyViewsEntry } from '../utils/data'
 import { niceScale, fmtDiff, diffColor } from '../utils/chartUtils'
 
 interface Props {
-  history: AllHistory
+  summary: DashboardSummary
   flags: VideoFlags
 }
 
@@ -450,11 +450,11 @@ const VIDEO_SECTIONS: { type: VideoType; label: string }[] = [
   { type: 'LiveArchive', label: 'ライブ部門' },
 ]
 
-export default function DashboardPage({ history, flags }: Props) {
+export default function DashboardPage({ summary, flags }: Props) {
   const [view, setView] = useState<'ranking' | 'stats'>('ranking')
-  const data = buildDashboardData(history, flags)
-  const statsPoints = buildStatsData(history)
-  const dailyViewsByTalent = buildDailyViewsByTalent(history)
+  const data = buildDashboardData(summary, flags)
+  const statsPoints = buildStatsData(summary)
+  const dailyViewsByTalent = buildDailyViewsByTalent(summary)
 
   const incrementPoints: StatsPoint[] = statsPoints.slice(1).map((p, i) => ({
     date: p.date,
@@ -462,7 +462,7 @@ export default function DashboardPage({ history, flags }: Props) {
     views: p.views - statsPoints[i].views,
   }))
 
-  const allDailyViews = buildDashboardDailyViewsBreakdown(history, flags)
+  const allDailyViews = buildDashboardDailyViewsBreakdown(summary)
 
   const availableMonths = [...new Set(incrementPoints.map(p => p.date.slice(0, 7)))].sort()
   const [selectedMonth, setSelectedMonth] = useState<string>(availableMonths.at(-1) ?? '')

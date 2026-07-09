@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import { AllHistory, VideoFlags, AllComments } from './types'
-import { loadHistory, loadVideoFlags, loadComments, getAvailableTalents } from './utils/data'
+import { useState, useEffect, useRef } from 'react'
+import { AllHistory, VideoFlags, ChannelComments, DashboardSummary } from './types'
+import { loadDashboardSummary, loadVideoFlags, loadTalentHistory, loadTalentComments, TALENT_ORDER } from './utils/data'
 import DashboardPage from './components/DashboardPage'
 import TalentPage from './components/TalentPage'
 import Footer from './components/Footer'
@@ -9,40 +9,64 @@ import './App.css'
 type Page = string
 
 export default function App() {
-  const [history, setHistory]   = useState<AllHistory | null>(null)
-  const [flags, setFlags]       = useState<VideoFlags>({})
-  const [comments, setComments] = useState<AllComments>({})
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState<string | null>(null)
-  const [failedTalents, setFailedTalents] = useState<string[]>([])
+  const [summary, setSummary] = useState<DashboardSummary | null>(null)
+  const [flags, setFlags]     = useState<VideoFlags>({})
+  const [summaryLoading, setSummaryLoading] = useState(true)
+  const [summaryError, setSummaryError]     = useState<string | null>(null)
+
+  const [talentCache, setTalentCache]     = useState<Record<string, AllHistory[string] | null>>({})
+  const [commentsCache, setCommentsCache] = useState<Record<string, ChannelComments>>({})
+  const [talentLoading, setTalentLoading] = useState<Record<string, boolean>>({})
+  const [talentError, setTalentError]     = useState<Record<string, string | null>>({})
+  const inFlightRef = useRef<Set<string>>(new Set())
+
   const [activePage, setActivePage] = useState<Page>('Dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    // comments取得はhistoryより優先度が低いため後段で行い、
-    // raw.githubusercontent.comのレート制限枠をhistory取得に優先して使わせる。
     (async () => {
       try {
-        const [h, f] = await Promise.all([loadHistory(), loadVideoFlags()])
-        const c = await loadComments()
-        setHistory(h.data)
+        const [s, f] = await Promise.all([loadDashboardSummary(), loadVideoFlags()])
+        setSummary(s)
         setFlags(f)
-        setComments(c.data)
-        setFailedTalents(h.failedTalents)
       } catch (e) {
-        setError(String(e))
+        setSummaryError(String(e))
       } finally {
-        setLoading(false)
+        setSummaryLoading(false)
       }
     })()
   }, [])
 
-  const talents = history ? getAvailableTalents(history) : ['Dashboard']
+  async function ensureTalentLoaded(talent: string) {
+    if (talent === 'Dashboard') return
+    if (talent in talentCache || inFlightRef.current.has(talent)) return
+    inFlightRef.current.add(talent)
+    setTalentLoading(prev => ({ ...prev, [talent]: true }))
+    setTalentError(prev => ({ ...prev, [talent]: null }))
+    try {
+      const [h, c] = await Promise.all([loadTalentHistory(talent), loadTalentComments(talent)])
+      if (h.failed) {
+        setTalentError(prev => ({ ...prev, [talent]: 'データの取得に失敗しました' }))
+      } else {
+        setTalentCache(prev => ({ ...prev, [talent]: h.data }))
+        setCommentsCache(prev => ({ ...prev, [talent]: c }))
+      }
+    } finally {
+      inFlightRef.current.delete(talent)
+      setTalentLoading(prev => ({ ...prev, [talent]: false }))
+    }
+  }
 
   function navigate(page: Page) {
     setActivePage(page)
     setSidebarOpen(false)
+    if (page !== 'Dashboard') void ensureTalentLoaded(page)
   }
+
+  const talentHistoryForPage: AllHistory =
+    activePage in talentCache && talentCache[activePage]
+      ? { [activePage]: talentCache[activePage] }
+      : {}
 
   return (
     <div className="app-layout">
@@ -68,7 +92,7 @@ export default function App() {
       {/* サイドバー */}
       <aside className={`sidebar${sidebarOpen ? ' sidebar--open' : ''}`}>
         <nav className="sidebar-nav">
-          {talents.map(talent => (
+          {TALENT_ORDER.map(talent => (
             <button
               key={talent}
               className={`sidebar-nav-btn${activePage === talent ? ' active' : ''}`}
@@ -83,17 +107,34 @@ export default function App() {
       {/* メインコンテンツ */}
       <div className="main-wrapper">
         <div className="content">
-          {loading && <p className="muted">読み込み中...</p>}
-          {error   && <p className="error-text">データの取得に失敗しました: {error}</p>}
-          {!loading && !error && failedTalents.length > 0 && (
-            <p className="error-text">
-              一部データの取得に失敗しました（再読み込みで解消する場合があります）: {failedTalents.join('、')}
-            </p>
-          )}
-          {!loading && !error && history && (
-            activePage === 'Dashboard'
-              ? <DashboardPage history={history} flags={flags} />
-              : <TalentPage key={activePage} history={history} talentName={activePage} flags={flags} comments={comments} />
+          {activePage === 'Dashboard' ? (
+            summaryError ? (
+              <p className="error-text">データの取得に失敗しました: {summaryError}</p>
+            ) : summaryLoading ? (
+              <p className="muted">読み込み中...</p>
+            ) : !summary ? (
+              <p className="muted">集計データを準備中です。しばらくしてから再度お試しください。</p>
+            ) : (
+              <DashboardPage summary={summary} flags={flags} />
+            )
+          ) : (
+            talentError[activePage] ? (
+              <p className="error-text">
+                {talentError[activePage]}
+                {' '}
+                <button onClick={() => ensureTalentLoaded(activePage)}>再試行</button>
+              </p>
+            ) : talentLoading[activePage] || !(activePage in talentCache) ? (
+              <p className="muted">読み込み中...</p>
+            ) : (
+              <TalentPage
+                key={activePage}
+                history={talentHistoryForPage}
+                talentName={activePage}
+                flags={flags}
+                comments={{ [activePage]: commentsCache[activePage] ?? {} }}
+              />
+            )
           )}
         </div>
         <Footer />

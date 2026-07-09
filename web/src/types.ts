@@ -97,3 +97,36 @@ export interface VideoCommentData {
 
 export type ChannelComments = Record<string, VideoCommentData>
 export type AllComments = Record<string, ChannelComments>
+
+// ----------------------------------------------------------------
+// Dashboard用軽量サマリー（auto_check.pyが生成するdashboard_summary.json）
+// ----------------------------------------------------------------
+
+export interface DashboardVideoSnapshot {
+  t: string       // talent
+  id: string      // vid_id
+  ti: string      // タイトル
+  ty: VideoType
+  vn: number | null // 再生数 at n_date
+  ln: number | null // 高評価数 at n_date
+  cn: number | null // コメント数 at n_date
+  vp: number | null // 再生数 at p_date
+  lp: number | null // 高評価数 at p_date
+  cp: number | null // コメント数 at p_date
+}
+
+export interface DailyTypeBreakdownEntry {
+  date: string
+  Movie: number
+  Short: number
+  LiveArchive: number
+}
+
+export interface DashboardSummary {
+  generated_at: string
+  n_date: string
+  p_date: string | null
+  channel_stats: Record<string, Record<string, ChannelStats>>
+  daily_type_breakdown: DailyTypeBreakdownEntry[]
+  videos: DashboardVideoSnapshot[]
+}

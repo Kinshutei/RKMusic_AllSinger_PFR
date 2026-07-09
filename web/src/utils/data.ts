@@ -1,7 +1,8 @@
 import {
-  AllHistory, ChannelStats, VideoType, VideoFlags,
+  AllHistory, TalentHistory, ChannelStats, VideoType, VideoFlags,
   SingerRankItem, VideoRankItem, VideoCard,
-  AllComments, ChannelComments,
+  ChannelComments,
+  DashboardSummary,
 } from '../types'
 
 export const TALENT_ORDER = [
@@ -16,11 +17,9 @@ const HISTORY_BASE_URL =
   import.meta.env.VITE_HISTORY_BASE_URL ??
   'https://raw.githubusercontent.com/Kinshutei/RKMusic_AllSinger_PFR/main'
 
-const FLAGS_URL = 'https://raw.githubusercontent.com/Kinshutei/RKMusic_AllSinger_PFR/main/video_flags.json'
+const FLAGS_URL = `${HISTORY_BASE_URL}/video_flags.json`
+const SUMMARY_URL = `${HISTORY_BASE_URL}/dashboard_summary.json`
 
-// raw.githubusercontent.com は同時多数リクエストでレート制限（429）を返すことがあるため、
-// 同時実行数を絞りつつ、失敗時は間隔を空けてリトライする。
-const FETCH_CONCURRENCY = 5
 const FETCH_RETRIES = 3
 const FETCH_RETRY_DELAY_MS = 1000
 
@@ -45,63 +44,28 @@ async function fetchJsonWithRetry<T>(url: string): Promise<FetchResult<T>> {
   return { data: null, failed: true }
 }
 
-async function mapWithConcurrency<T, R>(
-  items: T[], limit: number, fn: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results: R[] = new Array(items.length)
-  let nextIndex = 0
-  async function worker() {
-    while (nextIndex < items.length) {
-      const i = nextIndex++
-      results[i] = await fn(items[i])
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
-  return results
-}
-
-export interface LoadResult<T> {
-  data: T
-  failedTalents: string[]
-}
-
-export async function loadHistory(): Promise<LoadResult<AllHistory>> {
-  const talents = TALENT_ORDER.filter(t => t !== 'Dashboard')
-  const failedTalents: string[] = []
-  const results = await mapWithConcurrency(talents, FETCH_CONCURRENCY, async talent => {
-    const { data, failed } = await fetchJsonWithRetry<AllHistory>(
-      `${HISTORY_BASE_URL}/history_${encodeURIComponent(talent)}.json`
-    )
-    if (failed) failedTalents.push(talent)
-    return data ?? {}
-  })
-  return { data: Object.assign({}, ...results), failedTalents }
+// Dashboardは事前集約済みの軽量サマリー1件のみ取得する（全タレントのhistoryを都度取得しない）。
+export async function loadDashboardSummary(): Promise<DashboardSummary | null> {
+  return (await fetchJsonWithRetry<DashboardSummary>(SUMMARY_URL)).data
 }
 
 export async function loadVideoFlags(): Promise<VideoFlags> {
   return (await fetchJsonWithRetry<VideoFlags>(FLAGS_URL)).data ?? {}
 }
 
-// comments_*.json は収集対象外のタレントが多く404が正常に発生するため、
-// 取得失敗はhistoryほど致命的ではない（TalentPageのコメント欄が空になるのみ）。
-export async function loadComments(): Promise<LoadResult<AllComments>> {
-  const talents = TALENT_ORDER.filter(t => t !== 'Dashboard')
-  const failedTalents: string[] = []
-  const results = await mapWithConcurrency(talents, FETCH_CONCURRENCY, async talent => {
-    const { data, failed } = await fetchJsonWithRetry<ChannelComments>(
-      `${HISTORY_BASE_URL}/comments_${encodeURIComponent(talent)}.json`
-    )
-    if (failed) failedTalents.push(talent)
-    return data ? { [talent]: data } : {}
-  })
-  return { data: Object.assign({}, ...results), failedTalents }
+// タレント個別ページ表示時にのみ、そのタレント1人分だけ取得する（遅延読み込み）。
+export async function loadTalentHistory(talent: string): Promise<{ data: TalentHistory | null; failed: boolean }> {
+  const { data, failed } = await fetchJsonWithRetry<AllHistory>(
+    `${HISTORY_BASE_URL}/history_${encodeURIComponent(talent)}.json`
+  )
+  return { data: data?.[talent] ?? null, failed }
 }
 
-export function getAvailableTalents(history: AllHistory): string[] {
-  const existing = new Set(Object.keys(history))
-  const ordered = TALENT_ORDER.filter(t => t === 'Dashboard' || existing.has(t))
-  const extras = Object.keys(history).filter(t => !TALENT_ORDER.includes(t)).sort()
-  return [...ordered, ...extras]
+// comments_*.json は収集対象外のタレントが多く404が正常に発生する（想定内）。
+export async function loadTalentComments(talent: string): Promise<ChannelComments> {
+  return (await fetchJsonWithRetry<ChannelComments>(
+    `${HISTORY_BASE_URL}/comments_${encodeURIComponent(talent)}.json`
+  )).data ?? {}
 }
 
 // ----------------------------------------------------------------
@@ -146,47 +110,38 @@ function rate(val: number, diff: number | null): number | null {
 // ダッシュボード
 // ----------------------------------------------------------------
 
-export function buildDashboardData(history: AllHistory, flags: VideoFlags = {}) {
-  const talents = TALENT_ORDER.filter(t => t !== 'Dashboard' && t in history)
+export function buildDashboardData(summary: DashboardSummary, flags: VideoFlags = {}) {
+  const { n_date, p_date, channel_stats, videos } = summary
+  const talents = Object.keys(channel_stats)
 
-  const allDates = new Set<string>()
-  for (const t of talents) {
-    const cs = history[t]?._channel_stats
-    if (cs) Object.keys(cs).forEach(d => allDates.add(d))
+  const videosByTalent = new Map<string, DashboardSummary['videos']>()
+  for (const v of videos) {
+    const arr = videosByTalent.get(v.t)
+    if (arr) arr.push(v)
+    else videosByTalent.set(v.t, [v])
   }
-  if (allDates.size === 0) return null
-
-  const n_date = Array.from(allDates).sort().at(-1)!
-  const p_date = prevDate(n_date)
 
   const singerData: SingerRankItem[] = []
   for (const talent of talents) {
-    const cs = history[talent]?._channel_stats as Record<string, ChannelStats> | undefined
-    if (!cs) continue
-    const n = cs[n_date], p = cs[p_date]
+    const cs = channel_stats[talent] as Record<string, ChannelStats> | undefined
+    const n = cs?.[n_date], p = p_date ? cs?.[p_date] : undefined
     const subs_n  = n?.登録者数 ?? 0
     const views_n = n?.総再生数 ?? 0
     const subs_diff  = (n && p) ? subs_n  - (p.登録者数 ?? 0) : null
     const views_diff = (n && p) ? views_n - (p.総再生数 ?? 0) : null
 
+    const talentVideos = videosByTalent.get(talent) ?? []
     let comments_n = 0, comments_p = 0, has_p = false
     let content_movie = 0, content_short = 0, content_live = 0
     let content_n = 0, content_p = 0, has_content_p = false
-    for (const [vid_id, raw] of Object.entries(history[talent] ?? {})) {
-      if (vid_id === '_channel_stats') continue
-      const vid = raw as { type?: string; records?: Record<string, { コメント数?: number }> }
-      if (!vid.records) continue
-      comments_n += vid.records[n_date]?.コメント数 ?? 0
-      if (vid.records[p_date] !== undefined) {
-        comments_p += vid.records[p_date]?.コメント数 ?? 0
-        has_p = true
-      }
-      const vtype = (flags[talent]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
-      if (vtype === 'Movie')       content_movie++
-      else if (vtype === 'Short')  content_short++
-      else if (vtype === 'LiveArchive') content_live++
-      if (vid.records[n_date] !== undefined) content_n++
-      if (vid.records[p_date] !== undefined) { content_p++; has_content_p = true }
+    for (const v of talentVideos) {
+      comments_n += v.cn ?? 0
+      if (v.cp !== null) { comments_p += v.cp; has_p = true }
+      if (v.ty === 'Movie')       content_movie++
+      else if (v.ty === 'Short')  content_short++
+      else if (v.ty === 'LiveArchive') content_live++
+      if (v.vn !== null) content_n++
+      if (v.vp !== null) { content_p++; has_content_p = true }
     }
     const comments_diff = has_p ? comments_n - comments_p : null
     const content_diff = has_content_p ? content_n - content_p : null
@@ -203,39 +158,30 @@ export function buildDashboardData(history: AllHistory, flags: VideoFlags = {}) 
   }
 
   const videoData: Record<VideoType, VideoRankItem[]> = { Movie: [], Short: [], LiveArchive: [] }
-  for (const talent of talents) {
-    for (const [vid_id, raw] of Object.entries(history[talent] ?? {})) {
-      if (vid_id === '_channel_stats') continue
-      const vid = raw as { タイトル?: string; type?: string; records?: Record<string, { 再生数?: number; 高評価数?: number; コメント数?: number }> }
-      if (!vid.records) continue
-      const vtype = (flags[talent]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
-      if (!(vtype in videoData)) continue
-      const nr = vid.records[n_date], pr = vid.records[p_date]
-      const views_n    = nr?.再生数    ?? 0
-      const likes_n    = nr?.高評価数  ?? 0
-      const comments_n = nr?.コメント数 ?? 0
-      const views_diff    = (nr && pr) ? views_n    - (pr.再生数    ?? 0) : null
-      const likes_diff    = (nr && pr) ? likes_n    - (pr.高評価数  ?? 0) : null
-      const comments_diff = (nr && pr) ? comments_n - (pr.コメント数 ?? 0) : null
-      videoData[vtype].push({
-        talent, vid_id, title: vid.タイトル ?? vid_id,
-        views_n, views_diff, views_rate: rate(views_n, views_diff),
-        likes_n, likes_diff,
-        comments_n, comments_diff,
-      })
-    }
+  for (const v of videos) {
+    const vtype = (flags[v.t]?.[v.id] ?? v.ty) as VideoType
+    if (!(vtype in videoData)) continue
+    const views_n    = v.vn ?? 0
+    const likes_n    = v.ln ?? 0
+    const comments_n = v.cn ?? 0
+    const views_diff    = (v.vn !== null && v.vp !== null) ? v.vn - v.vp : null
+    const likes_diff    = (v.ln !== null && v.lp !== null) ? v.ln - v.lp : null
+    const comments_diff = (v.cn !== null && v.cp !== null) ? v.cn - v.cp : null
+    videoData[vtype].push({
+      talent: v.t, vid_id: v.id, title: v.ti,
+      views_n, views_diff, views_rate: rate(views_n, views_diff),
+      likes_n, likes_diff,
+      comments_n, comments_diff,
+    })
   }
 
   return { singerData, videoData, n_date }
 }
 
-export function buildStatsData(history: AllHistory): { date: string; subs: number; views: number }[] {
-  const talents = TALENT_ORDER.filter(t => t !== 'Dashboard' && t in history)
+export function buildStatsData(summary: DashboardSummary): { date: string; subs: number; views: number }[] {
   const dateMap = new Map<string, { subs: number; views: number }>()
 
-  for (const talent of talents) {
-    const cs = history[talent]?._channel_stats as Record<string, ChannelStats> | undefined
-    if (!cs) continue
+  for (const cs of Object.values(summary.channel_stats)) {
     for (const [date, stats] of Object.entries(cs)) {
       const cur = dateMap.get(date) ?? { subs: 0, views: 0 }
       cur.subs  += stats.登録者数 ?? 0
@@ -249,73 +195,20 @@ export function buildStatsData(history: AllHistory): { date: string; subs: numbe
     .map(([date, v]) => ({ date, ...v }))
 }
 
-export function buildViewsTypeBreakdown(
-  history: AllHistory, flags: VideoFlags = {}
-): { Movie: number; Short: number; LiveArchive: number; date: string } | null {
-  const talents = TALENT_ORDER.filter(t => t !== 'Dashboard' && t in history)
-
-  const allDates = new Set<string>()
-  for (const t of talents) {
-    const cs = history[t]?._channel_stats
-    if (cs) Object.keys(cs).forEach(d => allDates.add(d))
-  }
-  if (allDates.size === 0) return null
-
-  const n_date = Array.from(allDates).sort().at(-1)!
-  const p_date = prevDate(n_date)
-
-  const result = { Movie: 0, Short: 0, LiveArchive: 0, date: n_date }
-
-  for (const talent of talents) {
-    for (const [vid_id, raw] of Object.entries(history[talent] ?? {})) {
-      if (vid_id === '_channel_stats') continue
-      const vid = raw as { type?: string; records?: Record<string, { 再生数?: number }> }
-      if (!vid.records) continue
-      const nr = vid.records[n_date]
-      const pr = vid.records[p_date]
-      if (!nr || !pr) continue
-      const diff = (nr.再生数 ?? 0) - (pr.再生数 ?? 0)
-      if (diff <= 0) continue
-      const vtype = (flags[talent]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
-      result[vtype] += diff
-    }
-  }
-
-  return result
-}
-
 export function buildDailyViewsByTalent(
-  history: AllHistory
+  summary: DashboardSummary
 ): { views: Record<string, number>; date: string } | null {
-  const talents = TALENT_ORDER.filter(t => t !== 'Dashboard' && t in history)
-
-  const allDates = new Set<string>()
-  for (const t of talents) {
-    const cs = history[t]?._channel_stats
-    if (cs) Object.keys(cs).forEach(d => allDates.add(d))
-  }
-  if (allDates.size === 0) return null
-
-  const n_date = Array.from(allDates).sort().at(-1)!
-  const p_date = prevDate(n_date)
+  if (!summary.p_date) return null
 
   const views: Record<string, number> = {}
-  for (const talent of talents) {
-    let total = 0
-    for (const [vid_id, raw] of Object.entries(history[talent] ?? {})) {
-      if (vid_id === '_channel_stats') continue
-      const vid = raw as { records?: Record<string, { 再生数?: number }> }
-      if (!vid.records) continue
-      const nr = vid.records[n_date]
-      const pr = vid.records[p_date]
-      if (!nr || !pr) continue
-      const diff = (nr.再生数 ?? 0) - (pr.再生数 ?? 0)
-      if (diff > 0) total += diff
-    }
-    views[talent] = total
+  for (const talent of Object.keys(summary.channel_stats)) views[talent] = 0
+  for (const v of summary.videos) {
+    if (v.vn === null || v.vp === null) continue
+    const diff = v.vn - v.vp
+    if (diff > 0) views[v.t] = (views[v.t] ?? 0) + diff
   }
 
-  return { views, date: n_date }
+  return { views, date: summary.n_date }
 }
 
 // ----------------------------------------------------------------
@@ -493,44 +386,11 @@ export function buildPostingCalendar(
 // Dashboard用：全タレント合計の日別再生数内訳（種別×日付）
 // ----------------------------------------------------------------
 
-export function buildDashboardDailyViewsBreakdown(
-  history: AllHistory,
-  flags: VideoFlags = {}
-): DailyViewsEntry[] {
-  const talents = TALENT_ORDER.filter(t => t !== 'Dashboard' && t in history)
-
-  const allDates = new Set<string>()
-  for (const t of talents) {
-    const cs = history[t]?._channel_stats as Record<string, ChannelStats> | undefined
-    if (cs) Object.keys(cs).forEach(d => allDates.add(d))
-  }
-  if (allDates.size < 2) return []
-
-  const sortedDates = Array.from(allDates).sort()
-
-  const result: DailyViewsEntry[] = []
-  for (let i = 1; i < sortedDates.length; i++) {
-    const date = sortedDates[i]
-    const prev = sortedDates[i - 1]
-    const entry: DailyViewsEntry = { date, Movie: 0, Short: 0, LiveArchive: 0 }
-
-    for (const talent of talents) {
-      for (const [vid_id, raw] of Object.entries(history[talent] ?? {})) {
-        if (vid_id === '_channel_stats') continue
-        const vid = raw as { type?: string; records?: Record<string, { 再生数?: number }> }
-        if (!vid.records) continue
-        const nr = vid.records[date]
-        const pr = vid.records[prev]
-        if (!nr || !pr) continue
-        const diff = (nr.再生数 ?? 0) - (pr.再生数 ?? 0)
-        if (diff <= 0) continue
-        const vtype = (flags[talent]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
-        entry[vtype] += diff
-      }
-    }
-    result.push(entry)
-  }
-  return result
+// 事前集計済み（auto_check.pyのbuild_dashboard_summary）をそのまま返す。
+// video_flags.jsonの手動変更は次回の自動収集まで反映が遅れる点に注意
+// （ランキングテーブル側はvideos[].tyにflagsをその場で適用するため即時反映のまま）。
+export function buildDashboardDailyViewsBreakdown(summary: DashboardSummary): DailyViewsEntry[] {
+  return summary.daily_type_breakdown
 }
 
 // ----------------------------------------------------------------
