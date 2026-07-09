@@ -18,47 +18,83 @@ const HISTORY_BASE_URL =
 
 const FLAGS_URL = 'https://raw.githubusercontent.com/Kinshutei/RKMusic_AllSinger_PFR/main/video_flags.json'
 
-export async function loadHistory(): Promise<AllHistory> {
+// raw.githubusercontent.com は同時多数リクエストでレート制限（429）を返すことがあるため、
+// 同時実行数を絞りつつ、失敗時は間隔を空けてリトライする。
+const FETCH_CONCURRENCY = 5
+const FETCH_RETRIES = 3
+const FETCH_RETRY_DELAY_MS = 1000
+
+interface FetchResult<T> {
+  data: T | null
+  failed: boolean // true = リトライしても取得できなかった（404はファイル不在の想定内なのでfalse）
+}
+
+async function fetchJsonWithRetry<T>(url: string): Promise<FetchResult<T>> {
+  for (let attempt = 0; attempt <= FETCH_RETRIES; attempt++) {
+    try {
+      const res = await fetch(url)
+      if (res.ok) return { data: await res.json() as T, failed: false }
+      if (res.status === 404) return { data: null, failed: false }
+    } catch {
+      // ネットワークエラーはリトライへ
+    }
+    if (attempt < FETCH_RETRIES) {
+      await new Promise(r => setTimeout(r, FETCH_RETRY_DELAY_MS * (attempt + 1)))
+    }
+  }
+  return { data: null, failed: true }
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[], limit: number, fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let nextIndex = 0
+  async function worker() {
+    while (nextIndex < items.length) {
+      const i = nextIndex++
+      results[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
+}
+
+export interface LoadResult<T> {
+  data: T
+  failedTalents: string[]
+}
+
+export async function loadHistory(): Promise<LoadResult<AllHistory>> {
   const talents = TALENT_ORDER.filter(t => t !== 'Dashboard')
-  const results = await Promise.all(
-    talents.map(async talent => {
-      try {
-        const res = await fetch(`${HISTORY_BASE_URL}/history_${encodeURIComponent(talent)}.json`)
-        if (!res.ok) return {}
-        return res.json() as Promise<AllHistory>
-      } catch {
-        return {}
-      }
-    })
-  )
-  return Object.assign({}, ...results)
+  const failedTalents: string[] = []
+  const results = await mapWithConcurrency(talents, FETCH_CONCURRENCY, async talent => {
+    const { data, failed } = await fetchJsonWithRetry<AllHistory>(
+      `${HISTORY_BASE_URL}/history_${encodeURIComponent(talent)}.json`
+    )
+    if (failed) failedTalents.push(talent)
+    return data ?? {}
+  })
+  return { data: Object.assign({}, ...results), failedTalents }
 }
 
 export async function loadVideoFlags(): Promise<VideoFlags> {
-  try {
-    const res = await fetch(FLAGS_URL)
-    if (!res.ok) return {}
-    return res.json()
-  } catch {
-    return {}
-  }
+  return (await fetchJsonWithRetry<VideoFlags>(FLAGS_URL)).data ?? {}
 }
 
-export async function loadComments(): Promise<AllComments> {
+// comments_*.json は収集対象外のタレントが多く404が正常に発生するため、
+// 取得失敗はhistoryほど致命的ではない（TalentPageのコメント欄が空になるのみ）。
+export async function loadComments(): Promise<LoadResult<AllComments>> {
   const talents = TALENT_ORDER.filter(t => t !== 'Dashboard')
-  const results = await Promise.all(
-    talents.map(async talent => {
-      try {
-        const res = await fetch(`${HISTORY_BASE_URL}/comments_${encodeURIComponent(talent)}.json`)
-        if (!res.ok) return {}
-        const data = await res.json() as ChannelComments
-        return { [talent]: data }
-      } catch {
-        return {}
-      }
-    })
-  )
-  return Object.assign({}, ...results)
+  const failedTalents: string[] = []
+  const results = await mapWithConcurrency(talents, FETCH_CONCURRENCY, async talent => {
+    const { data, failed } = await fetchJsonWithRetry<ChannelComments>(
+      `${HISTORY_BASE_URL}/comments_${encodeURIComponent(talent)}.json`
+    )
+    if (failed) failedTalents.push(talent)
+    return data ? { [talent]: data } : {}
+  })
+  return { data: Object.assign({}, ...results), failedTalents }
 }
 
 export function getAvailableTalents(history: AllHistory): string[] {

@@ -14,14 +14,27 @@ export default function App() {
   const [comments, setComments] = useState<AllComments>({})
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState<string | null>(null)
+  const [failedTalents, setFailedTalents] = useState<string[]>([])
   const [activePage, setActivePage] = useState<Page>('Dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    Promise.all([loadHistory(), loadVideoFlags(), loadComments()])
-      .then(([h, f, c]) => { setHistory(h); setFlags(f); setComments(c) })
-      .catch(e => setError(String(e)))
-      .finally(() => setLoading(false))
+    // comments取得はhistoryより優先度が低いため後段で行い、
+    // raw.githubusercontent.comのレート制限枠をhistory取得に優先して使わせる。
+    (async () => {
+      try {
+        const [h, f] = await Promise.all([loadHistory(), loadVideoFlags()])
+        const c = await loadComments()
+        setHistory(h.data)
+        setFlags(f)
+        setComments(c.data)
+        setFailedTalents(h.failedTalents)
+      } catch (e) {
+        setError(String(e))
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [])
 
   const talents = history ? getAvailableTalents(history) : ['Dashboard']
@@ -72,6 +85,11 @@ export default function App() {
         <div className="content">
           {loading && <p className="muted">読み込み中...</p>}
           {error   && <p className="error-text">データの取得に失敗しました: {error}</p>}
+          {!loading && !error && failedTalents.length > 0 && (
+            <p className="error-text">
+              一部データの取得に失敗しました（再読み込みで解消する場合があります）: {failedTalents.join('、')}
+            </p>
+          )}
           {!loading && !error && history && (
             activePage === 'Dashboard'
               ? <DashboardPage history={history} flags={flags} />
