@@ -1,0 +1,16 @@
+#!/bin/sh
+# RKMusic_AllSinger_PFR専用: Kinshutei以外の著者でのコミットを拒否する。
+# 有効化: git config core.hooksPath .githooks
+
+ALLOWED_EMAIL="whitelily.goldeneagle.inn@gmail.com"
+CURRENT_EMAIL="$(git config user.email)"
+
+if [ "$CURRENT_EMAIL" != "$ALLOWED_EMAIL" ]; then
+  echo "" >&2
+  echo "コミット中止: このリポジトリは Kinshutei <$ALLOWED_EMAIL> 以外の著者でのコミットを許可していません。" >&2
+  echo "  現在の user.email: ${CURRENT_EMAIL:-（未設定）}" >&2
+  echo "  次を実行してから再度コミットしてください:" >&2
+  echo "  git config user.name \"Kinshutei\" && git config user.email \"$ALLOWED_EMAIL\"" >&2
+  echo "" >&2
+  exit 1
+fi
