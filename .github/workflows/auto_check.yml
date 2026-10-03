@@ -35,7 +35,10 @@ jobs:
           CHANNELS: ${{ secrets.CHANNELS }}
         run: python auto_check.py
       
+      # 一部のチャンネルが失敗してスクリプトが異常終了しても、成功したチャンネルの分は保存する
+      # （以前は保存の手順まで進まず、その日の全タレント分が失われる作りだった）
       - name: Commit and push changes
+        if: success() || failure()
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"

@@ -27,7 +27,8 @@ export default function App() {
     (async () => {
       try {
         const [s, f] = await Promise.all([loadDashboardSummary(), loadVideoFlags()])
-        setSummary(s)
+        if (s.failed) setSummaryError('時間をおいて再読み込みしてください')
+        setSummary(s.data)
         setFlags(f)
       } catch (e) {
         setSummaryError(String(e))

@@ -1,4 +1,6 @@
 export type VideoType = 'Movie' | 'Short' | 'LiveArchive'
+// 配信前・配信中で種別がまだ決まらない動画。データには入るが、サイトには出さない
+export type StoredType = VideoType | 'Pending'
 export type VideoFlags = Record<string, Record<string, VideoType>>
 
 export interface ChannelStats {
@@ -16,7 +18,7 @@ export interface VideoRecord {
 export interface VideoHistoryEntry {
   タイトル: string
   公開日: string
-  type: VideoType
+  type: StoredType
   records: Record<string, VideoRecord>
 }
 
@@ -106,7 +108,7 @@ export interface DashboardVideoSnapshot {
   t: string       // talent
   id: string      // vid_id
   ti: string      // タイトル
-  ty: VideoType
+  ty: StoredType
   vn: number | null // 再生数 at n_date
   ln: number | null // 高評価数 at n_date
   cn: number | null // コメント数 at n_date

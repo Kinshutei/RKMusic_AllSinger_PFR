@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RKMusic 動画フラグ設定ツール v2.00</title>
+<style>
+  /* 見た目は Concentus 管理ツールに揃えている */
+  :root{
+    --bg:#0f1420; --surface:#171d2b; --surface2:#1e2537; --border:#2b3346;
+    --text:#e6e9f0; --muted:#8f9bb3; --accent:#5b8dd9; --ok:#4caf7d;
+    --warn:#d9a441; --err:#d9605b; --mono:ui-monospace,"Consolas","Meiryo",monospace;
+    /* 種別の色はサイト（ダッシュボード）の凡例に合わせ、暗い地で読めるよう明るめにしている */
+    --movie:#8190e6; --short:#e0607a; --live:#4fbf8a; --pending:#8f9bb3;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font-family:"Segoe UI","Yu Gothic UI",sans-serif;font-size:13px}
+  h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.04em}
+  h1 small{color:var(--muted);font-weight:400;margin-left:8px;font-size:11px}
+  header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+         padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border)}
+  .cred{display:flex;align-items:center;gap:6px}
+  .cred label{color:var(--muted);font-size:11px;white-space:nowrap}
+  input,select,button{font-family:inherit;font-size:12px;color:var(--text);
+    background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:5px 8px;outline:none}
+  input:focus,select:focus{border-color:var(--accent)}
+  input[type=password]{width:150px;font-family:var(--mono)}
+  button{cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  nav{display:flex;gap:2px;padding:0 16px;background:var(--surface);
+      border-bottom:1px solid var(--border)}
+  nav button{border:none;border-radius:0;background:none;padding:9px 18px;color:var(--muted)}
+  nav button.on{color:var(--text);box-shadow:inset 0 -2px 0 var(--accent)}
+  main{padding:16px}
+  .panel{display:none}
+  .panel.on{display:block}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .spacer{flex:1}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+        padding:12px 14px;margin-bottom:12px}
+  .card h2{font-size:12px;margin:0;color:var(--muted);font-weight:600;
+           letter-spacing:.06em;text-transform:uppercase}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  th,td{border-bottom:1px solid var(--border);padding:5px 7px;text-align:left;vertical-align:middle}
+  th{color:var(--muted);font-weight:600;font-size:11px;position:sticky;top:0;background:var(--surface);z-index:1}
+  tbody tr:hover{background:var(--surface2)}
+  th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+  th.sortable:hover{color:var(--text)}
+  th.sortable .arw{opacity:.35;margin-left:3px}
+  th.sortable.on{color:var(--accent)}
+  th.sortable.on .arw{opacity:1}
+  .scroll{overflow:auto;border:1px solid var(--border);border-radius:6px;
+    scrollbar-width:thin;scrollbar-color:var(--accent) var(--surface)}
+  .scroll::-webkit-scrollbar{width:10px;height:10px}
+  .scroll::-webkit-scrollbar-track{background:var(--surface)}
+  .scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:6px;
+    border:2px solid var(--surface);background-clip:padding-box}
+  .scroll::-webkit-scrollbar-thumb:hover{background:var(--accent);background-clip:padding-box}
+  .mono{font-family:var(--mono)}
+  .muted{color:var(--muted)}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+  .badge{font-size:10px;padding:1px 6px;border-radius:8px;background:var(--surface2);
+         border:1px solid var(--border);color:var(--muted);margin-left:4px}
+  .badge.dirty{color:var(--warn);border-color:var(--warn)}
+  .hint{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6}
+  /* 区分の切り替え。今どこを見ているかが一目で判るよう地を塗る */
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .seg button{border:none;border-radius:0;background:none;padding:5px 12px;color:var(--muted)}
+  .seg button+button{border-left:1px solid var(--border)}
+  .seg button.on{background:var(--accent);color:#fff;font-weight:600}
+  .seg button.on .badge{color:#fff;border-color:rgba(255,255,255,.5);background:none}
+
+  /* 動画の一覧 */
+  .vtable{table-layout:fixed;min-width:1060px}
+  .vtable td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .vtable a{color:var(--text);text-decoration:none}
+  .vtable a:hover{color:var(--accent);text-decoration:underline}
+  tr.edited td{background:rgba(217,164,65,.10)}
+  .reason{display:inline-block;font-size:10px;padding:1px 6px;margin-right:4px;border-radius:8px;
+    border:1px solid var(--warn);color:var(--warn)}
+  /* 種別のボタン。塗り＝手で決めた例外、枠だけ＝自動判定の結果 */
+  .types{display:inline-flex;gap:4px}
+  .tbtn{padding:2px 9px;font-size:11px;border-radius:4px;background:none;color:var(--muted)}
+  .tbtn[data-type=Movie].auto{border-color:var(--movie);color:var(--movie)}
+  .tbtn[data-type=Short].auto{border-color:var(--short);color:var(--short)}
+  .tbtn[data-type=LiveArchive].auto{border-color:var(--live);color:var(--live)}
+  .tbtn[data-type=Movie].ex{background:var(--movie);border-color:var(--movie);color:#fff;font-weight:600}
+  .tbtn[data-type=Short].ex{background:var(--short);border-color:var(--short);color:#fff;font-weight:600}
+  .tbtn[data-type=LiveArchive].ex{background:var(--live);border-color:var(--live);color:#fff;font-weight:600}
+  .tbtn.reset{color:var(--muted)}
+  .auto-t{font-size:11px}
+  .auto-t.Movie{color:var(--movie)} .auto-t.Short{color:var(--short)}
+  .auto-t.LiveArchive{color:var(--live)} .auto-t.Pending{color:var(--pending)}
+  .empty{padding:36px 0;text-align:center;color:var(--muted)}
+  .badge:empty{display:none}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>RKMusic 動画フラグ設定ツール <small>v2.00 — AllSinger PFR</small></h1>
+  <div class="cred">
+    <label>GitHub PAT</label>
+    <input type="password" id="ghToken" placeholder="ghp_…" autocomplete="off">
+  </div>
+  <button id="saveCred">保存</button>
+  <button id="reload" class="primary">Github読込</button>
+  <button id="popout" title="推奨サイズ（1280×960）のウィンドウで開き直す">⇔ 推奨サイズで開く</button>
+  <span id="loadSt" class="muted"></span>
+  <span class="spacer"></span>
+  <span id="dirtySt" class="badge">変更なし</span>
+  <button id="push" class="primary" disabled>GitHubに保存</button>
+  <span id="pushSt"></span>
+</header>
+
+<nav>
+  <button data-tab="flags" class="on">動画種別</button>
+</nav>
+
+<main>
+
+<section class="panel on" id="tab-flags">
+  <div class="card">
+    <div class="row">
+      <div class="seg" id="modeSeg">
+        <button data-mode="review" class="on">要確認<span class="badge" id="cntReview"></span></button>
+        <button data-mode="new">新着<span class="badge" id="cntNew"></span></button>
+        <button data-mode="talent">タレント別</button>
+        <button data-mode="flags">例外<span class="badge" id="cntFlags"></span></button>
+      </div>
+      <select id="talentSel" style="display:none"></select>
+      <div class="seg" id="typeSeg">
+        <button data-type="" class="on">すべて</button>
+        <button data-type="Movie">動画</button>
+        <button data-type="Short">ショート</button>
+        <button data-type="LiveArchive">ライブ</button>
+        <button data-type="Pending">未確定</button>
+      </div>
+      <input id="q" style="width:220px" placeholder="タイトルで絞り込み">
+      <span id="count" class="muted"></span>
+    </div>
+    <div class="scroll" id="listWrap" style="height:calc(100vh - 210px);min-height:320px">
+      <table class="vtable">
+        <thead><tr>
+          <th class="sortable" data-sort="date" style="width:96px">公開日<span class="arw"></span></th>
+          <th style="width:110px">タレント</th>
+          <th class="sortable" data-sort="title">タイトル<span class="arw"></span></th>
+          <th class="sortable" data-sort="dur" style="width:76px">長さ<span class="arw"></span></th>
+          <th style="width:84px">自動判定</th>
+          <th style="width:236px">種別</th>
+          <th style="width:190px">要確認</th>
+        </tr></thead>
+        <tbody id="list"></tbody>
+      </table>
+    </div>
+    <div class="hint">
+      種別のボタンは、塗りつぶしが手で決めた例外、枠だけが自動判定の結果です。押すとその種別を例外として決め、「自動」で例外を外します。<br>
+      保存するのは手で決めた例外だけです（video_flags.json）。自動判定は、配信前・配信中を「未確定」として持ち越し、配信が終わったらチャンネルの「動画／ショート／ライブ」タブのどれに入っているかで決まります。タブで分からないときだけ時間で仮に決め（「仮」の印）、翌日タブで判定し直します。
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+const OWNER = 'Kinshutei', REPO = 'RKMusic_AllSinger_PFR', BRANCH = 'main';
+const FLAGS_PATH = 'video_flags.json';
+// 7分前後として要確認に出す範囲（秒）。時間で仮に決めるときの境目（7分）の近くは取り違えが起きやすい。
+// タブで確定した動画は YouTube の分け方なので出さない
+const REVIEW_MIN = 360, REVIEW_MAX = 480;
+const TYPE_LABEL = { Movie: '動画', Short: 'ショート', LiveArchive: 'ライブ', Pending: '未確定' };
+// 確認用：?local=http://127.0.0.1:8765 のように付けると手元のデータを読む。保存はできない
+const LOCAL_BASE = new URLSearchParams(location.search).get('local');
+const REVIEWED_KEY = 'pfr_flag_reviewed';
+const LAST_CHECK_KEY = 'flagtool_lastCheckDate';  // v1.00 と同じ鍵。新着の基準日を引き継ぐ
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+const S = {
+  loaded: false,
+  talents: [],      // channels_config.json の順
+  videos: [],       // { t, id, title, date, dur, auto, fixed }
+  flags: {},        // 編集中の例外 { talent: { video_id: 種別 } }
+  orig: {},         // 読み込んだ時点の例外
+  flagsSha: null,
+  mode: 'review', type: '', q: '', talent: '',
+  sort: { key: 'date', dir: -1 },
+  reviewed: new Set(),
+  lastCheck: null,
+};
+
+try { S.reviewed = new Set(JSON.parse(localStorage.getItem(REVIEWED_KEY)) || []); } catch { /* 壊れていたら空から */ }
+try { S.lastCheck = localStorage.getItem(LAST_CHECK_KEY); } catch { /* 読めなければ初回扱い */ }
+
+// ---------------------------------------------------------------- 認証
+function ghToken() { return localStorage.getItem('gh_token') || ''; }
+
+$('saveCred').onclick = () => {
+  const t = $('ghToken').value.trim();
+  if (t && !t.startsWith('***')) localStorage.setItem('gh_token', t);
+  maskCreds();
+  $('loadSt').textContent = '認証情報を保存しました';
+};
+function maskCreds() {
+  const t = ghToken();
+  $('ghToken').value = t ? '***' + t.slice(-4) : '';
+}
+// 開き直したあと元の窓を閉じる。スクリプトで開かれた窓でないと close() は拒否されるので、その時は案内だけ出す
+$('popout').onclick = () => {
+  const w = window.open(location.href, '_blank', 'width=1280,height=960');
+  if (!w) { $('loadSt').innerHTML = '<span class="err">ポップアップがブロックされました</span>'; return; }
+  window.close();
+  setTimeout(() => { if (!window.closed) $('loadSt').textContent = 'このウィンドウは手動で閉じてください'; }, 400);
+};
+
+// ---------------------------------------------------------------- GitHub
+function ghHeaders(accept) {
+  const h = { Accept: accept };
+  if (ghToken()) h.Authorization = `Bearer ${ghToken()}`;
+  return h;
+}
+const contentsUrl = path => `https://api.github.com/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(path)}`;
+
+/** 中身だけ欲しいとき。all_snapshots.json は1MBを超えるので、通常の応答では中身が返らず raw で取る */
+async function ghRaw(path) {
+  const res = LOCAL_BASE
+    ? await fetch(`${LOCAL_BASE}/${encodeURIComponent(path)}`, { cache: 'no-store' })
+    : await fetch(`${contentsUrl(path)}?ref=${BRANCH}`,
+                  { headers: ghHeaders('application/vnd.github.raw+json'), cache: 'no-store' });
+  if (!res.ok) throw new Error(`${path} を読めませんでした（HTTP ${res.status}）`);
+  return res.json();
+}
+
+/** 保存し直すファイルは sha も要る。GitHubの応答はブラウザに約60秒キャッシュされ、古いshaで409になるので no-store */
+async function ghGetWithSha(path) {
+  if (LOCAL_BASE) return { data: await ghRaw(path), sha: null };
+  const res = await fetch(`${contentsUrl(path)}?ref=${BRANCH}`,
+                          { headers: ghHeaders('application/vnd.github+json'), cache: 'no-store' });
+  if (!res.ok) throw new Error(`${path} を読めませんでした（HTTP ${res.status}）`);
+  const json = await res.json();
+  const text = new TextDecoder().decode(
+    Uint8Array.from(atob(json.content.replace(/\n/g, '')), c => c.charCodeAt(0)));
+  return { data: JSON.parse(text), sha: json.sha };
+}
+
+function b64encode(text) {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin);
+}
+
+// ---------------------------------------------------------------- 読み込み
+$('reload').onclick = () => {
+  if (dirtyCount() && !confirm('保存していない変更があります。破棄してGitHubの最新版を読み込みますか？')) return;
+  loadAll();
+};
+window.addEventListener('beforeunload', e => { if (dirtyCount()) { e.preventDefault(); e.returnValue = ''; } });
+
+/**
+ * 3つとも読めたときだけ使えるようにする。
+ * v1.00 は読めなかったタレントを空のまま保存し、そのタレントの例外を消していた（2026-07-09 に NUROJUNK の32件が消えた）。
+ */
+async function loadAll() {
+  S.loaded = false;
+  $('push').disabled = true;
+  $('loadSt').textContent = '読み込み中…';
+  try {
+    const config = await ghRaw('channels_config.json');
+    const snap = await ghRaw('all_snapshots.json');
+    const { data: flags, sha } = await ghGetWithSha(FLAGS_PATH);
+    S.talents = config.map(c => c.name);
+    S.videos = [];
+    for (const t of S.talents) {
+      for (const [id, v] of Object.entries(snap[t]?.videos || {})) {
+        S.videos.push({
+          t, id, title: v['タイトル'] || id, date: v['公開日'] || '', dur: v.duration || 0,
+          // auto / fixed が無いのは改修前のデータ。その時は収集時の種別を自動判定とみなす
+          auto: v.auto || v.type || 'Movie', fixed: v.fixed ?? true,
+        });
+      }
+    }
+    S.flags = structuredClone(flags || {});
+    S.orig = structuredClone(flags || {});
+    S.flagsSha = sha;
+    S.loaded = true;
+    $('talentSel').innerHTML = S.talents.map(t => `<option>${esc(t)}</option>`).join('');
+    S.talent = S.talent && S.talents.includes(S.talent) ? S.talent : S.talents[0];
+    $('talentSel').value = S.talent;
+    $('loadSt').innerHTML = `<span class="ok">読み込みました</span>　${S.talents.length}タレント / ${S.videos.length.toLocaleString()}本`
+      + (LOCAL_BASE ? '　<span class="warn">手元のデータを表示中（保存できません）</span>' : '');
+  } catch (e) {
+    S.videos = [];
+    $('loadSt').innerHTML = `<span class="err">${esc(e.message)}</span>　<span class="muted">読み込めなかったため保存できません</span>`;
+  }
+  render();
+}
+
+// ---------------------------------------------------------------- 判定まわり
+const exceptionOf = v => S.flags[v.t]?.[v.id];
+const effective = v => exceptionOf(v) || v.auto;
+
+/** 要確認に出す理由。手で例外を決めたり「確認済み」を押した動画は出さない */
+function reviewReasons(v) {
+  if (S.reviewed.has(v.id)) return [];
+  const ex = exceptionOf(v), r = [];
+  if (!ex && v.auto === 'Pending') r.push('未確定');
+  if (!ex && !v.fixed && v.auto !== 'Pending') r.push('時間で仮判定');
+  if (!ex && !v.fixed && v.auto !== 'Short' && v.dur >= REVIEW_MIN && v.dur <= REVIEW_MAX) r.push('7分前後');
+  if (ex && v.fixed && v.auto !== 'Pending' && ex !== v.auto) r.push('自動判定と違う例外');
+  return r;
+}
+const isNew = v => !!S.lastCheck && v.date > S.lastCheck;
+
+function markReviewed(id) {
+  S.reviewed.add(id);
+  try { localStorage.setItem(REVIEWED_KEY, JSON.stringify([...S.reviewed])); } catch { /* 保存できなくても続ける */ }
+}
+
+/** 種別を決める。確定済みの自動判定と同じ種別を選んだときは、例外は要らないので外す */
+function setType(v, type) {
+  if (!S.flags[v.t]) S.flags[v.t] = {};
+  if (type === null || (type === v.auto && v.fixed)) delete S.flags[v.t][v.id];
+  else S.flags[v.t][v.id] = type;
+  markReviewed(v.id);
+}
+
+function dirtyCount() {
+  let n = 0;
+  const talents = new Set([...Object.keys(S.flags), ...Object.keys(S.orig)]);
+  for (const t of talents) {
+    const a = S.flags[t] || {}, b = S.orig[t] || {};
+    for (const id of new Set([...Object.keys(a), ...Object.keys(b)])) if (a[id] !== b[id]) n++;
+  }
+  return n;
+}
+
+// ---------------------------------------------------------------- 一覧
+function currentRows() {
+  let rows;
+  if (S.mode === 'review') rows = S.videos.filter(v => reviewReasons(v).length);
+  else if (S.mode === 'new') rows = S.videos.filter(isNew);
+  else if (S.mode === 'flags') rows = S.videos.filter(v => exceptionOf(v));
+  else rows = S.videos.filter(v => v.t === S.talent);
+  if (S.type) rows = rows.filter(v => effective(v) === S.type);
+  if (S.q) {
+    const q = S.q.toLowerCase();
+    rows = rows.filter(v => v.title.toLowerCase().includes(q));
+  }
+  const { key, dir } = S.sort;
+  const cmp = key === 'dur' ? (a, b) => a.dur - b.dur
+            : key === 'title' ? (a, b) => a.title.localeCompare(b.title, 'ja')
+            : (a, b) => a.date.localeCompare(b.date);
+  return rows.sort((a, b) => dir * cmp(a, b));
+}
+
+function fmtDur(sec) {
+  if (!sec) return '--:--';
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  const mm = String(m).padStart(2, '0'), ss = String(s).padStart(2, '0');
+  return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+function rowHtml(v) {
+  const ex = exceptionOf(v);
+  const edited = (S.orig[v.t]?.[v.id]) !== ex;
+  const btn = type => {
+    const cls = ex === type ? ' ex' : (!ex && v.auto === type ? ' auto' : '');
+    return `<button class="tbtn${cls}" data-act="set" data-type="${type}">${TYPE_LABEL[type]}</button>`;
+  };
+  const reasons = reviewReasons(v);
+  return `<tr data-k="${esc(v.t)}|${esc(v.id)}"${edited ? ' class="edited"' : ''}>
+    <td class="mono">${esc(v.date)}</td>
+    <td title="${esc(v.t)}">${esc(v.t)}</td>
+    <td title="${esc(v.title)}"><a href="https://www.youtube.com/watch?v=${esc(v.id)}" target="_blank" rel="noopener">${esc(v.title)}</a></td>
+    <td class="mono">${fmtDur(v.dur)}</td>
+    <td><span class="auto-t ${esc(v.auto)}">${TYPE_LABEL[v.auto] || esc(v.auto)}${
+      !v.fixed && v.auto !== 'Pending' ? '<span class="muted">（仮）</span>' : ''}</span></td>
+    <td><span class="types">${btn('Movie')}${btn('Short')}${btn('LiveArchive')}
+      <button class="tbtn reset" data-act="reset"${ex ? '' : ' disabled'}>自動</button></span></td>
+    <td>${reasons.map(r => `<span class="reason">${r}</span>`).join('')}${
+      reasons.length ? '<button class="tbtn" data-act="ok">確認済み</button>' : ''}</td>
+  </tr>`;
+}
+
+function render() {
+  $('talentSel').style.display = S.mode === 'talent' ? '' : 'none';
+  if (!S.loaded) {
+    $('list').innerHTML = '<tr><td colspan="7" class="empty">「Github読込」を押してください</td></tr>';
+    $('count').textContent = '';
+    renderCounts();
+    return;
+  }
+  const rows = currentRows();
+  if (S.mode === 'new' && !S.lastCheck) {
+    $('list').innerHTML = '<tr><td colspan="7" class="empty">初回のため基準日を記録しました。次回から、それ以降に公開された動画を新着に出します</td></tr>';
+  } else if (!rows.length) {
+    $('list').innerHTML = '<tr><td colspan="7" class="empty">該当する動画はありません</td></tr>';
+  } else {
+    $('list').innerHTML = rows.map(rowHtml).join('');
+  }
+  const by = { Movie: 0, Short: 0, LiveArchive: 0, Pending: 0 };
+  rows.forEach(v => { by[effective(v)] = (by[effective(v)] || 0) + 1; });
+  $('count').textContent = `${rows.length.toLocaleString()}件（動画 ${by.Movie} / ショート ${by.Short} / ライブ ${by.LiveArchive} / 未確定 ${by.Pending}）`;
+  document.querySelectorAll('th.sortable').forEach(th => {
+    const on = th.dataset.sort === S.sort.key;
+    th.classList.toggle('on', on);
+    th.querySelector('.arw').textContent = on ? (S.sort.dir > 0 ? '▲' : '▼') : '▼';
+  });
+  renderCounts();
+}
+
+function renderCounts() {
+  $('cntReview').textContent = S.loaded ? S.videos.filter(v => reviewReasons(v).length).length : '';
+  $('cntNew').textContent = S.loaded && S.lastCheck ? S.videos.filter(isNew).length : '';
+  $('cntFlags').textContent = S.loaded ? S.videos.filter(v => exceptionOf(v)).length : '';
+  const n = dirtyCount();
+  $('dirtySt').textContent = n ? `未保存の変更 ${n}件` : '変更なし';
+  $('dirtySt').classList.toggle('dirty', n > 0);
+  $('push').disabled = !S.loaded || !n || !!LOCAL_BASE;
+}
+
+/** 押した行だけ描き直す（要確認から外れた行もその場では消さず、次に一覧を切り替えた時に消える） */
+function rerenderRow(tr, v) {
+  const tmp = document.createElement('tbody');
+  tmp.innerHTML = rowHtml(v);
+  tr.replaceWith(tmp.firstElementChild);
+  renderCounts();
+}
+
+$('list').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  const tr = b.closest('tr');
+  const [t, id] = tr.dataset.k.split('|');
+  const v = S.videos.find(x => x.t === t && x.id === id);
+  if (!v) return;
+  if (b.dataset.act === 'set') setType(v, b.dataset.type);
+  else if (b.dataset.act === 'reset') setType(v, null);
+  else if (b.dataset.act === 'ok') markReviewed(v.id);
+  rerenderRow(tr, v);
+});
+
+$('modeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-mode]');
+  if (!b) return;
+  S.mode = b.dataset.mode;
+  $('modeSeg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  // タレント別は v1.00 と同じく長い順、それ以外は新しい順で開く
+  S.sort = S.mode === 'talent' ? { key: 'dur', dir: -1 } : { key: 'date', dir: -1 };
+  if (S.mode === 'new') {
+    // 保存する基準日は開いた時点の日付に進める。表示中の一覧は、このツールを開いた時の基準日のまま出し続ける
+    try { localStorage.setItem(LAST_CHECK_KEY, new Date().toISOString().slice(0, 10)); } catch { /* 保存できなくても続ける */ }
+  }
+  $('listWrap').scrollTop = 0;
+  render();
+});
+$('typeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-type]');
+  if (!b) return;
+  S.type = b.dataset.type;
+  $('typeSeg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  render();
+});
+$('talentSel').onchange = () => { S.talent = $('talentSel').value; $('listWrap').scrollTop = 0; render(); };
+$('q').oninput = () => { S.q = $('q').value.trim(); render(); };
+document.querySelectorAll('th.sortable').forEach(th => th.onclick = () => {
+  const key = th.dataset.sort;
+  S.sort = S.sort.key === key ? { key, dir: -S.sort.dir } : { key, dir: key === 'title' ? 1 : -1 };
+  render();
+});
+
+// ---------------------------------------------------------------- 保存
+/** 例外だけを書き出す。タレントは channels_config.json の順、どこにも無いタレントの例外は後ろに残す */
+function buildFlagsOut() {
+  const out = {};
+  const put = t => {
+    const m = S.flags[t];
+    if (m && Object.keys(m).length) out[t] = m;
+  };
+  S.talents.forEach(put);
+  Object.keys(S.flags).filter(t => !(t in out)).forEach(put);
+  return out;
+}
+
+$('push').onclick = async () => {
+  if (!ghToken()) { $('pushSt').innerHTML = '<span class="err">GitHub PAT が未設定です</span>'; return; }
+  let add = 0, change = 0, remove = 0;
+  const talents = new Set([...Object.keys(S.flags), ...Object.keys(S.orig)]);
+  for (const t of talents) {
+    const a = S.flags[t] || {}, b = S.orig[t] || {};
+    for (const id of new Set([...Object.keys(a), ...Object.keys(b)])) {
+      if (a[id] === b[id]) continue;
+      if (b[id] === undefined) add++; else if (a[id] === undefined) remove++; else change++;
+    }
+  }
+  if (!confirm(`例外を ${add}件追加・${change}件変更・${remove}件解除して保存します。よろしいですか？`)) return;
+  $('push').disabled = true;
+  $('pushSt').textContent = '保存中…';
+  try {
+    const res = await fetch(contentsUrl(FLAGS_PATH), {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${ghToken()}`, Accept: 'application/vnd.github+json' },
+      body: JSON.stringify({
+        message: 'Update video_flags.json via flag tool v2.00', branch: BRANCH,
+        content: b64encode(JSON.stringify(buildFlagsOut(), null, 2)), sha: S.flagsSha,
+      }),
+    });
+    if (res.status === 409) throw new Error('GitHub側の video_flags.json が先に更新されています。「Github読込」で読み込み直してから、もう一度操作してください');
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${await res.text()}`);
+    S.flagsSha = (await res.json()).content.sha;
+    S.orig = structuredClone(S.flags);
+    $('pushSt').innerHTML = '<span class="ok">保存しました</span>';
+    render();
+  } catch (e) {
+    $('pushSt').innerHTML = `<span class="err">${esc(e.message)}</span>`;
+    renderCounts();
+  }
+};
+
+maskCreds();
+render();
+if (LOCAL_BASE) loadAll();
+</script>
+</body>
+</html>

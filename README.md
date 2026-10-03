@@ -22,18 +22,17 @@ GitHub Actions により毎日 JST 00:00 に実行。
 - 全シンガーのチャンネル統計（登録者数・総再生数・動画数）を取得
 - 全動画の再生数・高評価数・コメント数・再生時間を取得
 - `video_flags.json` を参照してコンテンツ種別を判定（最優先）
-- ショート判定：YouTube Shorts URL へのリダイレクト確認
-- ライブアーカイブ判定：`liveBroadcastContent` / `liveStreamingDetails` を確認
+- 種別判定：チャンネルの「動画／ショート／ライブ」タブの再生リスト（UULF / UUSH / UULV）のどれに入っているかで決める。配信前・配信中は確定するまで毎日判定し直す
 - データ保存先：`all_history_2026.json`（年別履歴）、`all_snapshots.json`（最新スナップショット）
 
-### 動画フラグ設定ツール（`RKMusic 動画フラグ設定ツール_v1.00.html`）
+### 動画フラグ設定ツール（`RKMusic 動画フラグ設定ツール_v2.00.html`）
 
-スタンドアロンHTMLツール。動画を「動画（Movie）」「ライブ（LiveArchive）」に手動分類し、`video_flags.json` へ書き込む。
+スタンドアロンHTMLツール。自動判定の誤りを「動画／ショート／ライブ」の例外として手で決め、`video_flags.json` へ書き込む。
 
-- GitHubから `all_history_2026.json` / `video_flags.json` を読み込み
-- 全シンガーの全非ショート動画の分類状態を一覧表示・編集
-- GitHub Contents API 経由で `video_flags.json` をプッシュ
-- GitHub Personal Access Token（`localStorage` 保存）で認証
+- GitHubから `channels_config.json` / `all_snapshots.json` / `video_flags.json` を読み込み（どれかが読めなければ保存できない）
+- 一覧は「要確認（未確定・時間で仮判定・7分前後・自動判定と違う例外）」「新着」「タレント別」「例外」
+- 保存するのは手で決めた例外だけ。自動判定の結果は書き出さない
+- GitHub Contents API 経由で `video_flags.json` をプッシュ。GitHub Personal Access Token（`localStorage` 保存）で認証
 
 ## ファイル構成
 
@@ -44,7 +43,7 @@ GitHub Actions により毎日 JST 00:00 に実行。
 ├── all_history_2026.json                  # 全シンガーの日別履歴データ（自動生成）
 ├── all_snapshots.json                     # 最新スナップショット・チャンネルIDキャッシュ（自動生成）
 ├── video_flags.json                       # 動画コンテンツ種別フラグ
-├── RKMusic 動画フラグ設定ツール_v1.00.html  # 動画フラグ設定スタンドアロンツール
+├── RKMusic 動画フラグ設定ツール_v2.00.html  # 動画フラグ設定スタンドアロンツール
 ├── requirements.txt                       # Python依存パッケージ
 ├── .github/
 │   └── workflows/
@@ -68,10 +67,15 @@ GitHub Actions により毎日 JST 00:00 に実行。
 
 ## コンテンツ種別判定ロジック
 
-1. `video_flags.json` に該当エントリがあれば最優先で適用
-2. YouTube Shorts URL へのリダイレクト確認 → Short
-3. `liveBroadcastContent == completed` または `liveStreamingDetails` あり → LiveArchive（6分以上）
-4. それ以外 → Movie
+1. `video_flags.json` に該当エントリがあれば最優先で適用（手で決めた例外だけを置く）
+2. 配信前・配信中（長さ0）→ Pending。サイトには出さず、翌日以降に判定し直す
+3. チャンネルの「動画／ショート／ライブ」タブの再生リストのどれに入っているか → Movie / Short / LiveArchive（確定）。
+   再生リストのIDはチャンネルIDの先頭 `UC` を `UULF`（動画）/ `UUSH`（ショート）/ `UULV`（ライブ）に替えたもの。
+   YouTube の公式文書には無い仕組みのため、読めないときは次の 4 で仮に決める
+4. タブで分からないときだけ時間で仮判定（確定はせず、翌日タブで判定し直す）：
+   3分以下は YouTube Shorts URL を確認 → Short（確認できなければ Pending）、それ以外は 7分以上 → LiveArchive、未満 → Movie
+
+自動判定の結果は `all_snapshots.json` の `auto`、確定したかは `fixed` に残る。確定した動画は以後判定し直さない。
 
 ## データ仕様
 

@@ -45,8 +45,9 @@ async function fetchJsonWithRetry<T>(url: string): Promise<FetchResult<T>> {
 }
 
 // Dashboardは事前集約済みの軽量サマリー1件のみ取得する（全タレントのhistoryを都度取得しない）。
-export async function loadDashboardSummary(): Promise<DashboardSummary | null> {
-  return (await fetchJsonWithRetry<DashboardSummary>(SUMMARY_URL)).data
+// failed=true はリトライしても取れなかったとき。画面で「準備中」ではなく失敗と出すために返す。
+export async function loadDashboardSummary(): Promise<FetchResult<DashboardSummary>> {
+  return fetchJsonWithRetry<DashboardSummary>(SUMMARY_URL)
 }
 
 export async function loadVideoFlags(): Promise<VideoFlags> {
@@ -104,6 +105,11 @@ function rate(val: number, diff: number | null): number | null {
   if (diff === null) return null
   const base = val - diff
   return base > 0 ? Math.round(diff / base * 1000) / 10 : null
+}
+
+// Pending（配信前・配信中で種別が未確定）など、3種別以外はサイトに出さない
+function isShownType(t: string): t is VideoType {
+  return t === 'Movie' || t === 'Short' || t === 'LiveArchive'
 }
 
 // ----------------------------------------------------------------
@@ -245,6 +251,8 @@ export function buildTalentVideoList(history: AllHistory, talentName: string, fl
       records?: Record<string, { 再生数?: number; 高評価数?: number; コメント数?: number }>
     }
     if (!vid.records) continue
+    const type = flags[talentName]?.[vid_id] ?? vid.type ?? 'Movie'
+    if (!isShownType(type)) continue
 
     const sorted = Object.keys(vid.records).sort()
     const last = vid.records[sorted.at(-1) ?? ''] ?? {}
@@ -276,7 +284,7 @@ export function buildTalentVideoList(history: AllHistory, talentName: string, fl
     result.push({
       id: vid_id,
       タイトル: title,
-      type: (flags[talentName]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType,
+      type,
       公開日: vid.公開日 ?? '',
       再生数: current_views,
       再生数15d増加: daily_views.reduce<number>((a, v) => a + (v ?? 0), 0),
@@ -336,7 +344,8 @@ export function buildDailyViewsBreakdown(
       if (!nr || !pr) continue
       const diff = (nr.再生数 ?? 0) - (pr.再生数 ?? 0)
       if (diff <= 0) continue
-      const vtype = (flags[talentName]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
+      const vtype = flags[talentName]?.[vid_id] ?? vid.type ?? 'Movie'
+      if (!isShownType(vtype)) continue
       entry[vtype] += diff
     }
     result.push(entry)
@@ -371,7 +380,8 @@ export function buildPostingCalendar(
     if (!vid.公開日) continue
 
     const month = vid.公開日.slice(0, 7)
-    const vtype = (flags[talentName]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
+    const vtype = flags[talentName]?.[vid_id] ?? vid.type ?? 'Movie'
+    if (!isShownType(vtype)) continue
 
     if (!monthMap.has(month)) {
       monthMap.set(month, { month, Movie: 0, Short: 0, LiveArchive: 0 })
@@ -447,7 +457,8 @@ export function buildMonthlyViewsBreakdown(
       const diff = curr - prev
       if (diff <= 0) continue
 
-      const vtype = (flags[talentName]?.[vid_id] ?? vid.type ?? 'Movie') as VideoType
+      const vtype = flags[talentName]?.[vid_id] ?? vid.type ?? 'Movie'
+      if (!isShownType(vtype)) continue
       entry[vtype] += diff
     }
     result.push(entry)

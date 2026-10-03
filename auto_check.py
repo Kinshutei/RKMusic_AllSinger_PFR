@@ -5,7 +5,7 @@ YouTube チャンネル統計 自動チェックスクリプト
 GitHub Actionsで定期実行される（JST 00:00）
 
 - 全アーティストのチャンネル統計・動画データを収集
-- Movie/Short/LiveArchive自動判別（並列処理）
+- Movie/Short/LiveArchive自動判別（確定するまで毎日判定し直す。配信前・配信中は Pending）
 - video_flags.json による例外設定対応
 - チャンネルIDキャッシュで無駄なAPIコールを削減
 - データ保存先:
@@ -40,6 +40,10 @@ except Exception:
 MAX_WORKERS = 10       # Short判定の同時並列数
 CHANNEL_WORKERS = 3   # チャンネル処理の同時並列数
 
+LIVE_MIN_SEC = 420    # タブで分からないときの予備。これ以上の長さはライブ、未満は動画（2026-10-04 6分から7分へ）
+SHORT_MAX_SEC = 180   # ショートは3分まで。これより長い動画はショート判定を省く
+PENDING = 'Pending'   # 配信前・配信中など、まだ種別を決められない動画。サイトには出さない
+
 SNAPSHOTS_FILE = 'all_snapshots.json'
 
 # スナップショット書き込みの排他制御用ロック（並列処理による競合防止）
@@ -61,10 +65,14 @@ def load_json(path, default):
             print(f'⚠️  {path} 読み込みエラー: {e}')
     return default
 
-def save_json(path, data, indent=2):
+def save_json(path, data, indent=None):
+    """indent を省くと、区切りの空白も省いて詰めて書く（履歴ファイルの肥大を抑えるため）"""
     dir_ = os.path.dirname(os.path.abspath(path))
     with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=dir_, delete=False, suffix='.tmp') as f:
-        json.dump(data, f, ensure_ascii=False, indent=indent)
+        if indent is None:
+            json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
+        else:
+            json.dump(data, f, ensure_ascii=False, indent=indent)
         tmp_path = f.name
     os.replace(tmp_path, path)
 
@@ -100,18 +108,26 @@ def execute_with_retry(request, max_retries=3):
 # ----------------------------------------------------------------
 
 def is_short_video(video_id):
-    """ShortsのURLにアクセスしてリダイレクト先で判定"""
+    """
+    ショートのURLを開き、そのまま表示されればショート、通常の再生ページへ転送されればショートではない。
+    どちらとも言えない応答（通信失敗・同意画面への転送など）は None を返し、翌日に判定し直す。
+    以前は失敗をショートではないと扱い、そのまま確定していた。
+    """
     url = f'https://www.youtube.com/shorts/{video_id}'
     for attempt in range(3):
         try:
-            response = requests.head(url, allow_redirects=True, timeout=5)
-            return 'shorts' in response.url.lower()
+            response = requests.head(url, allow_redirects=False, timeout=5)
+            if response.status_code == 200:
+                return True
+            if response.is_redirect and '/watch' in response.headers.get('Location', ''):
+                return False
         except Exception:
-            if attempt < 2:
-                wait = 2 ** attempt
-                print(f'  ⚠️  Short判定失敗、{wait}秒後にリトライ ({attempt + 1}/2): {video_id}')
-                time.sleep(wait)
-    return False
+            pass
+        if attempt < 2:
+            wait = 2 ** attempt
+            print(f'  ⚠️  Short判定失敗、{wait}秒後にリトライ ({attempt + 1}/2): {video_id}')
+            time.sleep(wait)
+    return None
 
 def check_shorts_batch(video_ids):
     """複数動画のShort判定を並列実行"""
@@ -130,60 +146,84 @@ def check_shorts_batch(video_ids):
             try:
                 results[vid] = future.result()
             except Exception:
-                results[vid] = False
+                results[vid] = None
             completed += 1
             if completed % 20 == 0:
                 print(f'    → {completed}/{len(video_ids)}本完了')
 
     elapsed = time.time() - start
     short_count = sum(1 for v in results.values() if v)
-    print(f'  Short判定完了: {elapsed:.1f}秒 ({short_count}本がShort)')
+    failed_count = sum(1 for v in results.values() if v is None)
+    print(f'  Short判定完了: {elapsed:.1f}秒 ({short_count}本がShort'
+          + (f'、{failed_count}本は判定できず翌日に持ち越し' if failed_count else '') + ')')
     return results
 
 # ----------------------------------------------------------------
 # 動画タイプ判定
 # ----------------------------------------------------------------
 
-def get_duration_minutes(video):
+def get_duration_seconds(video):
     try:
-        duration_str = video['contentDetails']['duration']
-        duration = isodate.parse_duration(duration_str)
-        return duration.total_seconds() / 60
+        return int(isodate.parse_duration(video['contentDetails'].get('duration', 'PT0S')).total_seconds())
     except Exception:
         return 0
 
-def determine_video_type(video, short_cache, overrides, channel_name):
+def classify(duration_sec, live_status, tab_type, short_result):
     """
-    判定順序:
-    1. video_flags.json（最優先）
-    2. Short（URLリダイレクト判定）
-    3. liveBroadcastContent == completed → duration で Movie/LiveArchive
-    4. その他 → Movie
+    自動判定。戻り値は (種別, 確定したか)。video_flags.json の例外はこの外で優先して当てる。
+
+    1. 配信前・配信中（長さが0）は判定できないので Pending のまま持ち越す。
+       以前は初めて見つけた日に1回だけ判定して固定していたため、
+       待機所の段階で Movie に決まり、6分を超える配信が Movie のまま残っていた。
+    2. チャンネルの「動画 / ショート / ライブ」タブのどれに入っているかで決める（確定）。
+    3. タブで分からないときだけ、時間で仮に決める。確定はせず、翌日にタブで判定し直す。
+       3分以下はショートかを確かめ（確かめられなければ Pending）、それ以外は長さで分ける。
     """
-    video_id = video['id']
+    if live_status in ('upcoming', 'live') or duration_sec <= 0:
+        return PENDING, False
+    if tab_type:
+        return tab_type, True
+    if duration_sec <= SHORT_MAX_SEC:
+        if short_result is None:
+            return PENDING, False
+        if short_result:
+            return 'Short', False
+    return ('LiveArchive' if duration_sec >= LIVE_MIN_SEC else 'Movie'), False
 
-    # 1. 例外設定
-    if overrides and channel_name in overrides:
-        if video_id in overrides[channel_name]:
-            override_type = overrides[channel_name][video_id]
-            print(f'  ⚙️  例外設定: [{video["snippet"]["title"][:40]}] → {override_type}')
-            return override_type
+TAB_PLAYLISTS = (('UULF', 'Movie'), ('UUSH', 'Short'), ('UULV', 'LiveArchive'))
 
-    # 2. Short
-    if short_cache.get(video_id, False):
-        return 'Short'
-
-    # 3. ライブアーカイブ判定
-    live = video['snippet'].get('liveBroadcastContent', 'none')
-    if live == 'completed':
-        return 'LiveArchive' if get_duration_minutes(video) >= 6 else 'Movie'
-
-    if 'liveStreamingDetails' in video:
-        if 'actualStartTime' in video['liveStreamingDetails']:
-            return 'LiveArchive' if get_duration_minutes(video) >= 6 else 'Movie'
-
-    # 4. デフォルト
-    return 'Movie'
+def get_tab_types(youtube, channel_id):
+    """
+    チャンネルページの「動画 / ショート / ライブ」タブの再生リストから、動画ごとの種別を返す。
+    再生リストのIDは、チャンネルIDの先頭 UC を UULF / UUSH / UULV に替えたもの。
+    YouTube の公式の文書には無い仕組みなので、読めなければ空を返し、呼び出し側が時間で仮に判定する。
+    2026-10-04、全23チャンネル9,431本のすべてが、どれか1つのタブにだけ入っていることを確認した。
+    """
+    result = {}
+    for prefix, vtype in TAB_PLAYLISTS:
+        token = None
+        try:
+            while True:
+                resp = execute_with_retry(youtube.playlistItems().list(
+                    part='contentDetails', playlistId=prefix + channel_id[2:],
+                    maxResults=50, pageToken=token
+                ))
+                for item in resp.get('items', []):
+                    result[item['contentDetails']['videoId']] = vtype
+                token = resp.get('nextPageToken')
+                if not token:
+                    break
+        except HttpError as e:
+            if e.status_code == 404:
+                # そのタブに1本も無いチャンネルでも起こりうるので、空のタブとして続ける
+                print(f'  ⚠️  {prefix} のタブが見つかりません（空として扱います）')
+                continue
+            print(f'  ⚠️  タブの取得に失敗しました。今日の新しい動画は時間で仮に判定します: {e}')
+            return {}
+        except Exception as e:
+            print(f'  ⚠️  タブの取得に失敗しました。今日の新しい動画は時間で仮に判定します: {e}')
+            return {}
+    return result
 
 # ----------------------------------------------------------------
 # YouTube API
@@ -238,9 +278,10 @@ def get_channel_stats(youtube, channel_id):
     return None
 
 def get_all_videos(youtube, channel_id, channel_name, overrides):
-    """チャンネルの全動画を取得してタイプ判定（Short判定はキャッシュ活用）"""
+    """チャンネルの全動画を取得してタイプ判定（確定済みの判定はキャッシュを再利用）"""
     snapshots = load_json(SNAPSHOTS_FILE, {})
     cached_videos = snapshots.get(channel_name, {}).get('videos', {})
+    channel_flags = (overrides or {}).get(channel_name, {})
 
     for attempt in range(3):
         videos = []
@@ -253,6 +294,7 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
 
             playlist_id = resp['items'][0]['contentDetails']['relatedPlaylists']['uploads']
             next_page_token = None
+            items = []
 
             while True:
                 playlist_resp = execute_with_retry(youtube.playlistItems().list(
@@ -272,50 +314,57 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
                     id=','.join(video_ids)
                 ))
 
-                print(f'  取得中... {len(videos) + len(videos_resp["items"])}本')
-
-                # 新規動画（キャッシュにないもの）のみShort判定
-                new_video_ids = [
-                    vid for vid in video_ids
-                    if vid not in cached_videos
-                ]
-                if new_video_ids:
-                    print(f'  新規動画 {len(new_video_ids)}本のShort判定を実行')
-                    short_cache = check_shorts_batch(new_video_ids)
-                else:
-                    short_cache = {}
-
-                for video in videos_resp['items']:
-                    vid = video['id']
-
-                    # キャッシュにtypeがある場合は例外設定のみチェックして再利用
-                    if vid in cached_videos:
-                        cached_type = cached_videos[vid].get('type', 'Movie')
-                        # 例外設定は常に最優先
-                        if overrides and channel_name in overrides and vid in overrides[channel_name]:
-                            vtype = overrides[channel_name][vid]
-                            print(f'  ⚙️  例外設定: [{video["snippet"]["title"][:40]}] → {vtype}')
-                        else:
-                            vtype = cached_type
-                    else:
-                        vtype = determine_video_type(video, short_cache, overrides, channel_name)
-
-                    videos.append({
-                        '動画ID': vid,
-                        'タイトル': video['snippet']['title'],
-                        '公開日': video['snippet']['publishedAt'][:10],
-                        '再生数': int(video['statistics'].get('viewCount', 0)),
-                        '高評価数': int(video['statistics'].get('likeCount', 0)),
-                        'コメント数': int(video['statistics'].get('commentCount', 0)),
-                        'type': vtype,
-                        'duration': int(isodate.parse_duration(
-                            video['contentDetails'].get('duration', 'PT0S')
-                        ).total_seconds()),
-                    })
+                items += videos_resp['items']
+                print(f'  取得中... {len(items)}本')
 
                 next_page_token = playlist_resp.get('nextPageToken')
                 if not next_page_token:
                     break
+
+            # 自動判定が確定していない動画（新規・配信前・前回タブで分からなかったもの）だけ判定し直す。
+            # 全部確定済みならタブは読まない
+            unfixed = [video for video in items if not cached_videos.get(video['id'], {}).get('fixed')]
+            tab_types = get_tab_types(youtube, channel_id) if unfixed else {}
+            short_ids = [
+                video['id'] for video in unfixed
+                if video['id'] not in tab_types
+                and video['snippet'].get('liveBroadcastContent', 'none') == 'none'
+                and 0 < get_duration_seconds(video) <= SHORT_MAX_SEC
+            ]
+            if short_ids:
+                print(f'  タブで分からない動画 {len(short_ids)}本のShort判定を実行')
+                short_cache = check_shorts_batch(short_ids)
+            else:
+                short_cache = {}
+            unfixed_ids = {video['id'] for video in unfixed}
+
+            for video in items:
+                vid = video['id']
+                duration = get_duration_seconds(video)
+
+                if vid in unfixed_ids:
+                    auto, fixed = classify(duration,
+                                           video['snippet'].get('liveBroadcastContent', 'none'),
+                                           tab_types.get(vid), short_cache.get(vid))
+                else:
+                    cached = cached_videos[vid]
+                    auto, fixed = cached.get('auto', cached.get('type', 'Movie')), True
+
+                # 例外設定は常に最優先。auto は例外を外したときに戻る先として残しておく
+                vtype = channel_flags.get(vid, auto)
+
+                videos.append({
+                    '動画ID': vid,
+                    'タイトル': video['snippet']['title'],
+                    '公開日': video['snippet']['publishedAt'][:10],
+                    '再生数': int(video['statistics'].get('viewCount', 0)),
+                    '高評価数': int(video['statistics'].get('likeCount', 0)),
+                    'コメント数': int(video['statistics'].get('commentCount', 0)),
+                    'type': vtype,
+                    'auto': auto,
+                    'fixed': fixed,
+                    'duration': duration,
+                })
 
             # グリッチ検知: 高評価・コメント数が0だが過去に非0だった動画を再取得
             glitch_ids = [
@@ -354,7 +403,9 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
             print(f'  ✓ 完了: {len(videos)}本')
             print(f'    Movie: {sum(1 for v in videos if v["type"] == "Movie")}本 / '
                   f'Short: {sum(1 for v in videos if v["type"] == "Short")}本 / '
-                  f'LiveArchive: {sum(1 for v in videos if v["type"] == "LiveArchive")}本')
+                  f'LiveArchive: {sum(1 for v in videos if v["type"] == "LiveArchive")}本 / '
+                  f'Pending: {sum(1 for v in videos if v["type"] == PENDING)}本 '
+                  f'（うち例外設定 {sum(1 for v in videos if v["動画ID"] in channel_flags)}本）')
             return videos
 
         except HttpError as e:
@@ -386,11 +437,14 @@ def update_snapshots(channel_name, channel_id, channel_stats, videos):
             'videos': {
                 v['動画ID']: {
                     'タイトル': v['タイトル'],
+                    '公開日': v['公開日'],
                     '再生数': v['再生数'],
                     '高評価数': v['高評価数'],
                     'コメント数': v['コメント数'],
                     'duration': v.get('duration', 0),
-                    'type': v['type']
+                    'type': v['type'],    # 例外設定を当てた後の種別
+                    'auto': v['auto'],    # 自動判定の結果
+                    'fixed': v['fixed'],  # 自動判定が確定したか（False なら翌日も判定し直す）
                 } for v in videos
             }
         }

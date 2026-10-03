@@ -15,7 +15,7 @@
 ## タレント追加手順
 1. `channels_config.json` にエントリ追加
 2. GitHub の `CHANNELS` シークレットを `channels_config.json` の内容で更新
-3. `RKMusic 動画フラグ設定ツール_v1.00.html` の `TALENT_ORDER` に追加
+3. `web/src/utils/data.ts` の `TALENT_ORDER` に追加（フラグ設定ツール v2.00 は `channels_config.json` を読むので変更不要）
 4. cron-job.org または手動で workflow を実行 → `all_history_YYYY.json` に自動追加
 5. Web ダッシュボードに自動で表示される（コード変更不要）
 
@@ -31,4 +31,4 @@
 | `all_snapshots.json` | 最新スナップショット・channel_id キャッシュ（自動生成） |
 | `video_flags.json` | 動画/ライブ フラグ（フラグ設定ツールで編集） |
 | `channels_config.json` | CHANNELS シークレットのローカルコピー |
-| `RKMusic 動画フラグ設定ツール_v1.00.html` | フラグ編集ツール（スタンドアロンHTML） |
+| `RKMusic 動画フラグ設定ツール_v2.00.html` | フラグ編集ツール（スタンドアロンHTML）。手で決めた例外だけを保存する |
