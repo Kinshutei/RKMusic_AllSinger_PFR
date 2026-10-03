@@ -508,6 +508,34 @@ def update_history(channel_name, videos, today_str, channel_stats=None):
 
 SUMMARY_FILE = 'dashboard_summary.json'
 CHANNELS_CONFIG_FILE = 'channels_config.json'
+DAILY_DIR = 'daily'
+DAILY_FROM = '2026-03-31'  # サイトで選べる最初の日（2026-04-01）の前日比に要るぶんから作る
+
+def daily_path(date_str):
+    return os.path.join(DAILY_DIR, f'{date_str}.json')
+
+def write_daily_files(talent_videos, dates):
+    """
+    サイトの日付指定・期間指定のために、日ごとの全動画の累計（再生数・高評価数・コメント数）を
+    daily/YYYY-MM-DD.json に1日1ファイルで書き出す（{"date": 日付, "v": {動画ID: [再生数, 高評価数, コメント数]}}）。
+    どの日・どの期間も「終わりの日の累計 − 始まりの前日の累計」で出せるので、サイトは数ファイル読むだけで済む。
+    過去の日の記録は変わらないので一度作れば作り直さない。同じ日に収集し直すと値が変わるため、最新の2日分だけは毎回書き直す。
+    """
+    recent = set(dates[-2:])
+    targets = [d for d in dates if d >= DAILY_FROM and (d in recent or not os.path.exists(daily_path(d)))]
+    if not targets:
+        return
+    wanted = set(targets)
+    per_date = {d: {} for d in targets}
+    for videos in talent_videos.values():
+        for vid_id, v in videos.items():
+            for d, r in v.get('records', {}).items():
+                if d in wanted:
+                    per_date[d][vid_id] = [r.get('再生数', 0) or 0, r.get('高評価数', 0) or 0, r.get('コメント数', 0) or 0]
+    os.makedirs(DAILY_DIR, exist_ok=True)
+    for d in targets:
+        save_json(daily_path(d), {'date': d, 'v': per_date[d]})
+    print(f'  日別ファイル保存: {len(targets)}日分（{targets[0]}〜{targets[-1]}）')
 
 def load_talent_names():
     """channels_config.jsonからタレント名一覧を取得（API/環境変数なしで動作）"""
@@ -614,6 +642,9 @@ def build_dashboard_summary():
 
     save_json(SUMMARY_FILE, summary, indent=None)
     print(f'  Dashboard集計保存: {SUMMARY_FILE}（動画{len(video_snapshots)}件 / タレント{len(channel_stats_summary)}件 / n_date={n_date} p_date={p_date}）')
+
+    # 読み込み済みの履歴をそのまま使って、日付指定用の日別ファイルも書く
+    write_daily_files(talent_videos, sorted_dates)
 
 # ----------------------------------------------------------------
 # チャンネル処理

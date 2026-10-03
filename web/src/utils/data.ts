@@ -2,7 +2,7 @@ import {
   AllHistory, TalentHistory, ChannelStats, VideoType, VideoFlags,
   SingerRankItem, VideoRankItem, VideoCard,
   ChannelComments,
-  DashboardSummary,
+  DashboardSummary, DailySnapshot,
 } from '../types'
 
 export const TALENT_ORDER = [
@@ -62,6 +62,19 @@ export async function loadTalentHistory(talent: string): Promise<{ data: TalentH
   return { data: data?.[talent] ?? null, failed }
 }
 
+// 日付指定用の日別ファイル。同じ日を何度も選び直すので取得結果を覚えておく。
+// 取れなかった日は、次に選び直した時に取り直せるよう覚えない。
+const dailyCache = new Map<string, Promise<FetchResult<DailySnapshot>>>()
+export function loadDaily(date: string): Promise<FetchResult<DailySnapshot>> {
+  let p = dailyCache.get(date)
+  if (!p) {
+    p = fetchJsonWithRetry<DailySnapshot>(`${HISTORY_BASE_URL}/daily/${date}.json`)
+    dailyCache.set(date, p)
+    void p.then(r => { if (r.failed || !r.data) dailyCache.delete(date) })
+  }
+  return p
+}
+
 // comments_*.json は収集対象外のタレントが多く404が正常に発生する（想定内）。
 export async function loadTalentComments(talent: string): Promise<ChannelComments> {
   return (await fetchJsonWithRetry<ChannelComments>(
@@ -116,72 +129,127 @@ function isShownType(t: string): t is VideoType {
 // ダッシュボード
 // ----------------------------------------------------------------
 
-export function buildDashboardData(summary: DashboardSummary, flags: VideoFlags = {}) {
-  const { n_date, p_date, channel_stats, videos } = summary
-  const talents = Object.keys(channel_stats)
+// 日付指定・期間指定で選べる最初の日。これより前は正式なデータ期間の外
+export const MIN_DATE = '2026-04-01'
+
+/** 'YYYY-MM-DD' を n 日ずらす。端末のタイムゾーンに左右されないよう UTC で計算する */
+export function addDays(date: string, n: number): string {
+  const d = new Date(`${date}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
+/** 各タレントの記録を始めた日（途中から加わったタレントは 2026-04-26 などになる） */
+function talentFirstDates(summary: DashboardSummary): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [talent, cs] of Object.entries(summary.channel_stats)) {
+    const first = Object.keys(cs).sort()[0]
+    if (first) out[talent] = first
+  }
+  return out
+}
+
+/**
+ * 期間 start〜end の集計に要る日別ファイルの日付。
+ * 「終わりの日」と「始まりの前日」、加えて期間の途中で記録を始めたタレントの記録開始日。
+ * 1日だけ見るときは start = end。
+ */
+export function rangeDates(summary: DashboardSummary, start: string, end: string): string[] {
+  const base = addDays(start, -1)
+  const dates = new Set([base, end])
+  for (const first of Object.values(talentFirstDates(summary))) {
+    if (first > base && first <= end) dates.add(first)
+  }
+  return [...dates]
+}
+
+/**
+ * 期間 start〜end に増えた数でランキングを作る（1日だけなら start = end で、前日比になる）。
+ * 増えた数は「終わりの日の累計 − 始まりの前日の累計」。
+ * - 始まりの前日に記録が無い動画（期間中に公開されたもの）は 0 から数える
+ * - 途中から加わったタレントは、記録を始めた日から数える（0 から数えると昔からの再生数まで増えた数に入るため）。
+ *   期間がまるごと記録開始より前なら nodata にする
+ * snaps には rangeDates() で挙げた日の日別ファイルを渡す。
+ */
+export function buildRangeData(
+  summary: DashboardSummary,
+  flags: VideoFlags,
+  start: string,
+  end: string,
+  snaps: Record<string, DailySnapshot>,
+) {
+  const base = addDays(start, -1)
+  const firstDates = talentFirstDates(summary)
+  const endSnap = snaps[end]?.v ?? {}
 
   const videosByTalent = new Map<string, DashboardSummary['videos']>()
-  for (const v of videos) {
+  for (const v of summary.videos) {
     const arr = videosByTalent.get(v.t)
     if (arr) arr.push(v)
     else videosByTalent.set(v.t, [v])
   }
 
   const singerData: SingerRankItem[] = []
-  for (const talent of talents) {
-    const cs = channel_stats[talent] as Record<string, ChannelStats> | undefined
-    const n = cs?.[n_date], p = p_date ? cs?.[p_date] : undefined
+  const videoData: Record<VideoType, VideoRankItem[]> = { Movie: [], Short: [], LiveArchive: [] }
+
+  for (const talent of Object.keys(summary.channel_stats)) {
+    const first = firstDates[talent]
+    if (!first || first > end) {
+      singerData.push({
+        talent, nodata: true,
+        subs_n: 0, subs_diff: null, subs_rate: null,
+        views_n: 0, views_diff: null, views_rate: null,
+        comments_n: 0, comments_diff: null, comments_rate: null,
+        content_total: 0, content_movie: 0, content_short: 0, content_live: 0,
+        content_diff: null, content_rate: null,
+      })
+      continue
+    }
+    const baseDate = first > base ? first : base
+    const baseSnap = snaps[baseDate]?.v ?? {}
+    const cs = summary.channel_stats[talent] as Record<string, ChannelStats>
+    const n = cs[end], p = cs[baseDate]
     const subs_n  = n?.登録者数 ?? 0
     const views_n = n?.総再生数 ?? 0
     const subs_diff  = (n && p) ? subs_n  - (p.登録者数 ?? 0) : null
     const views_diff = (n && p) ? views_n - (p.総再生数 ?? 0) : null
 
-    const talentVideos = videosByTalent.get(talent) ?? []
-    let comments_n = 0, comments_p = 0, has_p = false
-    let content_movie = 0, content_short = 0, content_live = 0
-    let content_n = 0, content_p = 0, has_content_p = false
-    for (const v of talentVideos) {
-      comments_n += v.cn ?? 0
-      if (v.cp !== null) { comments_p += v.cp; has_p = true }
-      if (v.ty === 'Movie')       content_movie++
-      else if (v.ty === 'Short')  content_short++
-      else if (v.ty === 'LiveArchive') content_live++
-      if (v.vn !== null) content_n++
-      if (v.vp !== null) { content_p++; has_content_p = true }
+    let comments_n = 0, comments_diff = 0
+    let content_movie = 0, content_short = 0, content_live = 0, content_p = 0
+    for (const v of videosByTalent.get(talent) ?? []) {
+      const e = endSnap[v.id]
+      if (!e) continue  // 終わりの日にまだ無い（後で公開された）動画
+      const b = baseSnap[v.id] ?? [0, 0, 0]
+      comments_n += e[2]
+      comments_diff += e[2] - b[2]
+      const vtype = flags[talent]?.[v.id] ?? v.ty
+      if (!isShownType(vtype)) continue
+      if (vtype === 'Movie') content_movie++
+      else if (vtype === 'Short') content_short++
+      else content_live++
+      if (baseSnap[v.id]) content_p++
+      const vd = e[0] - b[0]
+      videoData[vtype].push({
+        talent, vid_id: v.id, title: v.ti,
+        views_n: e[0], views_diff: vd, views_rate: rate(e[0], vd),
+        likes_n: e[1], likes_diff: e[1] - b[1],
+        comments_n: e[2], comments_diff: e[2] - b[2],
+      })
     }
-    const comments_diff = has_p ? comments_n - comments_p : null
-    const content_diff = has_content_p ? content_n - content_p : null
+    const content_total = content_movie + content_short + content_live
+    const content_diff = content_total - content_p
 
     singerData.push({
       talent, subs_n, views_n,
       subs_diff,  subs_rate:  rate(subs_n,  subs_diff),
       views_diff, views_rate: rate(views_n, views_diff),
       comments_n, comments_diff, comments_rate: rate(comments_n, comments_diff),
-      content_total: content_movie + content_short + content_live,
-      content_movie, content_short, content_live,
-      content_diff, content_rate: rate(content_n, content_diff),
+      content_total, content_movie, content_short, content_live,
+      content_diff, content_rate: rate(content_total, content_diff),
     })
   }
 
-  const videoData: Record<VideoType, VideoRankItem[]> = { Movie: [], Short: [], LiveArchive: [] }
-  for (const v of videos) {
-    const vtype = (flags[v.t]?.[v.id] ?? v.ty) as VideoType
-    if (!(vtype in videoData)) continue
-    const views_n    = v.vn ?? 0
-    const likes_n    = v.ln ?? 0
-    const comments_n = v.cn ?? 0
-    const views_diff    = (v.vn !== null && v.vp !== null) ? v.vn - v.vp : null
-    const likes_diff    = (v.ln !== null && v.lp !== null) ? v.ln - v.lp : null
-    const comments_diff = (v.cn !== null && v.cp !== null) ? v.cn - v.cp : null
-    videoData[vtype].push({
-      talent: v.t, vid_id: v.id, title: v.ti,
-      views_n, views_diff, views_rate: rate(views_n, views_diff),
-      likes_n, likes_diff,
-      comments_n, comments_diff,
-    })
-  }
-
-  return { singerData, videoData, n_date }
+  return { singerData, videoData }
 }
 
 export function buildStatsData(summary: DashboardSummary): { date: string; subs: number; views: number }[] {

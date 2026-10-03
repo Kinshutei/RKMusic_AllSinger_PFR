@@ -175,6 +175,36 @@ a:hover { color: #3a4fa8; text-decoration: underline; }
 .rank-val  { padding: 3px 6px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; width: 82px; }
 .rank-diff { padding: 3px 4px; text-align: right; white-space: nowrap; font-size: 11px; width: 116px; overflow: hidden; }
 
+/* ── 集計日の選択（ダッシュボード） ── */
+.date-nav { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 14px 0 6px; }
+.date-mode { display: flex; gap: 6px; }
+.date-pick { display: flex; align-items: center; gap: 6px; }
+.date-step {
+  width: 30px;
+  height: 30px;
+  background: rgba(58,69,128,0.08);
+  border: 1px solid #b0b6d8;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #3a4580;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.date-step:hover:not(:disabled) { background: rgba(58,69,128,0.16); }
+.date-step:disabled { opacity: 0.35; cursor: not-allowed; }
+.date-input {
+  height: 30px;
+  border: 1px solid #b0b6d8;
+  border-radius: 6px;
+  padding: 0 8px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #2a305c;
+  background: #ffffff;
+}
+.date-input:focus { outline: none; border-color: #3a4580; }
+.date-sep { color: #888; }
+
 /* ── チャンネルヘッダー ── */
 .channel-header { margin-bottom: 8px; }
 .talent-name { font-size: 1.4rem; font-weight: 700; color: #1a1a1a; margin: 0 0 6px; }

@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import Plot from 'react-plotly.js'
-import { DashboardSummary, SingerRankItem, VideoRankItem, VideoType, VideoFlags } from '../types'
-import { buildDashboardData, buildStatsData, buildDailyViewsByTalent, buildDashboardDailyViewsBreakdown, DailyViewsEntry } from '../utils/data'
+import { DashboardSummary, SingerRankItem, VideoRankItem, VideoType, VideoFlags, DailySnapshot } from '../types'
+import {
+  buildRangeData, rangeDates, loadDaily, addDays, MIN_DATE,
+  buildStatsData, buildDailyViewsByTalent, buildDashboardDailyViewsBreakdown, DailyViewsEntry,
+} from '../utils/data'
 import { niceScale, fmtDiff, diffColor } from '../utils/chartUtils'
 
 interface Props {
@@ -30,7 +33,7 @@ function SingerTable({ rows, valKey, diffKey, rateKey }: {
           <tr key={r.talent} className={i % 2 === 0 ? 'row-even' : ''}>
             <td className="rank-no">{i + 1}.</td>
             <td className="rank-name">{r.talent}</td>
-            <td className="rank-val">{r[valKey].toLocaleString()}</td>
+            <td className="rank-val">{r.nodata ? '—' : r[valKey].toLocaleString()}</td>
             <td className="rank-diff" style={{ color: diffColor(r[diffKey]) }}>
               {fmtDiff(r[diffKey], r[rateKey])}
             </td>
@@ -425,7 +428,7 @@ function ContentTable({ rows }: { rows: SingerRankItem[] }) {
           <tr key={r.talent} className={i % 2 === 0 ? 'row-even' : ''}>
             <td className="rank-no">{i + 1}.</td>
             <td className="rank-name">{r.talent}</td>
-            <td className="rank-val">{r.content_total.toLocaleString()}</td>
+            <td className="rank-val">{r.nodata ? '—' : r.content_total.toLocaleString()}</td>
             <td className="rank-diff" style={{ color: diffColor(r.content_diff) }}>
               {fmtDiff(r.content_diff, r.content_rate)}
             </td>
@@ -450,9 +453,95 @@ const VIDEO_SECTIONS: { type: VideoType; label: string }[] = [
   { type: 'LiveArchive', label: 'ライブ部門' },
 ]
 
+type RangeMode = 'day' | 'range'
+type RankData = ReturnType<typeof buildRangeData>
+
+const clampDate = (d: string, lo: string, hi: string) => (d < lo ? lo : d > hi ? hi : d)
+
+/** 期間の日数（両端を含む） */
+function spanDays(start: string, end: string): number {
+  return Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86400000) + 1
+}
+
+/** ランキングの集計日を選ぶ欄。1日は ◀▶ で1日ずつ動かし、期間はカレンダーで始まりと終わりを選ぶ */
+function RangeControls({ mode, day, start, end, latest, onMode, onDay, onRange }: {
+  mode: RangeMode
+  day: string
+  start: string
+  end: string
+  latest: string
+  onMode: (m: RangeMode) => void
+  onDay: (d: string) => void
+  onRange: (start: string, end: string) => void
+}) {
+  return (
+    <div className="date-nav">
+      <div className="date-mode">
+        <button className={`sort-btn${mode === 'day' ? ' active' : ''}`} onClick={() => onMode('day')}>1日</button>
+        <button className={`sort-btn${mode === 'range' ? ' active' : ''}`} onClick={() => onMode('range')}>期間</button>
+      </div>
+      {mode === 'day' ? (
+        <div className="date-pick">
+          <button className="date-step" disabled={day <= MIN_DATE} onClick={() => onDay(addDays(day, -1))} aria-label="前の日">◀</button>
+          <input type="date" className="date-input" min={MIN_DATE} max={latest} value={day}
+                 onChange={e => e.target.value && onDay(clampDate(e.target.value, MIN_DATE, latest))} />
+          <button className="date-step" disabled={day >= latest} onClick={() => onDay(addDays(day, 1))} aria-label="次の日">▶</button>
+        </div>
+      ) : (
+        <div className="date-pick">
+          <input type="date" className="date-input" min={MIN_DATE} max={end} value={start}
+                 onChange={e => e.target.value && onRange(clampDate(e.target.value, MIN_DATE, end), end)} />
+          <span className="date-sep">〜</span>
+          <input type="date" className="date-input" min={start} max={latest} value={end}
+                 onChange={e => e.target.value && onRange(start, clampDate(e.target.value, start, latest))} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function DashboardPage({ summary, flags }: Props) {
   const [view, setView] = useState<'ranking' | 'stats'>('ranking')
-  const data = buildDashboardData(summary, flags)
+
+  // ランキングの集計日。開いたときは最新日（今までと同じ見え方）
+  const latest = summary.n_date
+  const [mode, setMode] = useState<RangeMode>('day')
+  const [day, setDay] = useState(latest)
+  const [range, setRange] = useState({ start: latest, end: latest })
+  const start = mode === 'day' ? day : range.start
+  const end   = mode === 'day' ? day : range.end
+  const rankKey = `${start}|${end}`
+  const [rank, setRank] = useState<{ key: string; data: RankData } | null>(null)
+  const [rankError, setRankError] = useState<string | null>(null)
+  const [retry, setRetry] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    setRankError(null)
+    const dates = rangeDates(summary, start, end)
+    void Promise.all(dates.map(loadDaily)).then(results => {
+      if (!alive) return
+      const missing = dates.filter((_, i) => !results[i].data)
+      if (missing.length) {
+        setRankError(`${missing.join('、')} のデータを取得できませんでした。`)
+        return
+      }
+      const snaps: Record<string, DailySnapshot> = {}
+      results.forEach(r => { snaps[r.data!.date] = r.data! })
+      setRank({ key: `${start}|${end}`, data: buildRangeData(summary, flags, start, end, snaps) })
+    })
+    return () => { alive = false }
+  }, [summary, flags, start, end, retry])
+
+  function changeMode(m: RangeMode) {
+    if (m === mode) return
+    // 期間に切り替えたら、見ていた日までの1週間から始める。1日に戻したら期間の終わりの日を出す
+    if (m === 'range') setRange({ start: clampDate(addDays(day, -6), MIN_DATE, day), end: day })
+    else setDay(range.end)
+    setMode(m)
+  }
+
+  const data = rank?.key === rankKey ? rank.data : null
   const statsPoints = buildStatsData(summary)
   const dailyViewsByTalent = buildDailyViewsByTalent(summary)
 
@@ -501,12 +590,27 @@ export default function DashboardPage({ summary, flags }: Props) {
           <DashboardDailyViewsChart data={filteredDailyViews} title="総再生数（種別内訳）" />
           {dailyViewsByTalent && <GroupTreemap talentViews={dailyViewsByTalent.views} date={dailyViewsByTalent.date} />}
         </div>
-      ) : !data ? (
-        <p className="muted">データがありません</p>
       ) : (
         <>
-          <p className="date-label">集計基準日: {data.n_date}（前日比）</p>
+          <RangeControls
+            mode={mode} day={day} start={range.start} end={range.end} latest={latest}
+            onMode={changeMode} onDay={setDay} onRange={(s, e) => setRange({ start: s, end: e })}
+          />
+          <p className="date-label">
+            {mode === 'day'
+              ? `集計基準日: ${day}（前日比）`
+              : `集計期間: ${start}〜${end}（${spanDays(start, end)}日間の増加）`}
+          </p>
 
+          {rankError ? (
+            <p className="error-text">
+              {rankError}{' '}
+              <button onClick={() => setRetry(n => n + 1)}>再試行</button>
+            </p>
+          ) : !data ? (
+            <p className="muted">読み込み中...</p>
+          ) : (
+          <>
           {/* Singer別 */}
           <h3>Singer別</h3>
           <div className="four-col">
@@ -552,6 +656,8 @@ export default function DashboardPage({ summary, flags }: Props) {
               </div>
             )
           })}
+          </>
+          )}
         </>
       )}
     </div>

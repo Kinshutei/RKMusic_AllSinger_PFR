@@ -33,6 +33,7 @@ export interface AllHistory {
 
 export interface SingerRankItem {
   talent: string
+  nodata?: boolean  // 選んだ期間がまるごと記録開始より前（途中から加わったタレント）
   subs_n: number
   subs_diff: number | null
   subs_rate: number | null
@@ -122,6 +123,12 @@ export interface DailyTypeBreakdownEntry {
   Movie: number
   Short: number
   LiveArchive: number
+}
+
+// 日付指定用の日別ファイル（auto_check.py が daily/YYYY-MM-DD.json に書く）。その日0時時点の累計
+export interface DailySnapshot {
+  date: string
+  v: Record<string, [number, number, number]>  // 動画ID → [再生数, 高評価数, コメント数]
 }
 
 export interface DashboardSummary {
