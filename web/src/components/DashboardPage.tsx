@@ -456,6 +456,7 @@ const MILESTONE_FILTERS: { key: MilestoneFilter; label: string }[] = [
 ]
 // 何日以内に届くものを出すか。「すべて」は予測の対象にしている30日以内
 const MILESTONE_DAYS: { days: number; label: string }[] = [
+  { days: 1,  label: '1日以内' },
   { days: 3,  label: '3日以内' },
   { days: 7,  label: '7日以内' },
   { days: 30, label: 'すべて' },
