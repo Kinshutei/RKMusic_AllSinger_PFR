@@ -454,6 +454,12 @@ const MILESTONE_FILTERS: { key: MilestoneFilter; label: string }[] = [
   { key: 'Movie', label: '動画' },
   { key: 'Short', label: 'ショート' },
 ]
+// 何日以内に届くものを出すか。「すべて」は予測の対象にしている30日以内
+const MILESTONE_DAYS: { days: number; label: string }[] = [
+  { days: 3,  label: '3日以内' },
+  { days: 7,  label: '7日以内' },
+  { days: 30, label: 'すべて' },
+]
 
 /** 30日以内に再生数のキリ番を迎えそうな動画・ショートの一覧 */
 function MilestoneView({ summary, flags }: { summary: DashboardSummary; flags: VideoFlags }) {
@@ -463,6 +469,7 @@ function MilestoneView({ summary, flags }: { summary: DashboardSummary; flags: V
   const [error, setError] = useState<string | null>(null)
   const [retry, setRetry] = useState(0)
   const [filter, setFilter] = useState<MilestoneFilter>('all')
+  const [within, setWithin] = useState(3)
 
   useEffect(() => {
     let alive = true
@@ -488,23 +495,32 @@ function MilestoneView({ summary, flags }: { summary: DashboardSummary; flags: V
   }
   if (!items) return <p className="muted">読み込み中...</p>
 
-  const shown = filter === 'all' ? items : items.filter(m => m.type === filter)
+  const shown = items.filter(m => (filter === 'all' || m.type === filter) && m.days <= within)
   return (
     <>
-      <div className="sort-btns" style={{ marginTop: 16, marginBottom: 0 }}>
-        {MILESTONE_FILTERS.map(f => (
-          <button key={f.key} className={`sort-btn${filter === f.key ? ' active' : ''}`} onClick={() => setFilter(f.key)}>
-            {f.label}
-          </button>
-        ))}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 16 }}>
+        <div className="sort-btns" style={{ margin: 0 }}>
+          {MILESTONE_FILTERS.map(f => (
+            <button key={f.key} className={`sort-btn${filter === f.key ? ' active' : ''}`} onClick={() => setFilter(f.key)}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="sort-btns" style={{ margin: 0 }}>
+          {MILESTONE_DAYS.map(f => (
+            <button key={f.days} className={`sort-btn${within === f.days ? ' active' : ''}`} onClick={() => setWithin(f.days)}>
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
       {/* 下に固定のフッター（48px）があるので、最後の行が隠れないよう下を空ける */}
       <div className="milestone-alert-wrap" style={{ maxWidth: 1000, marginTop: 12, marginBottom: 24 }}>
         <div className="milestone-alert-header">
-          30日以内に再生数のキリ番を迎えそうな動画（{latest} 時点・直近{MILESTONE_WINDOW}日の1日平均から予測）
+          {within}日以内に再生数のキリ番を迎えそうな動画（{latest} 時点・直近{MILESTONE_WINDOW}日の1日平均から予測）
         </div>
         {shown.length === 0 ? (
-          <div className="milestone-alert-item muted">30日以内にキリ番を迎えそうな動画はありません</div>
+          <div className="milestone-alert-item muted">{within}日以内にキリ番を迎えそうな動画はありません</div>
         ) : shown.map(m => {
           const [, mo, d] = m.date.split('-')
           return (
