@@ -271,45 +271,48 @@ export function buildStatsData(summary: DashboardSummary): { date: string; subs:
 
 export interface MilestoneForecast {
   talent: string
-  kind: '登録者数' | '総再生数'
-  value: number      // 今の値
+  vid_id: string
+  title: string
+  type: 'Movie' | 'Short'
+  value: number      // 今の再生数
   milestone: number  // 次のキリ番
   date: string       // 届く予想日
   days: number       // 最新の集計日から何日後か
 }
 
-const dayDiff = (from: string, to: string) =>
-  Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000)
+// 増え方を見る日数。9/5時点の予測を10/5までの実績と比べると、7日平均は当たり78%・日数のずれ平均3.7日、
+// 30日平均は当たり65%・ずれ4.2日だった
+export const MILESTONE_WINDOW = 7
 
-/** 次のキリ番。いちばん上の桁が1つ上がる数（8,990→9,000、29,600→30,000、7,792,409→8,000,000） */
+/** 次のキリ番。1,000未満は1,000、それ以上はいちばん上の桁が1つ上がる数（58,563→60,000、1,234,567→2,000,000） */
 function nextMilestone(value: number): number {
-  const unit = 10 ** (String(Math.floor(value)).length - 1)
+  const unit = Math.max(1000, 10 ** (String(Math.floor(value)).length - 1))
   return (Math.floor(value / unit) + 1) * unit
 }
 
 /**
- * 登録者数・総再生数が、最新の集計日から within 日以内に次のキリ番へ届きそうなシンガーを、近い順に返す。
- * 増え方は直近30日の1日平均で見る。チャンネルの総再生数は数日同じ値のまま止まることがあり、短い期間の平均では外れるため。
+ * 動画・ショートの再生数が、最新の集計日から within 日以内に次のキリ番へ届きそうなものを近い順に返す。
+ * latest は最新の集計日、base はその MILESTONE_WINDOW 日前の日別ファイル。base に無い（後で公開された）動画は0から数える。
  */
-export function buildMilestoneForecast(summary: DashboardSummary, within = 30): MilestoneForecast[] {
+export function buildMilestoneForecast(
+  summary: DashboardSummary,
+  flags: VideoFlags,
+  latest: DailySnapshot,
+  base: DailySnapshot,
+  within = 30,
+): MilestoneForecast[] {
   const result: MilestoneForecast[] = []
-  for (const [talent, cs] of Object.entries(summary.channel_stats)) {
-    const dates = Object.keys(cs).sort()
-    const last = dates.at(-1)
-    if (!last) continue
-    const from = dates.find(d => d >= addDays(last, -30))!
-    const span = dayDiff(from, last)
-    if (span <= 0) continue
-    for (const kind of ['登録者数', '総再生数'] as const) {
-      const value = cs[last][kind]
-      const before = cs[from][kind]
-      if (!value || before == null) continue
-      const perDay = (value - before) / span
-      if (perDay <= 0) continue
-      const milestone = nextMilestone(value)
-      const date = addDays(last, Math.ceil((milestone - value) / perDay))
-      const days = dayDiff(summary.n_date, date)
-      if (days <= within) result.push({ talent, kind, value, milestone, date, days })
+  for (const v of summary.videos) {
+    const type = flags[v.t]?.[v.id] ?? v.ty
+    if (type !== 'Movie' && type !== 'Short') continue
+    const value = latest.v[v.id]?.[0] ?? 0
+    if (value <= 0) continue
+    const perDay = (value - (base.v[v.id]?.[0] ?? 0)) / MILESTONE_WINDOW
+    if (perDay <= 0) continue
+    const milestone = nextMilestone(value)
+    const days = Math.ceil((milestone - value) / perDay)
+    if (days <= within) {
+      result.push({ talent: v.t, vid_id: v.id, title: v.ti, type, value, milestone, date: addDays(latest.date, days), days })
     }
   }
   return result.sort((a, b) => a.days - b.days)

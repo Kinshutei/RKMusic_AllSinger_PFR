@@ -4,7 +4,7 @@ import { DashboardSummary, SingerRankItem, VideoRankItem, VideoType, VideoFlags,
 import {
   buildRangeData, rangeDates, loadDaily, addDays, MIN_DATE,
   buildStatsData, buildDailyViewsByTalent, buildDashboardDailyViewsBreakdown, DailyViewsEntry,
-  buildMilestoneForecast, MilestoneForecast,
+  buildMilestoneForecast, MilestoneForecast, MILESTONE_WINDOW,
 } from '../utils/data'
 import { niceScale, fmtDiff, diffColor } from '../utils/chartUtils'
 
@@ -448,28 +448,84 @@ function ContentTable({ rows }: { rows: SingerRankItem[] }) {
   )
 }
 
-/** 30日以内にキリ番を迎えそうなシンガーの一覧（登録者数・総再生数） */
-function MilestoneList({ items, latest }: { items: MilestoneForecast[]; latest: string }) {
+type MilestoneFilter = 'all' | 'Movie' | 'Short'
+const MILESTONE_FILTERS: { key: MilestoneFilter; label: string }[] = [
+  { key: 'all',   label: 'すべて' },
+  { key: 'Movie', label: '動画' },
+  { key: 'Short', label: 'ショート' },
+]
+
+/** 30日以内に再生数のキリ番を迎えそうな動画・ショートの一覧 */
+function MilestoneView({ summary, flags }: { summary: DashboardSummary; flags: VideoFlags }) {
+  const latest = summary.n_date
+  const baseDate = addDays(latest, -MILESTONE_WINDOW)
+  const [items, setItems] = useState<MilestoneForecast[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [retry, setRetry] = useState(0)
+  const [filter, setFilter] = useState<MilestoneFilter>('all')
+
+  useEffect(() => {
+    let alive = true
+    setError(null)
+    void Promise.all([loadDaily(latest), loadDaily(baseDate)]).then(([n, b]) => {
+      if (!alive) return
+      if (!n.data || !b.data) {
+        setError(`${[!n.data && latest, !b.data && baseDate].filter(Boolean).join('、')} のデータを取得できませんでした。`)
+        return
+      }
+      setItems(buildMilestoneForecast(summary, flags, n.data, b.data))
+    })
+    return () => { alive = false }
+  }, [summary, flags, latest, baseDate, retry])
+
+  if (error) {
+    return (
+      <p className="error-text">
+        {error}{' '}
+        <button onClick={() => setRetry(n => n + 1)}>再試行</button>
+      </p>
+    )
+  }
+  if (!items) return <p className="muted">読み込み中...</p>
+
+  const shown = filter === 'all' ? items : items.filter(m => m.type === filter)
   return (
-    <div className="milestone-alert-wrap" style={{ maxWidth: 720 }}>
-      <div className="milestone-alert-header">
-        30日以内にキリ番を迎えそうなシンガー（{latest} 時点・直近30日の1日平均から予測）
+    <>
+      <div className="sort-btns" style={{ marginTop: 16, marginBottom: 0 }}>
+        {MILESTONE_FILTERS.map(f => (
+          <button key={f.key} className={`sort-btn${filter === f.key ? ' active' : ''}`} onClick={() => setFilter(f.key)}>
+            {f.label}
+          </button>
+        ))}
       </div>
-      {items.length === 0 ? (
-        <div className="milestone-alert-item muted">30日以内にキリ番を迎えそうなシンガーはいません</div>
-      ) : items.map(m => {
-        const [, mo, d] = m.date.split('-')
-        return (
-          <div key={`${m.talent}|${m.kind}`} className="milestone-alert-item">
-            <span className="milestone-alert-title">{m.talent}</span>
-            <span className="milestone-alert-nums">
-              {m.kind} <strong>{m.value.toLocaleString()}</strong> → <strong>{m.milestone.toLocaleString()}</strong>
-            </span>
-            <span className="milestone-alert-days">{parseInt(mo)}月{parseInt(d)}日頃（{m.days}日後）</span>
-          </div>
-        )
-      })}
-    </div>
+      {/* 下に固定のフッター（48px）があるので、最後の行が隠れないよう下を空ける */}
+      <div className="milestone-alert-wrap" style={{ maxWidth: 1000, marginTop: 12, marginBottom: 24 }}>
+        <div className="milestone-alert-header">
+          30日以内に再生数のキリ番を迎えそうな動画（{latest} 時点・直近{MILESTONE_WINDOW}日の1日平均から予測）
+        </div>
+        {shown.length === 0 ? (
+          <div className="milestone-alert-item muted">30日以内にキリ番を迎えそうな動画はありません</div>
+        ) : shown.map(m => {
+          const [, mo, d] = m.date.split('-')
+          return (
+            <div key={m.vid_id} className="milestone-alert-item">
+              <span style={{ width: 110, flexShrink: 0, fontSize: 12, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {m.talent}
+              </span>
+              <a className="milestone-alert-title" href={`https://www.youtube.com/watch?v=${m.vid_id}`}
+                 target="_blank" rel="noopener noreferrer" title={m.title}>
+                {m.title}
+              </a>
+              <span style={{ flexShrink: 0, fontSize: 11, color: PIE_COLORS[m.type] }}>{PIE_LABELS[m.type]}</span>
+              <span className="milestone-alert-nums">
+                <strong>{m.value.toLocaleString()}</strong> → <strong>{m.milestone.toLocaleString()}</strong>
+              </span>
+              <span className="milestone-alert-days">{parseInt(mo)}月{parseInt(d)}日頃（{m.days}日後）</span>
+            </div>
+          )
+        })}
+      </div>
+    </>
   )
 }
 
@@ -604,7 +660,7 @@ export default function DashboardPage({ summary, flags }: Props) {
       </div>
 
       {view === 'milestone' ? (
-        <MilestoneList items={buildMilestoneForecast(summary)} latest={latest} />
+        <MilestoneView summary={summary} flags={flags} />
       ) : view === 'stats' ? (
         <div style={{ marginTop: 16 }}>
           <div style={{ marginBottom: 16 }}>
