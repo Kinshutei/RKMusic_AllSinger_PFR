@@ -52,7 +52,7 @@ function SingerTable({ rows, valKey, diffKey, rateKey }: {
   )
 }
 
-function VideoTable({ rows, valKey, diffKey, rateKey, top = 20 }: {
+function VideoTable({ rows, valKey, diffKey, rateKey, top = 15 }: {
   rows: VideoRankItem[]
   valKey: 'views_n' | 'likes_n' | 'comments_n'
   diffKey: 'views_diff' | 'likes_diff' | 'comments_diff'
@@ -447,10 +447,13 @@ function ContentTable({ rows }: { rows: SingerRankItem[] }) {
   )
 }
 
-const VIDEO_SECTIONS: { type: VideoType; label: string }[] = [
-  { type: 'Movie',       label: '動画部門' },
-  { type: 'Short',       label: 'ショート部門' },
-  { type: 'LiveArchive', label: 'ライブ部門' },
+// ランキングはスクロールせずに1画面で見られるよう、ボタンで選んだ1つだけを表示する
+type Section = 'Singer' | VideoType
+const SECTIONS: { key: Section; label: string }[] = [
+  { key: 'Singer',      label: 'Singer別' },
+  { key: 'Movie',       label: '動画部門' },
+  { key: 'Short',       label: 'ショート部門' },
+  { key: 'LiveArchive', label: 'ライブ部門' },
 ]
 
 type RangeMode = 'day' | 'range'
@@ -502,6 +505,7 @@ function RangeControls({ mode, day, start, end, latest, onMode, onDay, onRange }
 
 export default function DashboardPage({ summary, flags }: Props) {
   const [view, setView] = useState<'ranking' | 'stats'>('ranking')
+  const [section, setSection] = useState<Section>('Singer')
 
   // ランキングの集計日。開いたときは最新日（今までと同じ見え方）
   const latest = summary.n_date
@@ -602,6 +606,18 @@ export default function DashboardPage({ summary, flags }: Props) {
               : `集計期間: ${start}〜${end}（${spanDays(start, end)}日間の増加）`}
           </p>
 
+          <div className="type-tabs">
+            {SECTIONS.map(s => (
+              <button
+                key={s.key}
+                className={`type-tab-btn${section === s.key ? ' active' : ''}`}
+                onClick={() => setSection(s.key)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
           {rankError ? (
             <p className="error-text">
               {rankError}{' '}
@@ -611,8 +627,8 @@ export default function DashboardPage({ summary, flags }: Props) {
             <p className="muted">読み込み中...</p>
           ) : (
           <>
-          {/* Singer別 */}
-          <h3>Singer別</h3>
+          <h3>{SECTIONS.find(s => s.key === section)!.label}</h3>
+          {section === 'Singer' ? (
           <div className="four-col">
             <div>
               <div className="col-label">登録者数</div>
@@ -631,31 +647,24 @@ export default function DashboardPage({ summary, flags }: Props) {
               <ContentTable rows={data.singerData} />
             </div>
           </div>
-
-          {/* 動画部門 */}
-          {VIDEO_SECTIONS.map(({ type, label }) => {
-            const rows = data.videoData[type]
-            if (!rows.length) return null
-            return (
-              <div key={type}>
-                <h3>{label}</h3>
-                <div className="three-col">
-                  <div>
-                    <div className="col-label">再生数</div>
-                    <VideoTable rows={rows} valKey="views_n" diffKey="views_diff" rateKey="views_rate" />
-                  </div>
-                  <div>
-                    <div className="col-label">高評価数</div>
-                    <VideoTable rows={rows} valKey="likes_n" diffKey="likes_diff" />
-                  </div>
-                  <div>
-                    <div className="col-label">コメント数</div>
-                    <VideoTable rows={rows} valKey="comments_n" diffKey="comments_diff" />
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+          ) : !data.videoData[section].length ? (
+          <p className="muted">対象の動画がありません。</p>
+          ) : (
+          <div className="three-col">
+            <div>
+              <div className="col-label">再生数</div>
+              <VideoTable rows={data.videoData[section]} valKey="views_n" diffKey="views_diff" rateKey="views_rate" />
+            </div>
+            <div>
+              <div className="col-label">高評価数</div>
+              <VideoTable rows={data.videoData[section]} valKey="likes_n" diffKey="likes_diff" />
+            </div>
+            <div>
+              <div className="col-label">コメント数</div>
+              <VideoTable rows={data.videoData[section]} valKey="comments_n" diffKey="comments_diff" />
+            </div>
+          </div>
+          )}
           </>
           )}
         </>
