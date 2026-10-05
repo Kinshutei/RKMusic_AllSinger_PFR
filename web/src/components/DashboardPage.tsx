@@ -4,6 +4,7 @@ import { DashboardSummary, SingerRankItem, VideoRankItem, VideoType, VideoFlags,
 import {
   buildRangeData, rangeDates, loadDaily, addDays, MIN_DATE,
   buildStatsData, buildDailyViewsByTalent, buildDashboardDailyViewsBreakdown, DailyViewsEntry,
+  buildMilestoneForecast, MilestoneForecast,
 } from '../utils/data'
 import { niceScale, fmtDiff, diffColor } from '../utils/chartUtils'
 
@@ -447,6 +448,31 @@ function ContentTable({ rows }: { rows: SingerRankItem[] }) {
   )
 }
 
+/** 30日以内にキリ番を迎えそうなシンガーの一覧（登録者数・総再生数） */
+function MilestoneList({ items, latest }: { items: MilestoneForecast[]; latest: string }) {
+  return (
+    <div className="milestone-alert-wrap" style={{ maxWidth: 720 }}>
+      <div className="milestone-alert-header">
+        30日以内にキリ番を迎えそうなシンガー（{latest} 時点・直近30日の1日平均から予測）
+      </div>
+      {items.length === 0 ? (
+        <div className="milestone-alert-item muted">30日以内にキリ番を迎えそうなシンガーはいません</div>
+      ) : items.map(m => {
+        const [, mo, d] = m.date.split('-')
+        return (
+          <div key={`${m.talent}|${m.kind}`} className="milestone-alert-item">
+            <span className="milestone-alert-title">{m.talent}</span>
+            <span className="milestone-alert-nums">
+              {m.kind} <strong>{m.value.toLocaleString()}</strong> → <strong>{m.milestone.toLocaleString()}</strong>
+            </span>
+            <span className="milestone-alert-days">{parseInt(mo)}月{parseInt(d)}日頃（{m.days}日後）</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ランキングはスクロールせずに1画面で見られるよう、ボタンで選んだ1つだけを表示する
 type Section = 'Singer' | VideoType
 const SECTIONS: { key: Section; label: string }[] = [
@@ -504,7 +530,7 @@ function RangeControls({ mode, day, start, end, latest, onMode, onDay, onRange }
 }
 
 export default function DashboardPage({ summary, flags }: Props) {
-  const [view, setView] = useState<'ranking' | 'stats'>('ranking')
+  const [view, setView] = useState<'ranking' | 'stats' | 'milestone'>('ranking')
   const [section, setSection] = useState<Section>('Singer')
 
   // ランキングの集計日。開いたときは最新日（今までと同じ見え方）
@@ -574,9 +600,12 @@ export default function DashboardPage({ summary, flags }: Props) {
       <div className="tabs">
         <button className={`type-tab-btn${view === 'ranking' ? ' active' : ''}`} onClick={() => setView('ranking')}>ランキング</button>
         <button className={`type-tab-btn${view === 'stats'   ? ' active' : ''}`} onClick={() => setView('stats')}>Statistics</button>
+        <button className={`type-tab-btn${view === 'milestone' ? ' active' : ''}`} onClick={() => setView('milestone')}>キリ番予測</button>
       </div>
 
-      {view === 'stats' ? (
+      {view === 'milestone' ? (
+        <MilestoneList items={buildMilestoneForecast(summary)} latest={latest} />
+      ) : view === 'stats' ? (
         <div style={{ marginTop: 16 }}>
           <div style={{ marginBottom: 16 }}>
             <select

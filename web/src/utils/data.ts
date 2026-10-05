@@ -269,6 +269,52 @@ export function buildStatsData(summary: DashboardSummary): { date: string; subs:
     .map(([date, v]) => ({ date, ...v }))
 }
 
+export interface MilestoneForecast {
+  talent: string
+  kind: '登録者数' | '総再生数'
+  value: number      // 今の値
+  milestone: number  // 次のキリ番
+  date: string       // 届く予想日
+  days: number       // 最新の集計日から何日後か
+}
+
+const dayDiff = (from: string, to: string) =>
+  Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000)
+
+/** 次のキリ番。いちばん上の桁が1つ上がる数（8,990→9,000、29,600→30,000、7,792,409→8,000,000） */
+function nextMilestone(value: number): number {
+  const unit = 10 ** (String(Math.floor(value)).length - 1)
+  return (Math.floor(value / unit) + 1) * unit
+}
+
+/**
+ * 登録者数・総再生数が、最新の集計日から within 日以内に次のキリ番へ届きそうなシンガーを、近い順に返す。
+ * 増え方は直近30日の1日平均で見る。チャンネルの総再生数は数日同じ値のまま止まることがあり、短い期間の平均では外れるため。
+ */
+export function buildMilestoneForecast(summary: DashboardSummary, within = 30): MilestoneForecast[] {
+  const result: MilestoneForecast[] = []
+  for (const [talent, cs] of Object.entries(summary.channel_stats)) {
+    const dates = Object.keys(cs).sort()
+    const last = dates.at(-1)
+    if (!last) continue
+    const from = dates.find(d => d >= addDays(last, -30))!
+    const span = dayDiff(from, last)
+    if (span <= 0) continue
+    for (const kind of ['登録者数', '総再生数'] as const) {
+      const value = cs[last][kind]
+      const before = cs[from][kind]
+      if (!value || before == null) continue
+      const perDay = (value - before) / span
+      if (perDay <= 0) continue
+      const milestone = nextMilestone(value)
+      const date = addDays(last, Math.ceil((milestone - value) / perDay))
+      const days = dayDiff(summary.n_date, date)
+      if (days <= within) result.push({ talent, kind, value, milestone, date, days })
+    }
+  }
+  return result.sort((a, b) => a.days - b.days)
+}
+
 export function buildDailyViewsByTalent(
   summary: DashboardSummary
 ): { views: Record<string, number>; date: string } | null {
