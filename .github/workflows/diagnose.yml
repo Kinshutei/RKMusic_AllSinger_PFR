@@ -1,0 +1,32 @@
+name: Diagnose YouTube Counts
+
+# 収集の欠けを防ぐ改修の前に、YouTube API の総件数や取りこぼしの出方を確かめる確認用。
+# 手動で実行し、結果はログに出すだけ。リポジトリには何も書き込まない
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run diagnose script
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          CHANNELS: ${{ secrets.CHANNELS }}
+        run: python diagnose_counts.py
