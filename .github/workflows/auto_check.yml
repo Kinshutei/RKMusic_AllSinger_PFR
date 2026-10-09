@@ -1,40 +1,74 @@
 name: Auto Check YouTube Stats
 
+# いつもの収集は cron-job.org が毎日 0:00（JST）に workflow_dispatch で起動する（入力なし＝full）。
+# 1:30（JST）の schedule は予備の実行で、今日の記録が無いチャンネルと、0時に前日の値で埋めた動画だけを取り直す。
+# 予備を cron-job.org とは別の仕組みに置くのは、cron-job.org が止まった日にも動かすため
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'full = いつもの収集 / fill-only = 今日の記録が欠けている分だけ取る'
+        type: choice
+        options: [full, fill-only]
+        default: full
+      alert_test:
+        description: '通知（Issue）のテストだけを行う。データには触れない'
+        type: boolean
+        default: false
+  schedule:
+    - cron: '30 16 * * *'
+
+permissions:
+  contents: write
+  issues: write
+
+# 0:00 の実行が長引いても予備の実行と重ならないよう、順番に動かす
+concurrency:
+  group: auto-check
+  cancel-in-progress: false
 
 jobs:
   update-stats:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      
+
       - name: Pull latest changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git pull --rebase origin main || true
-      
+
       - name: Run auto check script
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           CHANNELS: ${{ secrets.CHANNELS }}
-        run: python auto_check.py
-      
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MODE: ${{ github.event_name == 'schedule' && 'fill-only' || inputs.mode }}
+          ALERT_TEST: ${{ inputs.alert_test }}
+        run: |
+          if [ "$ALERT_TEST" = "true" ]; then
+            python auto_check.py --alert-test
+          elif [ "$MODE" = "fill-only" ]; then
+            python auto_check.py --fill-only
+          else
+            python auto_check.py
+          fi
+
       # 一部のチャンネルが失敗してスクリプトが異常終了しても、成功したチャンネルの分は保存する
       # （以前は保存の手順まで進まず、その日の全タレント分が失われる作りだった）
       - name: Commit and push changes

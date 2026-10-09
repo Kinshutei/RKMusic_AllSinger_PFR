@@ -44,10 +44,28 @@ LIVE_MIN_SEC = 420    # タブで分からないときの予備。これ以上�
 SHORT_MAX_SEC = 180   # ショートは3分まで。これより長い動画はショート判定を省く
 PENDING = 'Pending'   # 配信前・配信中など、まだ種別を決められない動画。サイトには出さない
 
+# 取りこぼしへの備え（2026-10-10）。10/9 に CULUA の1ページで詳細が50本中19本しか返らず、31本がその日の記録から抜けた。
+# 4/4・4/19・10/2 にも同じような抜けがあった
+LIST_RETRIES = 2      # 一覧が総件数より少ないときに読み直す回数
+DETAIL_RETRIES = 3    # 詳細が返ってこなかった動画を取り直す回数
+RETRY_WAIT_SEC = 10   # 読み直し・取り直しの前に待つ秒数（回を重ねるごとに延ばす）
+FILL_MARK = '補完'     # 取り切れなかった日を、直前の値で埋めた記録に付ける印
+
 SNAPSHOTS_FILE = 'all_snapshots.json'
 
 # スナップショット書き込みの排他制御用ロック（並列処理による競合防止）
 _snapshot_lock = threading.Lock()
+
+# この実行で取り切れなかった分・解消した分・埋めた日。最後に通知と日別ファイルの書き直しに使う
+_report_lock = threading.Lock()
+REPORT = {'alerts': [], 'resolved': [], 'filled_dates': set()}
+
+def report(kind, value):
+    with _report_lock:
+        if kind == 'filled_dates':
+            REPORT[kind].update(value)
+        else:
+            REPORT[kind].append(value)
 
 def history_file(channel_name):
     return f'history_{channel_name}.json'
@@ -277,8 +295,104 @@ def get_channel_stats(youtube, channel_id):
         print(f'  ⚠️  チャンネル統計取得エラー: {e}')
     return None
 
+def list_upload_ids(youtube, playlist_id, name=''):
+    """
+    アップロードの一覧を最後まで読み、(IDの並び, 総件数, 総件数どおりに読めたか) を返す。
+    一覧のAPIが返す総件数（pageInfo.totalResults）より少なければ、少し待って読み直し、読めたIDを足し合わせる。
+    2026-10-10 の確認で、総件数は全23チャンネルで実際に受け取れたIDの数と一致した。
+    """
+    ids, seen, total = [], set(), None
+    for attempt in range(LIST_RETRIES + 1):
+        token, pages = None, 0
+        while True:
+            resp = execute_with_retry(youtube.playlistItems().list(
+                part='contentDetails', playlistId=playlist_id, maxResults=50, pageToken=token
+            ))
+            if total is None:
+                total = resp.get('pageInfo', {}).get('totalResults')
+            pages += 1
+            for item in resp.get('items', []):
+                vid = item['contentDetails']['videoId']
+                if vid not in seen:
+                    seen.add(vid)
+                    ids.append(vid)
+            token = resp.get('nextPageToken')
+            if not token:
+                break
+        print(f'  [{name}] 一覧: {len(ids)}本 / 総件数 {total}（{pages}ページ）')
+        if total is None or len(ids) >= total:
+            return ids, total, True
+        if attempt < LIST_RETRIES:
+            wait = RETRY_WAIT_SEC * (attempt + 1)
+            print(f'  ⚠️  [{name}] 一覧が総件数より{total - len(ids)}本少ないため、{wait}秒後に読み直します ({attempt + 1}/{LIST_RETRIES})')
+            time.sleep(wait)
+    return ids, total, False
+
+def fetch_details(youtube, ids, name=''):
+    """
+    動画の詳細を50本ずつ取る。頼んだIDのうち返ってこなかったものは、少し待って取り直す。
+    戻り値は ({動画ID: 詳細}, 最後まで返ってこなかったIDの並び)。
+    ページごとの「返ってきた数/頼んだ数」をログに出す（10/9 はどちらのAPIで欠けたかをログから追えなかった）。
+    """
+    got = {}
+    pending = list(ids)
+    missing = []
+    for attempt in range(DETAIL_RETRIES + 1):
+        missing, counts = [], []
+        for i in range(0, len(pending), 50):
+            batch = pending[i:i + 50]
+            resp = execute_with_retry(youtube.videos().list(
+                part='snippet,statistics,liveStreamingDetails,contentDetails', id=','.join(batch)
+            ))
+            items = {item['id']: item for item in resp.get('items', [])}
+            got.update(items)
+            counts.append(f'{len(items)}/{len(batch)}')
+            missing += [vid for vid in batch if vid not in items]
+        label = '詳細' if attempt == 0 else f'取り直し{attempt}回目'
+        print(f'  [{name}] {label}（返ってきた数/頼んだ数）: {" ".join(counts)}')
+        if not missing:
+            break
+        if attempt < DETAIL_RETRIES:
+            wait = RETRY_WAIT_SEC * (attempt + 1)
+            print(f'  ⚠️  [{name}] {len(missing)}本の詳細が返ってこなかったため、{wait}秒後に取り直します ({attempt + 1}/{DETAIL_RETRIES})')
+            time.sleep(wait)
+        pending = missing
+    return got, missing
+
+def describe_gone(youtube, ids):
+    """
+    一覧から外れた動画について、ログに出すための手がかりを返す（{動画ID: 説明}）。
+    IDを指定して取れるか（取れたら公開状態）と、埋め込み情報（oEmbed）の応答コード。
+    10/10 の確認では、一覧から外れた225本のうち206本はIDで取れず oEmbed が403か404、
+    19本はIDで取れて oEmbed が200（限定公開4本、公開15本。メン限と思われるものを含む）だった。
+    """
+    status = {}
+    for i in range(0, len(ids), 50):
+        try:
+            resp = execute_with_retry(youtube.videos().list(part='status', id=','.join(ids[i:i + 50])))
+            for item in resp.get('items', []):
+                status[item['id']] = item.get('status', {}).get('privacyStatus')
+        except Exception:
+            pass
+    out = {}
+    for vid in ids:
+        try:
+            code = requests.get('https://www.youtube.com/oembed',
+                                params={'url': f'https://www.youtube.com/watch?v={vid}', 'format': 'json'},
+                                timeout=10).status_code
+        except Exception:
+            code = '失敗'
+        privacy = status.get(vid)
+        out[vid] = (f'IDで取れる（{privacy}）' if privacy else 'IDで取れない') + f' / oEmbed {code}'
+    return out
+
 def get_all_videos(youtube, channel_id, channel_name, overrides):
-    """チャンネルの全動画を取得してタイプ判定（確定済みの判定はキャッシュを再利用）"""
+    """
+    チャンネルの全動画を取得してタイプ判定（確定済みの判定はキャッシュを再利用）。
+    戻り値は (取れた動画の並び, 最後まで詳細が取れなかった動画ID, 一覧の様子)。失敗したときは ([], [], None)。
+    詳細が取れなかった動画のうち前日まであったものは、呼び出し側が前日の値で埋める。
+    総件数どおりに読めた一覧から外れた動画は、チャンネル側で外されたものとして収集をやめる（埋めない）。
+    """
     snapshots = load_json(SNAPSHOTS_FILE, {})
     cached_videos = snapshots.get(channel_name, {}).get('videos', {})
     channel_flags = (overrides or {}).get(channel_name, {})
@@ -290,36 +404,20 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
                 part='contentDetails', id=channel_id
             ))
             if not resp['items']:
-                return videos
+                return [], [], None
 
             playlist_id = resp['items'][0]['contentDetails']['relatedPlaylists']['uploads']
-            next_page_token = None
-            items = []
-
-            while True:
-                playlist_resp = execute_with_retry(youtube.playlistItems().list(
-                    part='snippet',
-                    playlistId=playlist_id,
-                    maxResults=50,
-                    pageToken=next_page_token
-                ))
-
-                video_ids = [
-                    item['snippet']['resourceId']['videoId']
-                    for item in playlist_resp['items']
-                ]
-
-                videos_resp = execute_with_retry(youtube.videos().list(
-                    part='snippet,statistics,liveStreamingDetails,contentDetails',
-                    id=','.join(video_ids)
-                ))
-
-                items += videos_resp['items']
-                print(f'  取得中... {len(items)}本')
-
-                next_page_token = playlist_resp.get('nextPageToken')
-                if not next_page_token:
-                    break
+            listed, total, complete = list_upload_ids(youtube, playlist_id, channel_name)
+            listed_set = set(listed)
+            # 前日まで一覧にあって、今日の一覧に無い動画
+            gone = [vid for vid in cached_videos if vid not in listed_set]
+            targets = list(listed)
+            if not complete:
+                # 一覧が欠けたままなので、外されたのか取りこぼしたのか分からない。前日まであった動画はIDを指定して取りに行く
+                targets += gone
+                gone = []
+            details, failed = fetch_details(youtube, targets, channel_name)
+            items = [details[vid] for vid in targets if vid in details]
 
             # 自動判定が確定していない動画（新規・配信前・前回タブで分からなかったもの）だけ判定し直す。
             # 全部確定済みならタブは読まない
@@ -406,7 +504,13 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
                   f'LiveArchive: {sum(1 for v in videos if v["type"] == "LiveArchive")}本 / '
                   f'Pending: {sum(1 for v in videos if v["type"] == PENDING)}本 '
                   f'（うち例外設定 {sum(1 for v in videos if v["動画ID"] in channel_flags)}本）')
-            return videos
+
+            gone_reasons = describe_gone(youtube, gone) if gone else {}
+            for vid, why in gone_reasons.items():
+                title = cached_videos.get(vid, {}).get('タイトル', '')
+                print(f'  [{channel_name}] 一覧から外れた動画（収集をやめます）: {vid} {why} / {title[:40]}')
+            info = {'listed': len(listed), 'total': total, 'complete': complete, 'gone': len(gone)}
+            return videos, failed, info
 
         except HttpError as e:
             if e.status_code == 404 and attempt < 2:
@@ -415,45 +519,133 @@ def get_all_videos(youtube, channel_id, channel_name, overrides):
                 time.sleep(wait)
                 continue
             print(f'  ⚠️  動画取得エラー: {e}')
-            return []
+            return [], [], None
         except Exception as e:
             print(f'  ⚠️  動画取得エラー: {e}')
-            return []
+            return [], [], None
 
-    return []
+    return [], [], None
 
 # ----------------------------------------------------------------
 # データ保存
 # ----------------------------------------------------------------
 
-def update_snapshots(channel_name, channel_id, channel_stats, videos):
-    """all_snapshots.json を更新"""
+def snapshot_entry(v):
+    entry = {
+        'タイトル': v['タイトル'],
+        '公開日': v['公開日'],
+        '再生数': v['再生数'],
+        '高評価数': v['高評価数'],
+        'コメント数': v['コメント数'],
+        'duration': v.get('duration', 0),
+        'type': v['type'],    # 例外設定を当てた後の種別
+        'auto': v['auto'],    # 自動判定の結果
+        'fixed': v['fixed'],  # 自動判定が確定したか（False なら翌日も判定し直す）
+    }
+    if v.get(FILL_MARK):
+        entry[FILL_MARK] = True  # 取り切れず、前日の値で埋めた
+    return entry
+
+def update_snapshots(channel_name, channel_id, channel_stats, videos, only_ids=None):
+    """
+    all_snapshots.json を更新。
+    only_ids を渡したとき（予備の実行で、0時に埋めた動画だけを差し替えるとき）は、その動画の分だけ書き換える。
+    """
     with _snapshot_lock:
         snapshots = load_json(SNAPSHOTS_FILE, {})
 
-        snapshots[channel_name] = {
-            'channel_id': channel_id,
-            'channel_stats': channel_stats,
-            'videos': {
-                v['動画ID']: {
-                    'タイトル': v['タイトル'],
-                    '公開日': v['公開日'],
-                    '再生数': v['再生数'],
-                    '高評価数': v['高評価数'],
-                    'コメント数': v['コメント数'],
-                    'duration': v.get('duration', 0),
-                    'type': v['type'],    # 例外設定を当てた後の種別
-                    'auto': v['auto'],    # 自動判定の結果
-                    'fixed': v['fixed'],  # 自動判定が確定したか（False なら翌日も判定し直す）
-                } for v in videos
+        if only_ids is None:
+            snapshots[channel_name] = {
+                'channel_id': channel_id,
+                'channel_stats': channel_stats,
+                'videos': {v['動画ID']: snapshot_entry(v) for v in videos}
             }
-        }
+        else:
+            current = snapshots.setdefault(channel_name, {'channel_id': channel_id, 'videos': {}})
+            for v in videos:
+                if v['動画ID'] in only_ids:
+                    current['videos'][v['動画ID']] = snapshot_entry(v)
 
         save_json(SNAPSHOTS_FILE, snapshots)
         print(f'  スナップショット保存: {SNAPSHOTS_FILE}')
 
-def update_history(channel_name, videos, today_str, channel_stats=None):
-    """history_{channel_name}.json を更新（日次集約: 1日1レコード）"""
+def carry_video(video_id, cached):
+    """取り切れなかった動画を、前日のスナップショットの値でそのまま埋める"""
+    return {
+        '動画ID': video_id,
+        'タイトル': cached.get('タイトル', ''),
+        '公開日': cached.get('公開日', ''),
+        '再生数': cached.get('再生数', 0),
+        '高評価数': cached.get('高評価数', 0),
+        'コメント数': cached.get('コメント数', 0),
+        'type': cached.get('type', 'Movie'),
+        'auto': cached.get('auto', cached.get('type', 'Movie')),
+        'fixed': cached.get('fixed', True),
+        'duration': cached.get('duration', 0),
+        FILL_MARK: True,
+    }
+
+def dates_between(start, end):
+    """start と end の間の日付（両端は含まない）"""
+    day = datetime.strptime(start, '%Y-%m-%d') + timedelta(days=1)
+    stop = datetime.strptime(end, '%Y-%m-%d')
+    out = []
+    while day < stop:
+        out.append(day.strftime('%Y-%m-%d'))
+        day += timedelta(days=1)
+    return out
+
+def fill_gaps(channel_history, on_date=None):
+    """
+    記録の抜けている日を、直前の記録の値で埋める（印 FILL_MARK を付ける）。埋めた日の集まりを返す。
+    on_date を渡すと、その日に記録がある動画とチャンネル統計だけを見て、前の記録との間を埋める
+    （一覧から外れて戻ってきた動画や、収集が動かなかった日の分）。渡さなければ、すべての抜けを埋める（過去分の是正用）。
+    最後の記録より後（一覧から外れたまま戻っていない動画）は埋めない。
+    埋めた日の総再生数は、その日の動画の再生数の合計に直す。3/26以降は総再生数を動画の合計で持っているため、
+    埋める前に合計と一致していた日（と、チャンネル統計そのものを埋めた日）だけを直す。
+    """
+    stats = channel_history.setdefault('_channel_stats', {})
+    video_records = [v.setdefault('records', {}) for vid, v in channel_history.items() if vid != '_channel_stats']
+
+    def gaps_of(records):
+        dates = sorted(records)
+        if on_date is not None:
+            if on_date not in records:
+                return []
+            before = [d for d in dates if d < on_date]
+            pairs = [(before[-1], on_date)] if before else []
+        else:
+            pairs = list(zip(dates, dates[1:]))
+        return [(d, prev) for prev, nxt in pairs for d in dates_between(prev, nxt)]
+
+    video_gaps = [(records, gaps_of(records)) for records in video_records]
+    stats_gaps = gaps_of(stats)
+    filled = {d for _, gaps in video_gaps for d, _ in gaps} | {d for d, _ in stats_gaps}
+    if not filled:
+        return set()
+
+    def video_sum(d):
+        return sum((records.get(d) or {}).get('再生数', 0) for records in video_records)
+
+    sum_rule = {d for d in filled if d in stats and stats[d].get('総再生数') == video_sum(d)}
+    for records, gaps in video_gaps:
+        for d, prev in gaps:
+            src = records[prev]
+            records[d] = {'再生数': src.get('再生数', 0), '高評価数': src.get('高評価数', 0),
+                          'コメント数': src.get('コメント数', 0), FILL_MARK: True}
+    for d, prev in stats_gaps:
+        stats[d] = {**stats[prev], FILL_MARK: True}
+        sum_rule.add(d)
+    for d in sum_rule:
+        stats[d]['総再生数'] = video_sum(d)
+    return filled
+
+def update_history(channel_name, videos, today_str, channel_stats=None, only_ids=None):
+    """
+    history_{channel_name}.json を更新（日次集約: 1日1レコード）。記録の抜けを埋めた日の集まりを返す。
+    only_ids を渡したとき（予備の実行で、0時に埋めた動画だけを差し替えるとき）は、その動画の分だけ書き換え、
+    今日の総再生数を動画の合計に直す。
+    """
     path = history_file(channel_name)
     history = load_json(path, {})
 
@@ -463,7 +655,7 @@ def update_history(channel_name, videos, today_str, channel_stats=None):
     channel_history = history[channel_name]
 
     # チャンネル統計の日次履歴を保存（_channel_stats キーに蓄積）
-    if channel_stats:
+    if channel_stats and only_ids is None:
         if '_channel_stats' not in channel_history:
             channel_history['_channel_stats'] = {}
         channel_history['_channel_stats'][today_str] = {
@@ -471,9 +663,13 @@ def update_history(channel_name, videos, today_str, channel_stats=None):
             '総再生数': channel_stats.get('総再生数', 0),
             '動画数':   channel_stats.get('動画数', 0),
         }
+        if channel_stats.get(FILL_MARK):
+            channel_history['_channel_stats'][today_str][FILL_MARK] = True
 
     for video in videos:
         video_id = video['動画ID']
+        if only_ids is not None and video_id not in only_ids:
+            continue
 
         if video_id not in channel_history:
             channel_history[video_id] = {
@@ -492,15 +688,31 @@ def update_history(channel_name, videos, today_str, channel_stats=None):
             channel_history[video_id]['duration'] = video.get('duration', 0)
 
         # 日次集約: 同日のレコードは上書き（最新値で更新）
-        channel_history[video_id]['records'][today_str] = {
+        record = {
             '再生数': video['再生数'],
             '高評価数': video['高評価数'],
             'コメント数': video['コメント数']
         }
+        if video.get(FILL_MARK):
+            record[FILL_MARK] = True
+        channel_history[video_id]['records'][today_str] = record
+
+    stats = channel_history.get('_channel_stats', {})
+    if only_ids is not None and today_str in stats:
+        stats[today_str]['総再生数'] = sum(
+            (v.get('records', {}).get(today_str) or {}).get('再生数', 0)
+            for vid, v in channel_history.items() if vid != '_channel_stats'
+        )
+
+    # 一覧から外れて戻ってきた動画や、収集が動かなかった日の抜けを、直前の値で埋める
+    filled = fill_gaps(channel_history, on_date=today_str)
+    if filled:
+        print(f'  記録の抜けを直前の値で埋めました: {len(filled)}日分（{min(filled)}〜{max(filled)}）')
 
     history[channel_name] = channel_history
     save_json(path, history)
     print(f'  履歴保存: {path}')
+    return filled
 
 # ----------------------------------------------------------------
 # Dashboard用軽量集計ファイル
@@ -514,14 +726,15 @@ DAILY_FROM = '2026-03-31'  # サイトで選べる最初の日（2026-04-01）�
 def daily_path(date_str):
     return os.path.join(DAILY_DIR, f'{date_str}.json')
 
-def write_daily_files(talent_videos, dates):
+def write_daily_files(talent_videos, dates, rewrite=()):
     """
     サイトの日付指定・期間指定のために、日ごとの全動画の累計（再生数・高評価数・コメント数）を
     daily/YYYY-MM-DD.json に1日1ファイルで書き出す（{"date": 日付, "v": {動画ID: [再生数, 高評価数, コメント数]}}）。
     どの日・どの期間も「終わりの日の累計 − 始まりの前日の累計」で出せるので、サイトは数ファイル読むだけで済む。
     過去の日の記録は変わらないので一度作れば作り直さない。同じ日に収集し直すと値が変わるため、最新の2日分だけは毎回書き直す。
+    rewrite に渡した日（記録の抜けを埋めた日）も書き直す。
     """
-    recent = set(dates[-2:])
+    recent = set(dates[-2:]) | set(rewrite)
     targets = [d for d in dates if d >= DAILY_FROM and (d in recent or not os.path.exists(daily_path(d)))]
     if not targets:
         return
@@ -542,7 +755,7 @@ def load_talent_names():
     config = load_json(CHANNELS_CONFIG_FILE, [])
     return [c['name'] for c in config if 'name' in c]
 
-def build_dashboard_summary():
+def build_dashboard_summary(rewrite_dates=()):
     """
     Dashboard（全タレント横断のランキング・統計表示）専用の軽量サマリーを
     history_{talent}.json から再集計して dashboard_summary.json に書き出す。
@@ -644,20 +857,41 @@ def build_dashboard_summary():
     print(f'  Dashboard集計保存: {SUMMARY_FILE}（動画{len(video_snapshots)}件 / タレント{len(channel_stats_summary)}件 / n_date={n_date} p_date={p_date}）')
 
     # 読み込み済みの履歴をそのまま使って、日付指定用の日別ファイルも書く
-    write_daily_files(talent_videos, sorted_dates)
+    write_daily_files(talent_videos, sorted_dates, rewrite=rewrite_dates)
 
 # ----------------------------------------------------------------
 # チャンネル処理
 # ----------------------------------------------------------------
 
-def process_channel(channel_config, overrides, today_str):
-    """1チャンネルの処理（スレッドセーフ：APIクライアントを個別生成）"""
+def process_channel(channel_config, overrides, today_str, fill_only=False):
+    """
+    1チャンネルの処理（スレッドセーフ：APIクライアントを個別生成）。
+    fill_only（1:30 の予備の実行）のときは、今日の記録が無いチャンネルと、0時に前日の値で埋めた動画だけを取り直す。
+    すでに実際の値がある記録は上書きしない（同じ日に取り直すと日次の増加が歪むため）。
+    """
     channel_name = channel_config['name']
     channel_url = channel_config['url']
 
     print(f'\n{"=" * 50}')
     print(f'処理中: {channel_name}')
     print(f'{"=" * 50}')
+
+    only_ids = None
+    if fill_only:
+        history = load_json(history_file(channel_name), {}).get(channel_name, {})
+        has_today = today_str in history.get('_channel_stats', {})
+        filled_today = {
+            vid for vid, v in history.items()
+            if vid != '_channel_stats' and (v.get('records', {}).get(today_str) or {}).get(FILL_MARK)
+        }
+        if has_today and not filled_today:
+            print(f'  今日（{today_str}）の記録は揃っています。予備の実行では何もしません')
+            return True
+        if has_today:
+            only_ids = filled_today
+            print(f'  0時に前日の値で埋めた{len(filled_today)}本を取り直します')
+        else:
+            print(f'  今日（{today_str}）の記録が無いため取り直します')
 
     # スレッドごとに独自のAPIクライアントを生成
     youtube = build('youtube', 'v3', developerKey=API_KEY)
@@ -683,35 +917,120 @@ def process_channel(channel_config, overrides, today_str):
         return False
 
     # 全動画取得
-    videos = get_all_videos(youtube, channel_id, channel_name, overrides)
+    videos, failed, info = get_all_videos(youtube, channel_id, channel_name, overrides)
     if not videos:
         print(f'  ❌ 動画を取得できませんでした')
         return False
 
+    # 最後まで詳細が取れなかった動画は、前日の値で埋めて記録に穴を作らない。初めて見る動画は値が無いので翌日に回す
+    cached = snapshots.get(channel_name, {}).get('videos', {})
+    filled = [carry_video(vid, cached[vid]) for vid in failed if vid in cached]
+    unknown = [vid for vid in failed if vid not in cached]
+    if filled:
+        print(f'  ⚠️  [{channel_name}] {len(filled)}本は詳細が取り切れなかったため、前日の値で埋めます')
+    if not info['complete']:
+        report('alerts', f'{channel_name}: 一覧が総件数より少ないままでした（{info["listed"]}/{info["total"]}本）')
+    if unknown:
+        report('alerts', f'{channel_name}: 初めて見る{len(unknown)}本の詳細が取れず、今日は記録していません（{", ".join(unknown)}）')
+    all_videos = videos + filled
+
+    if only_ids is not None:
+        # 予備の実行: 0時に埋めた動画のうち、実際の値が取れたものだけ差し替える
+        replace = {v['動画ID'] for v in videos} & only_ids
+        update_snapshots(channel_name, channel_id, channel_stats, all_videos, only_ids=replace)
+        report('filled_dates', update_history(channel_name, all_videos, today_str, only_ids=replace))
+        if replace:
+            report('resolved', f'{channel_name}: 0時に前日の値で埋めた{len(replace)}本を、実際の値に差し替えました')
+        if only_ids - replace:
+            report('alerts', f'{channel_name}: {len(only_ids - replace)}本は予備の実行でも取れず、前日の値で埋めたままです')
+        print(f'  ✓ {channel_name} 完了')
+        return True
+
+    if filled:
+        report('alerts', f'{channel_name}: {len(filled)}本の詳細が取り切れず、前日の値で埋めました'
+                         + ('' if fill_only else '（1:30の予備の実行で取り直します）'))
+    elif fill_only:
+        report('resolved', f'{channel_name}: 0時に取れなかった今日の記録を取りました')
+
     # 総再生数 = 全動画（Movie/Short/LiveArchive）の再生数の総和（JST 00:00時点）
-    channel_stats['総再生数'] = sum(v['再生数'] for v in videos)
+    channel_stats['総再生数'] = sum(v['再生数'] for v in all_videos)
 
     print(f'  登録者数: {channel_stats["登録者数"]:,}人 / '
           f'総再生数: {channel_stats["総再生数"]:,}回 / '
           f'動画数: {channel_stats["動画数"]:,}本')
 
     # 保存
-    update_snapshots(channel_name, channel_id, channel_stats, videos)
-    update_history(channel_name, videos, today_str, channel_stats=channel_stats)
+    update_snapshots(channel_name, channel_id, channel_stats, all_videos)
+    report('filled_dates', update_history(channel_name, all_videos, today_str, channel_stats=channel_stats))
 
     print(f'  ✓ {channel_name} 完了')
     return True
+
+def fill_channel_from_snapshot(channel_name, today_str):
+    """
+    予備の実行でもチャンネルごと取れなかったとき、前日のスナップショットの値で今日の記録を埋める（記録に穴を作らない最後の手段）。
+    今日のチャンネル統計がすでにある（0時には取れていた）ときは何もしない。埋めた日の集まりを返す。
+    """
+    history = load_json(history_file(channel_name), {}).get(channel_name, {})
+    if today_str in history.get('_channel_stats', {}):
+        return set()
+    snap = load_json(SNAPSHOTS_FILE, {}).get(channel_name)
+    if not snap or not snap.get('videos'):
+        return set()
+    videos = [carry_video(vid, c) for vid, c in snap['videos'].items()]
+    stats = dict(snap.get('channel_stats') or {})
+    stats['総再生数'] = sum(v['再生数'] for v in videos)
+    stats[FILL_MARK] = True
+    filled = update_history(channel_name, videos, today_str, channel_stats=stats)
+    return filled | {today_str}
+
+def notify(today_str, fill_only, title=None):
+    """
+    取り切れなかった分があれば、GitHub の Issue で知らせる（同じ日の Issue があれば追記する）。
+    予備の実行で解消したときは、その日の Issue に書き添えて閉じる。GitHub Actions の上でだけ動く。
+    """
+    alerts, resolved = REPORT['alerts'], REPORT['resolved']
+    for line in alerts:
+        print(f'⚠️  {line}')
+    token = os.environ.get('GITHUB_TOKEN')
+    repo = os.environ.get('GITHUB_REPOSITORY')
+    if not token or not repo or not (alerts or resolved):
+        return
+    title = title or f'データ収集の欠け {today_str}'
+    run_url = f'{os.environ.get("GITHUB_SERVER_URL", "https://github.com")}/{repo}/actions/runs/{os.environ.get("GITHUB_RUN_ID", "")}'
+    when = '予備の実行（1:30）' if fill_only else '定時の実行（0:00）'
+    api = f'https://api.github.com/repos/{repo}/issues'
+    headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json'}
+    try:
+        found = requests.get(api, params={'state': 'open', 'per_page': 100}, headers=headers, timeout=20).json()
+        number = next((i['number'] for i in found if i.get('title') == title and 'pull_request' not in i), None)
+        if alerts:
+            body = (f'{when}で、取り切れなかった分があります。\n\n' + '\n'.join(f'- {a}' for a in alerts)
+                    + (('\n\n解消した分:\n' + '\n'.join(f'- {r}' for r in resolved)) if resolved else '')
+                    + f'\n\n実行の記録: {run_url}')
+            if number:
+                requests.post(f'{api}/{number}/comments', json={'body': body}, headers=headers, timeout=20).raise_for_status()
+            else:
+                requests.post(api, json={'title': title, 'body': body}, headers=headers, timeout=20).raise_for_status()
+            print(f'  通知しました（Issue「{title}」）')
+        elif number:
+            body = f'{when}で取り直し、解消しました。\n\n' + '\n'.join(f'- {r}' for r in resolved) + f'\n\n実行の記録: {run_url}'
+            requests.post(f'{api}/{number}/comments', json={'body': body}, headers=headers, timeout=20).raise_for_status()
+            requests.patch(f'{api}/{number}', json={'state': 'closed'}, headers=headers, timeout=20).raise_for_status()
+            print(f'  解消したため Issue「{title}」を閉じました')
+    except Exception as e:
+        print(f'⚠️  通知に失敗しました: {e}')
 
 # ----------------------------------------------------------------
 # メイン
 # ----------------------------------------------------------------
 
-def main():
+def main(fill_only=False):
     now = datetime.now(timezone(timedelta(hours=9)))
     today_str = now.strftime('%Y-%m-%d')
 
     print('=' * 50)
-    print('YouTube統計 自動チェック開始')
+    print('YouTube統計 自動チェック開始' + ('（予備の実行: 今日の記録が欠けている分だけ取る）' if fill_only else ''))
     print(f'実行日時: {now.strftime("%Y-%m-%d %H:%M:%S")}')
     print('=' * 50)
 
@@ -735,7 +1054,7 @@ def main():
     with ThreadPoolExecutor(max_workers=CHANNEL_WORKERS) as executor:
         futures = {
             executor.submit(
-                process_channel, ch, overrides, today_str
+                process_channel, ch, overrides, today_str, fill_only
             ): ch
             for ch in CHANNELS
         }
@@ -760,7 +1079,7 @@ def main():
         with ThreadPoolExecutor(max_workers=CHANNEL_WORKERS) as executor:
             futures = {
                 executor.submit(
-                    process_channel, ch, overrides, today_str
+                    process_channel, ch, overrides, today_str, fill_only
                 ): ch
                 for ch in failed_channels
             }
@@ -775,14 +1094,26 @@ def main():
                     print(f'  ❌ {ch["name"]} で予期しないエラー: {e}')
                     still_failed.append(ch['name'])
 
+    for name in still_failed:
+        if fill_only:
+            # 予備の実行でも取れなかった。前日の値で埋めて記録に穴を作らない
+            filled = fill_channel_from_snapshot(name, today_str)
+            report('filled_dates', filled)
+            report('alerts', f'{name}: 予備の実行でもチャンネルごと取得できず'
+                             + ('、今日の記録を前日の値で埋めました' if filled else 'ました'))
+        else:
+            report('alerts', f'{name}: チャンネルごと取得できませんでした（1:30の予備の実行で取り直します）')
+
     print(f'\n{"=" * 50}')
     print(f'✓ 全処理完了: {success}/{len(CHANNELS)} チャンネル成功')
     print('=' * 50)
 
     try:
-        build_dashboard_summary()
+        build_dashboard_summary(rewrite_dates=REPORT['filled_dates'])
     except Exception as e:
         print(f'⚠️  dashboard_summary.json 生成に失敗しました（本処理には影響しません）: {e}')
+
+    notify(today_str, fill_only)
 
     if still_failed:
         print(f'❌ リトライ後も失敗: {", ".join(still_failed)}')
@@ -793,9 +1124,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--summary-only', action='store_true',
                          help='既存のhistory_*.jsonからdashboard_summary.jsonのみ再生成（YouTube API呼び出しなし）')
+    parser.add_argument('--fill-only', action='store_true',
+                        help='予備の実行（1:30）。今日の記録が無いチャンネルと、0時に前日の値で埋めた動画だけを取り直す')
+    parser.add_argument('--alert-test', action='store_true',
+                        help='通知（GitHub の Issue）のテストだけを行う。データには触れない')
     args = parser.parse_args()
 
     if args.summary_only:
         build_dashboard_summary()
+    elif args.alert_test:
+        report('alerts', 'これは通知のテストです。データには触れていません。確認できたらこの Issue は閉じてください')
+        notify(datetime.now(timezone(timedelta(hours=9))).strftime('%Y-%m-%d'), False, title='データ収集の欠け（通知のテスト）')
     else:
-        main()
+        main(fill_only=args.fill_only)

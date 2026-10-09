@@ -135,7 +135,8 @@ def main():
         hist = load_json(history_file(name), {}).get(name, {})
         snap_ids = set(snapshots.get(name, {}).get('videos', {}))
         for vid, v in hist.items():
-            if vid.startswith('_') or vid in snap_ids:
+            # 動画IDが「_」で始まることもあるので、特別なキーは名前で除く
+            if vid == '_channel_stats' or vid in snap_ids:
                 continue
             ds = sorted(v.get('records', {}))
             if ds and ds[-1] >= DROPPED_SINCE:
