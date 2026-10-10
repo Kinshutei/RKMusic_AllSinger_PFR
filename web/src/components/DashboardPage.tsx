@@ -15,9 +15,9 @@ interface Props {
 
 function SingerTable({ rows, valKey, diffKey, rateKey }: {
   rows: SingerRankItem[]
-  valKey: 'subs_n' | 'views_n' | 'comments_n'
-  diffKey: 'subs_diff' | 'views_diff' | 'comments_diff'
-  rateKey: 'subs_rate' | 'views_rate' | 'comments_rate'
+  valKey: 'subs_n' | 'views_n' | 'likes_n' | 'comments_n'
+  diffKey: 'subs_diff' | 'views_diff' | 'likes_diff' | 'comments_diff'
+  rateKey: 'subs_rate' | 'views_rate' | 'likes_rate' | 'comments_rate'
 }) {
   const sorted = [...rows].sort((a, b) => (b[diffKey] ?? -999999) - (a[diffKey] ?? -999999))
   const totalVal = sorted.reduce((sum, r) => sum + r[valKey], 0)
@@ -731,7 +731,7 @@ export default function DashboardPage({ summary, flags }: Props) {
           <>
           <h3>{SECTIONS.find(s => s.key === section)!.label}</h3>
           {section === 'Singer' ? (
-          <div className="four-col">
+          <div className="five-col">
             <div>
               <div className="col-label">登録者数</div>
               <SingerTable rows={data.singerData} valKey="subs_n" diffKey="subs_diff" rateKey="subs_rate" />
@@ -739,6 +739,10 @@ export default function DashboardPage({ summary, flags }: Props) {
             <div>
               <div className="col-label">総再生数</div>
               <SingerTable rows={data.singerData} valKey="views_n" diffKey="views_diff" rateKey="views_rate" />
+            </div>
+            <div>
+              <div className="col-label">総高評価数</div>
+              <SingerTable rows={data.singerData} valKey="likes_n" diffKey="likes_diff" rateKey="likes_rate" />
             </div>
             <div>
               <div className="col-label">総コメント数</div>

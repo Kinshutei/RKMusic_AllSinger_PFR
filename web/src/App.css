@@ -98,6 +98,9 @@ body {
   background: #ffffff;
 }
 
+/* ダッシュボードだけは、Singer別の5つの表が並ぶよう横幅の上限を広げる（表1つ約294pxで名前の欄94px） */
+.content.content--dashboard { max-width: 1600px; }
+
 .content {
   max-width: 1400px;
   margin: 0;
@@ -174,6 +177,15 @@ a:hover { color: #3a4fa8; text-decoration: underline; }
 .rank-talent { display: block; font-size: 10px; color: #888; }
 .rank-val  { padding: 3px 6px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; width: 82px; }
 .rank-diff { padding: 3px 4px; text-align: right; white-space: nowrap; font-size: 11px; width: 116px; overflow: hidden; }
+
+/* Singer別は5つの表を並べるため、文字を2px小さくして列も詰める（部門の表は今のまま） */
+.five-col  { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 16px; }
+.five-col .rank-table { font-size: 10px; }
+/* 幅は実測した文字幅から決めた（2026-10-10）: 順位「10.」24px / 数値「469,588,472」72px /
+   増減「+79,768,308 (+20.5%)」104px（4/1〜の期間）/ 名前「HONK THE HORN」93px */
+.five-col .rank-no    { width: 24px; }
+.five-col .rank-val   { width: 72px; }
+.five-col .rank-diff  { font-size: 9px; width: 104px; }
 
 /* ── 集計日の選択（ダッシュボード） ── */
 .date-nav { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 14px 0 6px; }
@@ -356,6 +368,7 @@ a:hover { color: #3a4fa8; text-decoration: underline; }
   .two-col   { grid-template-columns: 1fr; }
   .three-col { grid-template-columns: 1fr; }
   .four-col  { grid-template-columns: 1fr; }
+  .five-col  { grid-template-columns: 1fr; }
   .content   { padding: 16px 12px; }
 }
 

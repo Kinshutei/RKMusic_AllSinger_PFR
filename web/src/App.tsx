@@ -107,7 +107,7 @@ export default function App() {
 
       {/* メインコンテンツ */}
       <div className="main-wrapper">
-        <div className="content">
+        <div className={`content${activePage === 'Dashboard' ? ' content--dashboard' : ''}`}>
           {activePage === 'Dashboard' ? (
             summaryError ? (
               <p className="error-text">データの取得に失敗しました: {summaryError}</p>

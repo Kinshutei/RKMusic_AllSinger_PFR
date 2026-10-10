@@ -199,6 +199,7 @@ export function buildRangeData(
         talent, nodata: true,
         subs_n: 0, subs_diff: null, subs_rate: null,
         views_n: 0, views_diff: null, views_rate: null,
+        likes_n: 0, likes_diff: null, likes_rate: null,
         comments_n: 0, comments_diff: null, comments_rate: null,
         content_total: 0, content_movie: 0, content_short: 0, content_live: 0,
         content_diff: null, content_rate: null,
@@ -214,12 +215,15 @@ export function buildRangeData(
     const subs_diff  = (n && p) ? subs_n  - (p.登録者数 ?? 0) : null
     const views_diff = (n && p) ? views_n - (p.総再生数 ?? 0) : null
 
+    let likes_n = 0, likes_diff = 0
     let comments_n = 0, comments_diff = 0
     let content_movie = 0, content_short = 0, content_live = 0, content_p = 0
     for (const v of videosByTalent.get(talent) ?? []) {
       const e = endSnap[v.id]
       if (!e) continue  // 終わりの日にまだ無い（後で公開された）動画
       const b = baseSnap[v.id] ?? [0, 0, 0]
+      likes_n += e[1]
+      likes_diff += e[1] - b[1]
       comments_n += e[2]
       comments_diff += e[2] - b[2]
       const vtype = flags[talent]?.[v.id] ?? v.ty
@@ -243,6 +247,7 @@ export function buildRangeData(
       talent, subs_n, views_n,
       subs_diff,  subs_rate:  rate(subs_n,  subs_diff),
       views_diff, views_rate: rate(views_n, views_diff),
+      likes_n, likes_diff, likes_rate: rate(likes_n, likes_diff),
       comments_n, comments_diff, comments_rate: rate(comments_n, comments_diff),
       content_total, content_movie, content_short, content_live,
       content_diff, content_rate: rate(content_total, content_diff),
