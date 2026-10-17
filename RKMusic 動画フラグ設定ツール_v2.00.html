@@ -198,11 +198,11 @@ try { S.reviewed = new Set(JSON.parse(localStorage.getItem(REVIEWED_KEY)) || [])
 try { S.lastCheck = localStorage.getItem(LAST_CHECK_KEY); } catch { /* 読めなければ初回扱い */ }
 
 // ---------------------------------------------------------------- 認証
-function ghToken() { return localStorage.getItem('gh_token') || ''; }
+function ghToken() { return localStorage.getItem('flagtool_gh_token') || ''; }
 
 $('saveCred').onclick = () => {
   const t = $('ghToken').value.trim();
-  if (t && !t.startsWith('***')) localStorage.setItem('gh_token', t);
+  if (t && !t.startsWith('***')) localStorage.setItem('flagtool_gh_token', t);
   maskCreds();
   $('loadSt').textContent = '認証情報を保存しました';
 };
